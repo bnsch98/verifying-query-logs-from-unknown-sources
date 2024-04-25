@@ -1,0 +1,71 @@
+=============
+WRITING STYLE
+=============
+-) Avoid unclear co-references. (like 'this', 'that', 'these', 'it', etc.; often not clear what word is actually targetted ... which breaks the reading "flow")
+   - The supervisors told the workers that they will receive a bonus. -> who will receive the bonus?
+   - or one of my favorite German ones: <Sportler X> hat sich im Training das Knie verdreht. Er musste es abbrechen.
+-) Do not use literature references as if they were nouns.
+   - As stated in [42], [...] -> As stated by <Author et al.> [42], [...]
+-) Do not start a sentence with some number or acronym.
+-) Use the Oxford comma before the last 'and' in an enumeration.
+   - During their trip, they visited her mother and father, Albert Einstein and John Feynman.
+-) Put a comma after 'e.g.' and 'i.e.' and do not use them to start a sentence.
+-) Rather two shorter sentences instead of one long one. 
+-) When something can be written in a shorter way, do so.
+   - make use of -> use; etc. ... but also on sentence / passage level
+-) Write at least one or two sentences between two headings. (e.g., not directly start Section 1.1 after the heading of Section 1)
+-) Words like 'chapter', 'section', 'table', 'figure', etc. should start with a capital letter when a reference number follows.
+   - An example is shown in Figure 1 ...
+-) The word 'performance' refers to efficiency + effectiveness; when only effectiveness is meant, then write 'effectiveness'.
+   - Retrieval system X has a better retrieval effectiveness than system Y ...
+-) Put punctuation after equations when they are part of a sentence. (e.g., put a period when the equation ends the sentence)
+-) German: compound words consisting of some foreign-language term and some German term usually require hyphens.
+   - Retrieval-System, Machine-Learning-Modell, etc.
+
+
+
+
+======================
+TECHNICALITIES / LaTeX
+======================
+-) Use non-breaking spaces where appropriate. (with numbers, abbreviations, references to sections/tables/figures, ACM-style \cite, etc.)
+   - '50,000~queries', '[...] and this sentence ends with an ACM-style reference~\cite{author:2022}'
+-) Use \ where appropriate. (to indicate that the next space is not as variable-width as a space after a sentence)
+   - 'Author X et al.\ show [...]' or 'cf.\ [...]' (for cf. also a tilde often makes sense)
+-) Avoid overlong lines. (check the overfull box warnings after each LaTeX run)
+-) Avoid orphans and widows. (only few words in last line of a paragraph; just one/two lines of a paragraph on a new or previous page/column)
+-) Put footnotes after punctuation, not directly before. (there are only very very few exceptions)
+-) Remove unused LaTeX packages and do not load packages for stuff that is doable via simple LaTeX macros or "lighter" packages.
+-) LaTeX preamble of a document (usepackages, macros, etc.) should go in a separate style file to keep the frame-file "clean".
+-) Only commit / push paper versions without LaTeX errors / warnings. 
+   - the PDF should only be committed / pushed once at the end when it does not change anymore
+-) Keep comments in the LaTeX sources at a minimum. 
+   - comments that contain content needed for some camera-ready or so version should be preceeded by a short note like "ADDITION"
+-) Homogenize the references. (either all author first names abbreviated or none; either all titles in title case, or none; either all with conference acronyms or none; either all references with URLs or none; etc.)
+   - I suggest full author names, non-title case titles, 'Proceedings of SIGIR~2022'-style conference mentions, page numbers, and DOI-style URLS
+   - if possible, I suggest alpha bibstyle instead of numbering the references
+
+
+
+================
+TABLES / FIGURES
+================
+-) Put tables and figures on the top / bottom of a page / column but usually not "inline".
+-) A caption should completely explain a table / figure ... a reader should not have to read the actual document's body text to understand what is shown in a table or figure.
+-) Give numerical values with two or three decimals at most. (higher precision is often not justified)
+-) Right-align numbers in tables so that they are easily comparable.
+-) No vertical lines in tables. (suggestion: use the package booktabs)
+-) Fonts in figures / tables should not be bigger / smaller than the "standard" text body fonts (normal, small, footnote, etc.).
+
+
+
+======================
+MATERIAL / BIB ENTRIES
+======================
+-) Store PDFs of references you use, publications on a topic, etc. in an appropriate material folder.
+   - naming convention: <last name of first author><last two digits of year>-title-in-lower-case-without-special-characters.pdf (e.g., author22-an-example-title.pdf)
+-) When having stored a PDF of some publication, immediately afterwards fetch a corresponding bib entry from dblp. (if not available, mimic dblp style)
+  - remove the lines 'timestamp', 'biburl', 'bibsource'
+  - repair casing issues in the title if needed (e.g., {W}ikipedia)
+  - arXiv papers: weirdly have a journal bib entry at dblp -> techreport fits better; also: CoRR -> arXiv; and make sure that not a better citable version exists than arXiv
+  - change the bibkey to our scheme: <last name of first author>:<year> (e.g., author:2022; when the key would be duplicated, add 'a', 'b', etc. in lexicographic ordering of the bibentries (e.g., author:2022b; priority: author team, paper title (just like sorting in the references section works); i.e., the paper with the lexicographically "earlier" author team gets the earlier letter, etc.))
