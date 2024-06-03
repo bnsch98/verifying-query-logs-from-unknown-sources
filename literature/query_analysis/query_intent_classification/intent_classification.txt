@@ -1,0 +1,7 @@
+- manuelle klassifikation
+Quelle: chang20-query-understandig-for-search-engines
+- automatische klassifikation: 
+	- unsupervised methods: rule-based -> eigene entscheidungsregeln/Heuristiken nach denen klassifiziert wird
+	- supervised learning -> klassich mit gelabelten Daten ein Modell trainieren
+	- unsupervised learning -> Probabilistic Latent Semantic Analysis (PLSA) um zu clustern
+	- feature based classification: mehrere Ansätze zur Feater Extraction werden beschrieben -> STILL TO READ
