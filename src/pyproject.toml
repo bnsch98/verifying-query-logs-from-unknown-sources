@@ -1,0 +1,28 @@
+[project]
+name = "thesis-schneg"
+requires-python = "~=3.10"
+version = "0.0.0"
+dependencies = [
+    "jupyter~=1.0",
+    "pandas~=2.0",
+    "pyarrow~=16.1",
+    "python-dotenv~=1.0",
+    "ray[data,default]~=2.31",
+    "tqdm~=4.64",
+]
+
+[build-system]
+requires = [
+    "setuptools~=69.0",   
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = [
+    "build",
+    "venv",
+    "notebooks",
+    "data",
+]
+
+# [tool.setuptools_scm]
