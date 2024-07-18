@@ -6,6 +6,7 @@ excludes:
   - "*.egg-info/"
   - venv/
   - __pycache__/
+  - part*
 py_modules:
   - thesis_schneg/
 pip:

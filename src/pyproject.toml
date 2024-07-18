@@ -9,6 +9,7 @@ dependencies = [
     "python-dotenv~=1.0",
     "ray[data,default]~=2.31",
     "tqdm~=4.64",
+    "pyarrow-stubs~=10.0",
 ]
 
 [build-system]
