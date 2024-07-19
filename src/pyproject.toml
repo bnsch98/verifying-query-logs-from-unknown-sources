@@ -7,7 +7,7 @@ dependencies = [
     "pandas~=2.0",
     "pyarrow~=16.1",
     "python-dotenv~=1.0",
-    "ray[data,default]~=2.31",
+    "ray[data,default]~=2.31.0",
     "tqdm~=4.64",
     "pyarrow-stubs~=10.0",
 ]
