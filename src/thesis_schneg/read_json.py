@@ -97,8 +97,8 @@ ds = read_json(
 # struc = ds.select_columns(['serp_results'])
 # print(f"############## STRUC: {struc.schema()} ##############")
 # print("\n\n\n\n\n\n\n")
-# drop_cols = ['serp_results']
-# ds = ds.drop_columns(drop_cols)
+drop_cols = ['serp_results']
+ds = ds.drop_columns(drop_cols)
 # print(ds.schema())
 # col = ds.select_columns(['serp_id'])
 
