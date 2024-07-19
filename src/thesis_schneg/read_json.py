@@ -1,3 +1,4 @@
+from json import dumps
 from ray import init
 # from ray.data import range
 # import ray
@@ -97,7 +98,14 @@ ds = read_json(
 # struc = ds.select_columns(['serp_results'])
 # print(f"############## STRUC: {struc.schema()} ##############")
 # print("\n\n\n\n\n\n\n")
-ds = ds.drop_columns(cols=['serp_results'])
+
+def serp_results_to_json_string(row):
+    row["serp_results"] = dumps(row["serp_results"])
+    return row
+
+ds = ds.map(serp_results_to_json_string)
+# ds = ds.drop_columns(cols=['serp_results'])
+
 # print(ds.schema())
 # col = ds.select_columns(['serp_id'])
 
@@ -105,6 +113,8 @@ print("\n\n\n\n\n\n\n")
 ds = ds.drop_columns(cols=["serp_offset"])
 print(ds.schema())
 print("\n\n\n\n\n\n\n")
+
+print(ds.take(1))
 
 # print(ds)
 # print("\n\n\n\n\n\n\n")
