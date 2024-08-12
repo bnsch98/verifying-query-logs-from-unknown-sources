@@ -9,6 +9,7 @@ from pyarrow import json, csv
 
 from ray.data import read_json, read_parquet, read_csv
 from ray.data.aggregate import AggregateFn
+
 # from ray.data.datasource.partitioning import Partitioning
 # from ray.data.aggregate import Count, AggregateFn
 import os
@@ -32,7 +33,8 @@ schema = pa.schema(
         pa.field("serp_offset", pa.int64(), nullable=True),
         pa.field("serp_query_text_url", pa.string(), nullable=True),
         pa.field("serp_query_text_url_language", pa.string(), nullable=True),
-        pa.field("serp_query_text_html", pa.string(), nullable=True),
+        pa.field("serp_query_text_html", pa.string(),
+                 nullable=True),  # , nullable=True
         pa.field("serp_warc_relative_path", pa.string(), nullable=True),
         pa.field("serp_warc_byte_offset", pa.int64(), nullable=True),
         pa.field(
@@ -71,8 +73,68 @@ schema = pa.schema(
         pa.field(
             "search_provider_alexa_domain_public_suffix", pa.string(), nullable=True
         ),
-        pa.field("search_provider_alexa_rank", pa.int64(), nullable=True),
+        pa.field("search_provider_alexa_rank",
+                 pa.int64(), nullable=True),  # int64
         pa.field("search_provider_category", pa.string(), nullable=True),
+    ]
+)
+
+schema = pa.schema(
+    [
+        pa.field("serp_id", pa.string()),
+        pa.field("serp_url", pa.string()),
+        pa.field("serp_domain", pa.string()),
+        pa.field("serp_domain_public_suffix", pa.string()),
+        pa.field("serp_timestamp", pa.int64()),
+        # pa.field('serp_timestamp', timestamp('s', tz='UTC')),
+        pa.field("serp_wayback_url", pa.string()),
+        pa.field("serp_wayback_raw_url", pa.string()),
+        pa.field("serp_page", pa.int64()),
+        pa.field("serp_offset", pa.int64()),
+        pa.field("serp_query_text_url", pa.string()),
+        pa.field("serp_query_text_url_language", pa.string()),
+        pa.field("serp_query_text_html", pa.string()),  # ,
+        pa.field("serp_warc_relative_path", pa.string()),
+        pa.field("serp_warc_byte_offset", pa.int64()),
+        pa.field(
+            "serp_results",
+            pa.list_(
+                pa.struct(
+                    [
+                        pa.field("result_id", pa.string()),
+                        pa.field("result_url", pa.string()),
+                        pa.field("result_domain", pa.string()),
+                        pa.field(
+                            "result_domain_public_suffix", pa.string()
+                        ),
+                        pa.field("result_wayback_url",
+                                 pa.string()),
+                        pa.field("result_wayback_raw_url",
+                                 pa.string()),
+                        pa.field("result_snippet_rank",
+                                 pa.int64()),
+                        pa.field("result_snippet_title",
+                                 pa.string()),
+                        pa.field("result_snippet_text",
+                                 pa.string()),
+                        pa.field(
+                            "result_warc_relative_path", pa.string()
+                        ),
+                        pa.field("result_warc_byte_offset",
+                                 pa.int64()),
+                    ]
+                )
+            ),
+
+        ),
+        pa.field("search_provider_name", pa.string()),
+        pa.field("search_provider_alexa_domain", pa.string()),
+        pa.field(
+            "search_provider_alexa_domain_public_suffix", pa.string()
+        ),
+        pa.field("search_provider_alexa_rank",
+                 pa.int64()),  # int64
+        pa.field("search_provider_category", pa.string()),
     ]
 )
 # pa.field('result_id', pa.string()),
@@ -144,30 +206,18 @@ class Ray_Dataloader:
         return ds
 
 
-        # input_paths = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/few_serps/"
-# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
-input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
-# input_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/file20.gz"
-# input_paths = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"  # kleine Datei
-input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol/'
-input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
-# input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_micro/'
-# input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas2/'
-input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/'
+input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
+# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
 
 
-schema_orcas = pa.schema([
-    pa.field('query_id', pa.string(), nullable=True),
-    pa.field('query', pa.string(), nullable=True)
-
-])
-aql_parse_options = json.ParseOptions(explicit_schema=schema)
-
-aql_dataloader = Ray_Dataloader(
-    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
+aql_parse_options = json.ParseOptions(
+    explicit_schema=schema, unexpected_field_behavior="ignore")
 
 # aql_dataloader = Ray_Dataloader(
-# file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, num_files=2)  # num_files=2,
+#     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
+
+aql_dataloader = Ray_Dataloader(
+    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, num_files=10)  # num_files=2,
 
 ds_aql = aql_dataloader.read_file()
 
@@ -177,53 +227,7 @@ ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
 print(ds_aql.schema())
 print(ds_aql.take(5))
 
-aggregation_row_count = AggregateFn(
-    init=lambda column: 0,
-    # Apply this to each row to produce a partial aggregate result
-    accumulate_row=lambda a, row: a + 1,
-    # Apply this to merge partial aggregate results into a final result
-    merge=lambda a1, a2: a1 + a2,
-    name="sum_rows"
-)
-
-
-print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
-# aol_parse_options = csv.ParseOptions(delimiter="\t")
-
-# aol_dataloader = Ray_Dataloader(
-#     file_type="txt", path_dataset=input_paths_aol, compression='gz', num_files=1, parse_options=aol_parse_options)
-
-# ds_aol = aol_dataloader.read_file()
-
-# print(ds_aol.schema())
-# print(ds_aol.take(5))
-
-# ms_parse_options = csv.ParseOptions(delimiter="\t")
-
-# ms_dataloader = Ray_Dataloader(
-#     file_type="tsv", path_dataset=input_paths_ms, num_files=1, parse_options=ms_parse_options)
-
-# ds_ms = ms_dataloader.read_file()
-
-# print(ds_ms.schema())
-# print(ds_ms.take(5))
-
-
-# orcas_parse_options = csv.ParseOptions(delimiter="\t")
-
-# orcas_dataloader = Ray_Dataloader(
-#     file_type="tsv", path_dataset=input_paths_orcas, num_files=1, parse_options=orcas_parse_options)
-
-# ds_orcas = orcas_dataloader.read_file()
-
-# print(ds_orcas.schema())
-# print(ds_orcas.take(20))
-
-
-# output_path_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
-# output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
-# output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
-# output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
+output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
 
 
 # ds_orcas.write_parquet(output_path_orcas, concurrency=5,
@@ -243,5 +247,27 @@ print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
 
 # ds_aql = ds_aql.map(transform_null, concurrency=5)
 
-# ds_aql.write_parquet(output_path_aql, concurrency=5,
-#                      num_rows_per_file=500000)
+aggregation_row_count = AggregateFn(
+    init=lambda column: 0,
+    # Apply this to each row to produce a partial aggregate result
+    accumulate_row=lambda a, row: a + 1,
+    # Apply this to merge partial aggregate results into a final result
+    merge=lambda a1, a2: a1 + a2,
+    name="sum_rows"
+)
+
+
+print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+
+ds_aql.write_parquet(output_path_aql, concurrency=5,
+                     num_rows_per_file=500000)  # , arrow_parquet_args={'': '', }
+
+ql_dataloader = Ray_Dataloader(
+    file_type="parquet", path_dataset=output_path_aql, parse_options=aql_parse_options)  # num_files=2,
+
+ds_aql = aql_dataloader.read_file()
+
+ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+
+print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
