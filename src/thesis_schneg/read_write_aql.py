@@ -1,4 +1,3 @@
-from json import dumps
 from ray import init
 from typing import Any, Dict
 # from ray.data import range
@@ -206,6 +205,11 @@ class Ray_Dataloader:
         return ds
 
 
+def avg_query(row: Dict[str, Any]) -> Dict[str, Any]:
+    row['query_length'] = len(str(row['serp_query_text_url']).split())
+    return row
+
+
 input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
 # input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
 
@@ -217,15 +221,24 @@ aql_parse_options = json.ParseOptions(
 #     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
 
 aql_dataloader = Ray_Dataloader(
-    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, num_files=10)  # num_files=2,
+    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, num_files=20)  # num_files=2,
 
 ds_aql = aql_dataloader.read_file()
 
 ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html", "serp_page"],  concurrency=5)
 
-print(ds_aql.schema())
-print(ds_aql.take(5))
+# ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+
+ds_aql.add_column('query_length', lambda df:
+                  df["serp_query_text_url"])
+ds_aql = ds_aql.map(avg_query)
+ds_group = ds_aql.groupby('query_length')
+
+# print(ds_group)
+# print(ds_aql.schema())
+# print(ds_aql.take(5))
 
 output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
 
@@ -256,18 +269,29 @@ aggregation_row_count = AggregateFn(
     name="sum_rows"
 )
 
+# print(
+#     f"SIZE grouped Dataset: {ds_group.aggregate(aggregation_row_count)['sum_rows']}")
+# print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+# print(ds_group.count().take(5))
+query_lengths_dataset = ds_group.count()
+query_lengths_dataset.write_parquet(
+    '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results_query_length')
+# ds_groupedrows = ds_group.map_groups(
+#     lambda g: g.aggregate(aggregation_row_count))
 
-print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+# print(ds_groupedrows.take(5))
 
-ds_aql.write_parquet(output_path_aql, concurrency=5,
-                     num_rows_per_file=500000)  # , arrow_parquet_args={'': '', }
+# print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
 
-ql_dataloader = Ray_Dataloader(
-    file_type="parquet", path_dataset=output_path_aql, parse_options=aql_parse_options)  # num_files=2,
+# ds_aql.write_parquet(output_path_aql, concurrency=5,
+#                      num_rows_per_file=500000)  # , arrow_parquet_args={'': '', }
 
-ds_aql = aql_dataloader.read_file()
+# ql_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=output_path_aql, parse_options=aql_parse_options)  # num_files=2,
 
-ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+# ds_aql = aql_dataloader.read_file()
 
-print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+# ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html"],  concurrency=5)
+
+# print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")

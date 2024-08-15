@@ -143,51 +143,53 @@ class Ray_Dataloader:
 
         return ds
 
-
         # input_paths = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/few_serps/"
-# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
-input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
+input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
+# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
 # input_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/file20.gz"
 # input_paths = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"  # kleine Datei
-input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol/'
-input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
+# input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol/'
+# input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
 # input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_micro/'
 # input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas2/'
-input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/'
+# input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/'
 
 
-schema_orcas = pa.schema([
-    pa.field('query_id', pa.string(), nullable=True),
-    pa.field('query', pa.string(), nullable=True)
+# schema_orcas = pa.schema([
+#     pa.field('query_id', pa.string(), nullable=True),
+#     pa.field('query', pa.string(), nullable=True)
 
-])
+# ])
 aql_parse_options = json.ParseOptions(explicit_schema=schema)
 
-aql_dataloader = Ray_Dataloader(
-    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
-
 # aql_dataloader = Ray_Dataloader(
-# file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, num_files=2)  # num_files=2,
+#     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
+
+aql_dataloader = Ray_Dataloader(
+    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options)  # num_files=2,
 
 ds_aql = aql_dataloader.read_file()
 
+# ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+
 ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html", "serp_page"],  concurrency=5)
 
 print(ds_aql.schema())
 print(ds_aql.take(5))
 
-aggregation_row_count = AggregateFn(
-    init=lambda column: 0,
-    # Apply this to each row to produce a partial aggregate result
-    accumulate_row=lambda a, row: a + 1,
-    # Apply this to merge partial aggregate results into a final result
-    merge=lambda a1, a2: a1 + a2,
-    name="sum_rows"
-)
+# aggregation_row_count = AggregateFn(
+#     init=lambda column: 0,
+#     # Apply this to each row to produce a partial aggregate result
+#     accumulate_row=lambda a, row: a + 1,
+#     # Apply this to merge partial aggregate results into a final result
+#     merge=lambda a1, a2: a1 + a2,
+#     name="sum_rows"
+# )
 
 
-print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+# print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
 # aol_parse_options = csv.ParseOptions(delimiter="\t")
 
 # aol_dataloader = Ray_Dataloader(
@@ -223,7 +225,7 @@ print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
 # output_path_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
 # output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
 # output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
-# output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
+output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
 
 
 # ds_orcas.write_parquet(output_path_orcas, concurrency=5,

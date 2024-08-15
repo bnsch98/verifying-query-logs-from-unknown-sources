@@ -2,6 +2,20 @@
 name = "thesis-schneg"
 requires-python = "~=3.10"
 version = "0.0.0"
+
+#dependencies prod
+# dependencies = [ 
+#     "jupyter~=1.0",
+#     "pandas~=2.0",
+#     "pyarrow~=16.1",
+#     "python-dotenv~=1.0",
+#     "ray[data,default]~=2.33.0", 
+#     "tqdm~=4.64",
+#     "pyarrow-stubs~=10.0",
+#     "matplotlib~=3.9"
+# ]
+
+#dependencies test
 dependencies = [
     "jupyter~=1.0",
     "pandas~=2.0",
@@ -10,7 +24,12 @@ dependencies = [
     "ray[data,default]~=2.33.0", 
     "tqdm~=4.64",
     "pyarrow-stubs~=10.0",
-    "matplotlib~=3.9"
+    "matplotlib~=3.9",
+    "fasttext-wheel~=0.9",
+    # "fasttext~=0.9.3", # installation funktioniert nicht
+    "huggingface-hub~=0.24",
+    "transformers~=4.44",
+    "torch~=2.4"
 ]
 
 [build-system]
@@ -25,6 +44,7 @@ exclude = [
     "venv",
     "notebooks",
     "data",
+    "venv_test"
 ]
 
 # [tool.setuptools_scm]
