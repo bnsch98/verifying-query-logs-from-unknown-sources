@@ -6,7 +6,7 @@ from typing import Any, Dict
 import pyarrow as pa
 # from pyarrow.lib import timestamp
 from pyarrow import json, csv
-
+import pandas as pd
 from ray.data import read_json, read_parquet, read_csv
 from ray.data.aggregate import AggregateFn
 # from ray.data.datasource.partitioning import Partitioning
@@ -75,13 +75,34 @@ schema = pa.schema(
         pa.field("search_provider_category", pa.string(), nullable=True),
     ]
 )
-# pa.field('result_id', pa.string()),
-#                     pa.field('result_url', pa.string()),
-# Erhalte eine Liste aller CSV-Dateien im Verzeichnis
+
+final_schema = pa.schema(
+    [
+        pa.field("serp_id", pa.string(), nullable=True),
+        pa.field("serp_url", pa.string(), nullable=True),
+        pa.field("serp_domain", pa.string(), nullable=True),
+        pa.field("serp_domain_public_suffix", pa.string(), nullable=True),
+        pa.field("serp_timestamp", pa.int64(), nullable=True),
+        pa.field("serp_page", pa.int64(), nullable=True),
+        pa.field("serp_offset", pa.int64(), nullable=True),
+        pa.field("serp_query_text_url", pa.string(), nullable=True),
+        pa.field("serp_query_text_url_language", pa.string(), nullable=True),
+        pa.field("serp_query_text_html", pa.string(), nullable=True),
+        pa.field("serp_warc_relative_path", pa.string(), nullable=True),
+        pa.field("serp_warc_byte_offset", pa.int64(), nullable=True),
+        pa.field("search_provider_name", pa.string(), nullable=True),
+        pa.field("search_provider_alexa_domain", pa.string(), nullable=True),
+        pa.field(
+            "search_provider_alexa_domain_public_suffix", pa.string(), nullable=True
+        ),
+        pa.field("search_provider_alexa_rank", pa.int64(), nullable=True),
+        pa.field("search_provider_category", pa.string(), nullable=True),
+    ]
+)
 
 
 class Ray_Dataloader:
-    def __init__(self, file_type: str, path_dataset: str, compression: str = None, num_files: int = None, concurrency: int = 5, parse_options=None, multi: bool = True):
+    def __init__(self, file_type: str, path_dataset: str, compression: str = None, num_files: int = None, concurrency: int = 5, parse_options=None, multi: bool = True, includePath: bool = False):
         """A uniform dataloader, that manages reading different query log datasets in Ray.
 
         Args: 
@@ -98,6 +119,7 @@ class Ray_Dataloader:
         self.concurrency = concurrency
         self.parse_options = parse_options
         self.multi = multi
+        self.includePath = includePath
 
         assert self.file_type in ['txt', 'csv', 'tsv', 'json',
                                   'jsonl', 'parquet'], "Specified file type is not supported!"
@@ -133,25 +155,32 @@ class Ray_Dataloader:
         if self.num_files is not None:
             input_paths = input_paths[0:self.num_files]
 
-        if self.parse_options is not None:
-            parse_options = self.parse_options
-            ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
-                        parse_options=parse_options, concurrency=self.concurrency)
+        if self.file_type != 'parquet':
+            if self.parse_options is not None:
+                parse_options = self.parse_options
+                ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
+                            parse_options=parse_options, concurrency=self.concurrency, include_paths=self.includePath)
+            else:
+                ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
+                            concurrency=self.concurrency, include_paths=self.includePath)
         else:
-            ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
-                        concurrency=self.concurrency)
+            ds = reader(paths=input_paths, file_extensions=file_extensions,
+                        concurrency=self.concurrency, include_paths=self.includePath)
 
         return ds
 
         # input_paths = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/few_serps/"
-input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
+# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
 # input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
+# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00186.gz" #empty file
+
+
 # input_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/file20.gz"
 # input_paths = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"  # kleine Datei
-# input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol/'
-# input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
+input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol-cleaned/'
+input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
 # input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_micro/'
-# input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas2/'
+input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/'  # richtiger Pfad
 # input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/'
 
 
@@ -160,24 +189,24 @@ input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/a
 #     pa.field('query', pa.string(), nullable=True)
 
 # ])
-aql_parse_options = json.ParseOptions(explicit_schema=schema)
+# aql_parse_options = json.ParseOptions(explicit_schema=schema)
 
 # aql_dataloader = Ray_Dataloader(
 #     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
 
-aql_dataloader = Ray_Dataloader(
-    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options)  # num_files=2,
+# # aql_dataloader = Ray_Dataloader(
+# #     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, includePath=True, num_files=2)  # , num_files=2,
 
-ds_aql = aql_dataloader.read_file()
+# ds_aql = aql_dataloader.read_file()
+
+# # ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+# #                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
 
 # ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html", "serp_page"],  concurrency=5)
 
-ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html", "serp_page"],  concurrency=5)
-
-print(ds_aql.schema())
-print(ds_aql.take(5))
+# print(ds_aql.schema())
+# print(ds_aql.take(5))
 
 # aggregation_row_count = AggregateFn(
 #     init=lambda column: 0,
@@ -187,55 +216,204 @@ print(ds_aql.take(5))
 #     merge=lambda a1, a2: a1 + a2,
 #     name="sum_rows"
 # )
+# Define a function to fill missing columns with None
+def fill_missing_columns(batch: pd.DataFrame) -> pd.DataFrame:
+    for field in final_schema:
+        if field.name not in batch.columns:
+            batch[field.name] = None
+    return batch
 
 
+def int_to_str(batch: pd.DataFrame) -> pd.DataFrame:
+    batch["serp_id"] = batch['serp_id'].astype(str)
+    return batch
+
+
+def count_rows(batch: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame({"row_count": [len(batch)]})
 # print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+
+
+#     AOL     ###
 # aol_parse_options = csv.ParseOptions(delimiter="\t")
 
 # aol_dataloader = Ray_Dataloader(
-#     file_type="txt", path_dataset=input_paths_aol, compression='gz', num_files=1, parse_options=aol_parse_options)
+#     file_type="txt", path_dataset=input_paths_aol, compression='gz', parse_options=aol_parse_options, includePath=True)
 
 # ds_aol = aol_dataloader.read_file()
+
+# # Define the new column names
+# new_column_names_aol = {
+#     'AnonID': 'serp_id',
+#     'Query': 'serp_query_text_url',
+#     'QueryTime': 'serp_timestamp',
+#     'ItemRank': 'serp_offset',
+# }
+
+# def rename_columns_aol(batch: pd.DataFrame) -> pd.DataFrame:
+#     return batch.rename(columns=new_column_names_aol)
+
+
+# ds_aol = ds_aol.map_batches(rename_columns_aol, batch_format="pandas")
+
+# ds_aol = ds_aol.drop_columns(cols=["ClickURL"])
+
+# ds_aol = ds_aol.map_batches(fill_missing_columns, batch_format="pandas")
+
+# row_counts = ds_aol.map_batches(count_rows, batch_format="pandas")
+
+# total_row_count = row_counts.sum(on="row_count")
 
 # print(ds_aol.schema())
 # print(ds_aol.take(5))
 
-# ms_parse_options = csv.ParseOptions(delimiter="\t")
+###     MS_MARCO        ###
+ms_parse_options = csv.ParseOptions(delimiter="\t")
 
-# ms_dataloader = Ray_Dataloader(
-#     file_type="tsv", path_dataset=input_paths_ms, num_files=1, parse_options=ms_parse_options)
+ms_dataloader = Ray_Dataloader(
+    file_type="tsv", path_dataset=input_paths_ms, parse_options=ms_parse_options)
 
-# ds_ms = ms_dataloader.read_file()
+ds_ms = ms_dataloader.read_file()
 
+# Define the new column names
+new_column_names_ms = {
+    'query_id': 'serp_id',
+    'query': 'serp_query_text_url',
+    'language': 'serp_query_text_url_language',
+}
+
+
+def rename_columns_ms(batch: pd.DataFrame) -> pd.DataFrame:
+    return batch.rename(columns=new_column_names_ms)
+
+
+def fill_empty_lang(batch: pd.DataFrame) -> pd.DataFrame:
+    if batch['serp_query_text_url_language'].isnull().all():
+        batch['serp_query_text_url_language'] = batch['serp_query_text_url_language'].fillna(
+            "")
+    return batch
+
+
+ds_ms = ds_ms.map_batches(rename_columns_ms, batch_format="pandas")
+ds_ms = ds_ms.map_batches(fill_missing_columns, batch_format="pandas")
+print(ds_ms.take(5))
+
+ds_ms = ds_ms.map_batches(fill_empty_lang, batch_format="pandas")
+
+row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
+
+total_row_count = row_counts.sum(on="row_count")
 # print(ds_ms.schema())
 # print(ds_ms.take(5))
 
 
-# orcas_parse_options = csv.ParseOptions(delimiter="\t")
+# # Define the parse options with the correct delimiter and quote character
+# orcas_parse_options = csv.ParseOptions(
+#     delimiter=",", quote_char='"', invalid_row_handler=row_handler_orcas, newlines_in_values=True)
+
+# orcas_parse_options = csv.ParseOptions(
+#     delimiter=",")
+
+# orcas_read_options = csv.ReadOptions(
+#     column_names=["serp_id", "serp_query_text_url"])
 
 # orcas_dataloader = Ray_Dataloader(
-#     file_type="tsv", path_dataset=input_paths_orcas, num_files=1, parse_options=orcas_parse_options)
-
+#     file_type="csv", path_dataset=input_paths_orcas)
 # ds_orcas = orcas_dataloader.read_file()
+# # # ,parse_options=orcas_parse_options
+# ds_orcas = ds_orcas.map_batches(fill_missing_columns, batch_format="pandas")
+
+# row_counts = ds_orcas.map_batches(count_rows, batch_format="pandas")
+
+# total_row_count = row_counts.sum(on="row_count")
+
+# print(f"\n\n\n\n\n\nTotal number of rows: {total_row_count}\n\n\n\n\n\n")
 
 # print(ds_orcas.schema())
 # print(ds_orcas.take(20))
 
+# ds_orcas = read_csv(file_extensions=["tsv", "csv"], paths=input_paths_orcas,
+#                     parse_options=orcas_parse_options, read_options=orcas_read_options)
 
-# output_path_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
-# output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
-# output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
-output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
+# ds_orcas = ds_orcas.add_column("serp_query_text_language", lambda df: None)
+# ds_orcas = ds_orcas.add_column("search_provider_name", lambda df: None)
 
+# ds_orcas = ds_orcas.add_column("search_provider_alexa_rank", lambda df: None)
+# ds = ds_orcas.map_batches(fill_missing_columns_orcas, batch_format="pandas")
+
+
+output_path_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
+output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
+output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
+# output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/'
+
+
+## CHECK ORCAS ###
 
 # ds_orcas.write_parquet(output_path_orcas, concurrency=5,
 #                        num_rows_per_file=500000)
 
+
+# output_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=output_path_orcas)
+
+# ds_orcas = output_dataloader.read_file()
+# # # ,parse_options=orcas_parse_options
+# ds_orcas = ds_orcas.map_batches(fill_missing_columns, batch_format="pandas")
+
+# row_counts = ds_orcas.map_batches(count_rows, batch_format="pandas")
+
+# total_row_count_out = row_counts.sum(on="row_count")
+
+# print(f"\n\n\n\n\n\nTotal number of input_rows: {total_row_count}\n\n\n\n\n\n")
+# print(
+#     f"\n\n\n\n\n\nTotal number of output_rows: {total_row_count_out}\n\n\n\n\n\n")
+
+
+## CHECK MS_MARCO ###
+
 # ds_ms.write_parquet(output_path_ms, concurrency=5,
 #                     num_rows_per_file=500000)
+output_dataloader = Ray_Dataloader(
+    file_type="parquet", path_dataset=output_path_ms)
+
+
+ds_ms = output_dataloader.read_file()
+# # # ,parse_options=orcas_parse_options
+ds_ms = ds_ms.map_batches(fill_missing_columns, batch_format="pandas")
+
+row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
+
+total_row_count_out = row_counts.sum(on="row_count")
+
+print(f"\n\n\n\n\n\nTotal number of input_rows: {total_row_count}\n\n\n\n\n\n")
+print(
+    f"\n\n\n\n\n\nTotal number of output_rows: {total_row_count_out}\n\n\n\n\n\n")
+
+
+## CHECK AOL ###
 
 # ds_aol.write_parquet(output_path_aol, concurrency=5,
 #                      num_rows_per_file=500000)
+
+
+# output_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=output_path_aol)
+
+
+# ds_aol = output_dataloader.read_file()
+# # # # ,parse_options=orcas_parse_options
+# ds_aol = ds_aol.map_batches(fill_missing_columns, batch_format="pandas")
+
+# row_counts = ds_aol.map_batches(count_rows, batch_format="pandas")
+
+# total_row_count_out = row_counts.sum(on="row_count")
+
+# print(f"\n\n\n\n\n\nTotal number of input_rows: {total_row_count}\n\n\n\n\n\n")
+# print(
+#     f"\n\n\n\n\n\nTotal number of output_rows: {total_row_count_out}\n\n\n\n\n\n")
+
+# print(ds_aol.schema())
 # def transform_null(row: Dict[str, Any]) -> Dict[str, Any]:
 #     for k, v in row.items():
 #         if row[k] is None:
@@ -247,3 +425,5 @@ output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesi
 
 # ds_aql.write_parquet(output_path_aql, concurrency=5,
 #                      num_rows_per_file=500000)
+
+# 1835038

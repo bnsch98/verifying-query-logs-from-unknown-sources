@@ -112,10 +112,12 @@ def predict_language(model, row):
 # Initialize Ray (and connect to cluster).
 init()
 
-input_path = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
+# input_path = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
+input_path = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
+
 
 aql_dataloader = Ray_Dataloader(
-    file_type="parquet", path_dataset=input_path, num_files=2)  # num_files=2,
+    file_type="parquet", path_dataset=input_path,  multi=False)  # num_files=2,
 
 ds_aql = aql_dataloader.read_file()
 print(ds_aql.schema())
@@ -123,7 +125,7 @@ print(ds_aql.schema())
 # ds_query = ds_aql.select_columns('serp_query_text_url')
 ds_query = ds_aql.select_columns(['query'])
 
-print(type(ds_query.take(1)))
+# print(type(ds_query.take_batch(1)))
 # ds_query = ds_query.add_column('language', lambda df:
 #                                df["query"])
 # model_ckpt = "papluca/xlm-roberta-base-language-detection"
@@ -132,7 +134,7 @@ print(type(ds_query.take(1)))
 # ds_query = ds_query.map(predict_language, fn_args=model)
 predictions = ds_query.map_batches(
     LanguagePredictor,
-    concurrency=6,
+    concurrency=2,
 )
 
 
@@ -141,7 +143,7 @@ predictions = ds_query.map_batches(
 # different partition of data.
 # predictions = ds_query.map_batches(LanguagePredictor, concurrency=2)
 
-predictions.show(limit=1)
+predictions.take_batch(5)
 
 # print(ds_query.take(10))
 # text = [
