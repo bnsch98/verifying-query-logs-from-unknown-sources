@@ -169,8 +169,6 @@ ds_aql = aql_dataloader.read_file()
 # ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
 #                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
 
-ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)  # , "search_provider_alexa_rank", "serp_query_text_html", "serp_page"
 
 # Define the function to fill columns with only null values with empty strings
 
@@ -193,7 +191,7 @@ def count_rows(batch: pd.DataFrame) -> pd.DataFrame:
 
 
 # Apply the function to each batch
-ds_aql = ds_aql.map_batches(fill_null_columns, batch_format="pandas")
+# ds_aql = ds_aql.map_batches(fill_null_columns, batch_format="pandas")
 row_counts = ds_aql.map_batches(count_rows, batch_format="pandas")
 
 total_row_count = row_counts.sum(on="row_count")
@@ -201,18 +199,18 @@ total_row_count = row_counts.sum(on="row_count")
 # print(ds_aql.schema())
 # print(ds_aql.take(5))
 
-output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output_test'
+output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output2'
 
 # ds_aql.write_parquet(output_path_aql, concurrency=5,
 #                      num_rows_per_file=500000)
 
 
-output_dataloader = Ray_Dataloader(
-    file_type="parquet", path_dataset=output_path_aql)
+# output_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=output_path_aql)
 
-ds_output = output_dataloader.read_file()
+ds_output = read_parquet(paths=output_path_aql, concurrency=5)
 
-ds_output = ds_output.map_batches(fill_null_columns, batch_format="pandas")
+# # ds_output = ds_output.map_batches(fill_null_columns, batch_format="pandas")
 row_counts = ds_output.map_batches(count_rows, batch_format="pandas")
 
 total_row_count_out = row_counts.sum(on="row_count")
