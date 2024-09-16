@@ -32,7 +32,7 @@ class read_parquet_data:
         elif self.dataset_name == 'orcas':
             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
         else:
-            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output2/'
+            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/'
 
     def read_file(self):
 

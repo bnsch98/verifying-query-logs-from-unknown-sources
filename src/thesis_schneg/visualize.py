@@ -37,7 +37,7 @@ for var in variable:
         axes[cnt_datasets].grid(True, which='minor', linestyle=':',
                                 linewidth='0.5', color='gray')
         cnt_datasets += 1
-
+    fig.suptitle(f'Comparison of {var} across Multiple Datasets', fontsize=16)
     plt.tight_layout()
     plt.savefig(
         f'/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/histogram_scaled_{var}.png')

@@ -1,4 +1,5 @@
 from ray import init
+import json
 # from ray.data import range
 # import ray
 import pyarrow as pa
@@ -165,44 +166,16 @@ class Ray_Dataloader:
 
         return ds
 
-        # input_paths = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/few_serps/"
-# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/"
-# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
-# input_paths_aql = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00186.gz" #empty file
 
-
-# input_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/data/file20.gz"
-# input_paths = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"  # kleine Datei
 input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol-cleaned/'
 input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
-# input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_micro/'
 input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/'  # richtiger Pfad
-# input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/'
 
+with open("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_paths.json", 'r') as f:
+    input_paths_aql = json.load(f)
+input_paths_aql.pop(794)  # remove the error path -> empty file
+input_paths_aql.pop(961)  # remove the error path -> empty file
 
-# schema_orcas = pa.schema([
-#     pa.field('query_id', pa.string(), nullable=True),
-#     pa.field('query', pa.string(), nullable=True)
-
-# ])
-# aql_parse_options = json.ParseOptions(explicit_schema=schema)
-
-# aql_dataloader = Ray_Dataloader(
-#     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, multi=False)  # num_files=2,
-
-# # aql_dataloader = Ray_Dataloader(
-# #     file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options, includePath=True, num_files=2)  # , num_files=2,
-
-# ds_aql = aql_dataloader.read_file()
-
-# # ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-# #                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
-
-# ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
-#                                    "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset", "search_provider_alexa_rank", "serp_query_text_html", "serp_page"],  concurrency=5)
-
-# print(ds_aql.schema())
-# print(ds_aql.take(5))
 
 # aggregation_row_count = AggregateFn(
 #     init=lambda column: 0,
@@ -213,6 +186,8 @@ input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/the
 #     name="sum_rows"
 # )
 # Define a function to fill missing columns with None
+
+
 def fill_missing_columns(batch: pd.DataFrame) -> pd.DataFrame:
     for field in final_schema:
         if field.name not in batch.columns:
@@ -230,31 +205,74 @@ def count_rows(batch: pd.DataFrame) -> pd.DataFrame:
 # print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
 
 
+#   AQL   #####
+
+aql_parse_options = pa.json.ParseOptions(
+    explicit_schema=schema, unexpected_field_behavior="infer")
+
+
+aql_dataloader = Ray_Dataloader(
+    file_type="jsonl", path_dataset=input_paths_aql, compression="gz", parse_options=aql_parse_options)  # , num_files=2,
+
+ds_aql = aql_dataloader.read_file()
+
+ds_aql = ds_aql.drop_columns(cols=["serp_wayback_url", "serp_wayback_raw_url",
+                                   "serp_results", "serp_warc_relative_path", "serp_warc_byte_offset"],  concurrency=5)
+
+# Define the function to fill columns with only null values based on their type
+
+
+def fill_null_columns(batch: pd.DataFrame) -> pd.DataFrame:
+    for column in batch.columns:
+        if batch[column].isnull().all():
+            if pd.api.types.is_string_dtype(batch[column]):
+                batch[column] = batch[column].fillna("")
+            elif pd.api.types.is_integer_dtype(batch[column]):
+                batch[column] = batch[column].fillna(0)
+            elif pd.api.types.is_float_dtype(batch[column]):
+                batch[column] = batch[column].fillna(0.0)
+    return batch
+
+
+ds_aql = ds_aql.map_batches(fill_null_columns, batch_format="pandas")
+
+output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output'
+
+ds_aql.write_parquet(output_path_aql, concurrency=5,
+                     num_rows_per_file=500000)
+
+
 #     AOL     ###
-# aol_parse_options = csv.ParseOptions(delimiter="\t")
+aol_parse_options = csv.ParseOptions(delimiter="\t")
 
-# aol_dataloader = Ray_Dataloader(
-#     file_type="txt", path_dataset=input_paths_aol, compression='gz', parse_options=aol_parse_options, includePath=True)
+aol_dataloader = Ray_Dataloader(
+    file_type="txt", path_dataset=input_paths_aol, compression='gz', parse_options=aol_parse_options, includePath=True)
 
-# ds_aol = aol_dataloader.read_file()
+ds_aol = aol_dataloader.read_file()
 
-# # Define the new column names
-# new_column_names_aol = {
-#     'AnonID': 'serp_id',
-#     'Query': 'serp_query_text_url',
-#     'QueryTime': 'serp_timestamp',
-#     'ItemRank': 'serp_offset',
-# }
-
-# def rename_columns_aol(batch: pd.DataFrame) -> pd.DataFrame:
-#     return batch.rename(columns=new_column_names_aol)
+# Define the new column names
+new_column_names_aol = {
+    'AnonID': 'serp_id',
+    'Query': 'serp_query_text_url',
+    'QueryTime': 'serp_timestamp',
+    'ItemRank': 'serp_offset',
+}
 
 
-# ds_aol = ds_aol.map_batches(rename_columns_aol, batch_format="pandas")
+def rename_columns_aol(batch: pd.DataFrame) -> pd.DataFrame:
+    return batch.rename(columns=new_column_names_aol)
 
-# ds_aol = ds_aol.drop_columns(cols=["ClickURL"])
 
-# ds_aol = ds_aol.map_batches(fill_missing_columns, batch_format="pandas")
+ds_aol = ds_aol.map_batches(rename_columns_aol, batch_format="pandas")
+
+ds_aol = ds_aol.drop_columns(cols=["ClickURL"])
+
+ds_aol = ds_aol.map_batches(fill_missing_columns, batch_format="pandas")
+
+output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
+
+ds_aol.write_parquet(output_path_aol, concurrency=5,
+                     num_rows_per_file=500000)
 
 # row_counts = ds_aol.map_batches(count_rows, batch_format="pandas")
 
@@ -296,28 +314,24 @@ print(ds_ms.take(5))
 
 ds_ms = ds_ms.map_batches(fill_empty_lang, batch_format="pandas")
 
-row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
+output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
 
-total_row_count = row_counts.sum(on="row_count")
+ds_ms.write_parquet(output_path_ms, concurrency=5,
+                    num_rows_per_file=500000)
+
+# row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
+
+# total_row_count = row_counts.sum(on="row_count")
 # print(ds_ms.schema())
 # print(ds_ms.take(5))
 
 
-# # Define the parse options with the correct delimiter and quote character
-# orcas_parse_options = csv.ParseOptions(
-#     delimiter=",", quote_char='"', invalid_row_handler=row_handler_orcas, newlines_in_values=True)
+orcas_dataloader = Ray_Dataloader(
+    file_type="csv", path_dataset=input_paths_orcas)
 
-# orcas_parse_options = csv.ParseOptions(
-#     delimiter=",")
+ds_orcas = orcas_dataloader.read_file()
 
-# orcas_read_options = csv.ReadOptions(
-#     column_names=["serp_id", "serp_query_text_url"])
-
-# orcas_dataloader = Ray_Dataloader(
-#     file_type="csv", path_dataset=input_paths_orcas)
-# ds_orcas = orcas_dataloader.read_file()
-# # # ,parse_options=orcas_parse_options
-# ds_orcas = ds_orcas.map_batches(fill_missing_columns, batch_format="pandas")
+ds_orcas = ds_orcas.map_batches(fill_missing_columns, batch_format="pandas")
 
 # row_counts = ds_orcas.map_batches(count_rows, batch_format="pandas")
 
@@ -327,21 +341,10 @@ total_row_count = row_counts.sum(on="row_count")
 
 # print(ds_orcas.schema())
 # print(ds_orcas.take(20))
-
-# ds_orcas = read_csv(file_extensions=["tsv", "csv"], paths=input_paths_orcas,
-#                     parse_options=orcas_parse_options, read_options=orcas_read_options)
-
-# ds_orcas = ds_orcas.add_column("serp_query_text_language", lambda df: None)
-# ds_orcas = ds_orcas.add_column("search_provider_name", lambda df: None)
-
-# ds_orcas = ds_orcas.add_column("search_provider_alexa_rank", lambda df: None)
-# ds = ds_orcas.map_batches(fill_missing_columns_orcas, batch_format="pandas")
-
-
 output_path_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
-output_path_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output'
-output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output'
-# output_path_aql = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/'
+
+ds_orcas.write_parquet(output_path_orcas, concurrency=5,
+                       num_rows_per_file=500000)
 
 
 ## CHECK ORCAS ###
@@ -369,22 +372,22 @@ output_path_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesi
 ## CHECK MS_MARCO ###
 
 # ds_ms.write_parquet(output_path_ms, concurrency=5,
-#                     num_rows_per_file=500000)
-output_dataloader = Ray_Dataloader(
-    file_type="parquet", path_dataset=output_path_ms)
+# #                     num_rows_per_file=500000)
+# output_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=output_path_ms)
 
 
-ds_ms = output_dataloader.read_file()
-# # # ,parse_options=orcas_parse_options
-ds_ms = ds_ms.map_batches(fill_missing_columns, batch_format="pandas")
+# ds_ms = output_dataloader.read_file()
+# # # # ,parse_options=orcas_parse_options
+# ds_ms = ds_ms.map_batches(fill_missing_columns, batch_format="pandas")
 
-row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
+# row_counts = ds_ms.map_batches(count_rows, batch_format="pandas")
 
-total_row_count_out = row_counts.sum(on="row_count")
+# total_row_count_out = row_counts.sum(on="row_count")
 
-print(f"\n\n\n\n\n\nTotal number of input_rows: {total_row_count}\n\n\n\n\n\n")
-print(
-    f"\n\n\n\n\n\nTotal number of output_rows: {total_row_count_out}\n\n\n\n\n\n")
+# print(f"\n\n\n\n\n\nTotal number of input_rows: {total_row_count}\n\n\n\n\n\n")
+# print(
+#     f"\n\n\n\n\n\nTotal number of output_rows: {total_row_count_out}\n\n\n\n\n\n")
 
 
 ## CHECK AOL ###
