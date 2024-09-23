@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 from ray import init
-from typing import Any, Dict
 from ray.data import read_parquet
 import os
 import pandas as pd
+from nltk.tokenize import word_tokenize
+import nltk
 init()
 
 
@@ -22,12 +23,12 @@ class read_parquet_data:
         self.multi = multi
 
         assert self.dataset_name in [
-            'aol', 'ms', 'orcas', 'aql'], "Specified dataset_name is not supported!"
+            'aol', 'ms-marco', 'orcas', 'aql'], "Specified dataset_name is not supported!"
         assert not (self.multi is False and self.num_files is not None), "Can't request single file and simoultenously specify multiple files! For single file, set multi to False and num_files to None!"
 
         if self.dataset_name == 'aol':
             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/'
-        elif self.dataset_name == 'ms':
+        elif self.dataset_name == 'ms-marco':
             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/'
         elif self.dataset_name == 'orcas':
             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
@@ -49,46 +50,52 @@ class read_parquet_data:
         return ds
 
 
-# def query_word_count(batch: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-#     for row in batch:
-#         if 'serp_query_text_url' in row:
-#             row['word_count'] = len(str(row['serp_query_text_url']).split())
-#             row['string_length'] = len(str(row['serp_query_text_url']))
-#     return batch
-
 def query_word_count(df: pd.DataFrame) -> pd.DataFrame:
-    # df['word_count'] = df['serp_query_text_url'].apply(
-    #     lambda x: len(str(x).split()))
+    try:
+        nltk.data.find('tokenizers/punkt_tab')
+    except LookupError:
+        nltk.download('punkt_tab')
+    df['word_count'] = df['serp_query_text_url'].apply(
+        lambda x: len(word_tokenize(str(x))))
+    return df
+
+# def query_word_count(df: pd.DataFrame) -> pd.DataFrame:
+#     df['word_count'] = df['serp_query_text_url'].apply(
+#         lambda x: len(str(x).split()))
+#     return df
+
+
+def query_string_length(df: pd.DataFrame) -> pd.DataFrame:
     df['string_length'] = df['serp_query_text_url'].apply(
         lambda x: len(str(x)))
     return df
-# def query_word_count(row: Dict[str, Any]) -> Dict[str, Any]:
-#     if 'serp_query_text_url' in row:
-#         row['word_count'] = len(str(row['serp_query_text_url']).split())
-#         row['string_length'] = len(str(row['serp_query_text_url']))
-#     return row
 
 
-datasets = ['aol', 'ms', 'orcas', 'aql']
+datasets = ['aol', 'ms-marco', 'orcas', 'aql']
+# datasets = ['aql']
+
 dataframes = []
 max_word_count = 0
 max_string_count = 0
-# analysis = 'word_count'
-analysis = 'string_length'
+analysis = 'word_count'
+# analysis = 'string_length'
+# Download the punkt tokenizer models
+nltk.download('punkt_tab')
+
 
 for dataset_name in datasets:
     reader = read_parquet_data(
-        dataset_name=dataset_name, concurrency=5)
+        dataset_name=dataset_name, concurrency=5)  # , num_files=1
     ds = reader.read_file()
-    # ds = ds.add_column(
-    #     'word_count', lambda df: df['serp_query_text_url'], concurrency=5)
     ds = ds.add_column(
-        'string_length', lambda df: df['serp_query_text_url'], concurrency=5)
+        analysis, lambda df: df['serp_query_text_url'], concurrency=5)
+    # ds = ds.add_column(
+    #     'string_length', lambda df: df['serp_query_text_url'], concurrency=5)
 
     # ,batch_format="pandas"
-    ds = ds.map_batches(query_word_count, batch_format="pandas")
+    ds = ds.map_batches(query_word_count, batch_format="pandas", concurrency=5)
     # print(f"\n\n\n\n\nrows of {dataset_name}: {ds.count()}\n\n\n\n\n")
-    ds_group = ds.groupby('string_length').count()
+    ds_group = ds.groupby(analysis).count()
     df_group = ds_group.to_pandas()
     dataframes.append((dataset_name, df_group))
     # print(ds.select_columns(
@@ -104,11 +111,11 @@ for dataset_name in datasets:
 # plt.figure(figsize=(10, 6))
 
 for dataset_name, df_group in dataframes:
-    total_rows = df_group['count()'].sum()
-    # plt.bar(df_group['word_count'], df_group['count()']/total_rows,
+    # total_rows = df_group['count()'].sum()
+    # plt.bar(df_group[analysis], df_group['count()']/total_rows,
     #         alpha=0.5, label=dataset_name)
     df_group.to_csv(
-        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results_query_length/' + dataset_name + '_' + analysis + '.csv')
+        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results_query_length/' + dataset_name + '_' + analysis + '_tokenized' + '.csv')
 
 # plt.xlabel(analysis)
 # plt.ylabel('Frequency')

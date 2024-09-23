@@ -29,7 +29,8 @@ dependencies = [
     # "fasttext~=0.9.3", # installation funktioniert nicht
     "huggingface-hub~=0.24",
     "transformers~=4.44",
-    "torch~=2.4"
+    "torch~=2.4",
+    "nltk~=3.9"
 ]
 
 [build-system]

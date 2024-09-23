@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from matplotlib.backends.backend_pdf import PdfPages
 input_path = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results_query_length/'
 
 
@@ -8,7 +8,9 @@ variable = ['string_length', 'word_count']
 datasets = ['aol', 'ms', 'aql', 'orcas']
 colors = ['blue', 'green', 'red', 'purple']  # Define a list of colors
 ylims = [0.16, 0.6]
-xlims = [100, 20]
+# xlims = [100, 20]
+xlims = [60, 10]
+
 cnt = 0
 for var in variable:
     fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(16, 4))
@@ -39,7 +41,9 @@ for var in variable:
         cnt_datasets += 1
     fig.suptitle(f'Comparison of {var} across Multiple Datasets', fontsize=16)
     plt.tight_layout()
-    plt.savefig(
-        f'/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/histogram_scaled_{var}.png')
     plt.show()
     cnt += 1
+    # with PdfPages(f'/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/histogram_scaled_{var}.pdf') as pdf:
+    #     pdf.savefig(fig)
+    # plt.savefig(
+    #     f'/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/histogram_scaled_{var}.png')
