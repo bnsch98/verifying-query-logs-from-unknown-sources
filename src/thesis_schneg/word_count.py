@@ -9,7 +9,7 @@ init()
 
 
 class read_parquet_data:
-    def __init__(self, dataset_name: str, num_files: int = None, concurrency: int = 5, multi: bool = True):
+    def __init__(self, dataset_name: str, num_files: int = None, concurrency: int = 5, multi: bool = True, only_english: bool = False):
         """A uniform dataloader, that manages reading different query log datasets in Ray.
 
         Args:
@@ -21,19 +21,30 @@ class read_parquet_data:
         self.num_files = num_files
         self.concurrency = concurrency
         self.multi = multi
+        self.only_english = only_english
 
         assert self.dataset_name in [
             'aol', 'ms-marco', 'orcas', 'aql'], "Specified dataset_name is not supported!"
         assert not (self.multi is False and self.num_files is not None), "Can't request single file and simoultenously specify multiple files! For single file, set multi to False and num_files to None!"
 
-        if self.dataset_name == 'aol':
-            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/'
-        elif self.dataset_name == 'ms-marco':
-            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/'
-        elif self.dataset_name == 'orcas':
-            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
+        if self.only_english:
+            if self.dataset_name == 'aol':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/'
+            elif self.dataset_name == 'ms-marco':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/'
+            elif self.dataset_name == 'orcas':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
+            else:
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/'
         else:
-            self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/'
+            if self.dataset_name == 'aol':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/'
+            elif self.dataset_name == 'ms-marco':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/'
+            elif self.dataset_name == 'orcas':
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
+            else:
+                self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/'
 
     def read_file(self):
 
@@ -72,6 +83,10 @@ def query_string_length(df: pd.DataFrame) -> pd.DataFrame:
 
 
 datasets = ['aol', 'ms-marco', 'orcas', 'aql']
+datasets = ['aol', 'ms-marco', 'orcas']
+datasets = ['aol', 'orcas']  # only english
+
+
 # datasets = ['aql']
 
 dataframes = []
