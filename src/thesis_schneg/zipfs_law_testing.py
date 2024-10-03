@@ -98,7 +98,7 @@ plt.figure(figsize=(10, 6))
 
 for dataset_name in datasets:
     reader = read_parquet_data(
-        dataset_name=dataset_name, concurrency=5, num_files=1, only_english=True)  # , num_files=1
+        dataset_name=dataset_name, concurrency=5, num_files=3, only_english=True)  # , num_files=1
     ds = reader.read_file()
     word_counts = ds.map_batches(count_words_in_batch, batch_format="pandas")
 
@@ -115,6 +115,10 @@ for dataset_name in datasets:
     # Plotten der sortierten Spalte 'count'
     plt.plot(range(1, len(final_word_counts) + 1),
              final_word_counts['count'], label=dataset_name)
+
+    final_word_counts.to_csv(
+        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/' + dataset_name + '.csv')
+
 
 plt.xscale('log')
 plt.yscale('log')

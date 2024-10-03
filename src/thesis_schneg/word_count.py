@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from ray import init
 from ray.data import read_parquet
 import os
@@ -130,7 +129,7 @@ for dataset_name, df_group in dataframes:
     # plt.bar(df_group[analysis], df_group['count()']/total_rows,
     #         alpha=0.5, label=dataset_name)
     df_group.to_csv(
-        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results_query_length/' + dataset_name + '_' + analysis + '_tokenized' + '.csv')
+        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_query_length/' + dataset_name + '_' + analysis + '_tokenized' + '.csv')
 
 # plt.xlabel(analysis)
 # plt.ylabel('Frequency')
