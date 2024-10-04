@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
 
 
 class visualize_results:
@@ -98,15 +99,19 @@ class visualize_results:
             input_path = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/'
             datasets = ['aol', 'ms-marco', 'aql', 'orcas']
             # Define a list of colors
-            colors = ['blue', 'green', 'red', 'purple']
+            # colors = ['blue', 'green', 'red', 'purple']
 
             plt.figure(figsize=(10, 6))
             for dataset in datasets:
                 file = input_path + dataset + '.csv'
                 data = pd.read_csv(file)
                 plt.plot(range(1, len(data) + 1),
-                         data['count'], label=dataset, color=colors[datasets.index(dataset)])
-
+                         data['count'], label=dataset)  # , color=colors[datasets.index(dataset)]
+            zipf_values = [1/(i*np.log(1.78*len(data)))
+                           for i in range(1, len(data) + 1)]
+            zipf_values = data['count'][0]/zipf_values[0]*np.array(zipf_values)
+            plt.plot(range(1, len(data) + 1),
+                     zipf_values, label='zipf distribution')
             plt.xscale('log')
             plt.yscale('log')
             plt.xlabel('Rank of the word')
@@ -125,4 +130,4 @@ if __name__ == '__main__':
 
     analysis = 'zipfs_law'
     vis = visualize_results(analysis)
-    vis.visualize(save_plots=True, show_plots=False)
+    vis.visualize(save_plots=False, show_plots=True)

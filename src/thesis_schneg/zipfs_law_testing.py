@@ -6,7 +6,6 @@ from ray.data import read_parquet
 import os
 import pandas as pd
 import nltk
-import matplotlib.pyplot as plt
 
 init()
 
@@ -93,9 +92,6 @@ datasets = ['aol', 'ms-marco', 'orcas', 'aql']
 # datasets = ['aol', 'orcas']  # only english
 
 
-# datasets = ['aol']
-plt.figure(figsize=(10, 6))
-
 for dataset_name in datasets:
     reader = read_parquet_data(
         dataset_name=dataset_name, concurrency=5, num_files=3, only_english=True)  # , num_files=1
@@ -112,19 +108,5 @@ for dataset_name in datasets:
     # print(final_word_counts)
     # print(type(final_word_counts))
 
-    # Plotten der sortierten Spalte 'count'
-    plt.plot(range(1, len(final_word_counts) + 1),
-             final_word_counts['count'], label=dataset_name)
-
     final_word_counts.to_csv(
         '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/' + dataset_name + '.csv')
-
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Rank of the word')
-plt.ylabel('Frequency of the word')
-plt.title('Zipfs Law: Frequency vs. Rank')
-plt.legend(title='Dataset')
-plt.grid(True)
-plt.show()

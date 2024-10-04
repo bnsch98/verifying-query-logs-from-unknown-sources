@@ -121,4 +121,4 @@ for dataset_name in datasets:
     predictions = ds_query.map_batches(
         SpamPredictor,
         concurrency=5,)
-    predictions.take_batch(5)
+    print(predictions.take_batch(5))
