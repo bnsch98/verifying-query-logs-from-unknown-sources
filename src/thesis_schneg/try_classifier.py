@@ -145,7 +145,6 @@ model_dir = '/home/benjamin/studium/masterarbeit/finetuned_BERT_first_level'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument(
@@ -185,8 +184,8 @@ if __name__ == "__main__":
     )
 
     # load your data
-    df = pd.read_csv(args.infile, sep="\t")
-    INPUT_TEXT_COLUMN = "query"
+    df = pd.read_csv(args.infile, sep=",")
+    INPUT_TEXT_COLUMN = "ser_query_text_url"
     queries = df[INPUT_TEXT_COLUMN].tolist()
 
     # iterate over the data to get the predictions
