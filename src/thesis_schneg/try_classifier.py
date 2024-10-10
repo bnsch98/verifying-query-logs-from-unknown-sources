@@ -2,8 +2,14 @@ from ray import init
 from typing import Dict
 # from ray.data import range
 # import ray
-# from pyarrow.lib import timestamp
+import argparse
+from argparse import ArgumentParser
+import numpy as np
+import pandas as pd
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 
+import json
 from ray.data import read_json, read_parquet, read_csv
 
 # from ray.data.datasource.partitioning import Partitioning
@@ -106,48 +112,87 @@ def predict_language(model, row):
 
 
 # Initialize Ray (and connect to cluster).
-init()
+# init()
 
 # input_path = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output'
-input_path = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
+# input_path = "/mnt/ceph/storage/data-in-progress/data-research/web-search/archive-query-log/focused/corpus/full/2023-05-22/serps/part-00004.gz"
 
 
-aql_dataloader = Ray_Dataloader(
-    file_type="parquet", path_dataset=input_path,  multi=False)  # num_files=2,
+# aql_dataloader = Ray_Dataloader(
+#     file_type="parquet", path_dataset=input_path,  multi=False)  # num_files=2,
 
-ds_aql = aql_dataloader.read_file()
-print(ds_aql.schema())
+# ds_aql = aql_dataloader.read_file()
+# print(ds_aql.schema())
 
-# ds_query = ds_aql.select_columns('serp_query_text_url')
-ds_query = ds_aql.select_columns(['query'])
+# ds_query = ds_aql.select_columns(['query'])
 
-# print(type(ds_query.take_batch(1)))
-# ds_query = ds_query.add_column('language', lambda df:
-#                                df["query"])
-# model_ckpt = "papluca/xlm-roberta-base-language-detection"
-# model = pipeline("text-classification", model=model_ckpt)
+# predictions = ds_query.map_batches(
+#     LanguagePredictor,
+#     concurrency=2,
+# )
 
-# ds_query = ds_query.map(predict_language, fn_args=model)
-predictions = ds_query.map_batches(
-    LanguagePredictor,
-    concurrency=2,
-)
+# predictions.take_batch(5)
+def read_labels(infile):
+    with open(infile, "r") as fp:
+        return json.load(fp)
 
 
-# Step 2: Map the Predictor over the Dataset to get predictions.
-# Use 2 parallel actors for inference. Each actor predicts on a
-# different partition of data.
-# predictions = ds_query.map_batches(LanguagePredictor, concurrency=2)
+# Pfad zum Verzeichnis, das das Modell und die Labels enthält
+model_dir = '/home/benjamin/studium/masterarbeit/finetuned_BERT_first_level'
 
-predictions.take_batch(5)
+"""Short script describing how to load pretrained bert model for intent prediction on new data."""
 
-# print(ds_query.take(10))
-# text = [
-#     "Brevity is the soul of wit.",
-#     "Amor, ch'a nullo amato amar perdona."
-# ]
 
-# model_ckpt = "papluca/xlm-roberta-base-language-detection"
-# pipe = pipeline("text-classification", model=model_ckpt)
-# print(pipe(text, top_k=1, truncation=True)[0][0]['label'])
-# print(pipe(text, top_k=1, truncation=True))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--infile", default="/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/orcas_small.csv", type=str)
+    parser.add_argument("--model_name", default="bert-base-uncased", type=str)
+    parser.add_argument(
+        "--model_path",
+        default="/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/finetuned_BERT_first_level.model",
+        type=str,
+    )
+    parser.add_argument(
+        "--labels_path",
+        default="/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/labels.json",
+        type=str,
+    )
+    args = parser.parse_args()
+
+    label_dict = read_labels(infile=args.labels_path)
+    inverse_label_dict = {v: k for k, v in label_dict.items()}
+
+    # Load the tokenizer
+    tokenizer = BertTokenizer.from_pretrained(
+        args.model_name, do_lower_case=True)
+
+    # load the model and update the weights
+    model = BertForSequenceClassification.from_pretrained(
+        args.model_name,
+        num_labels=len(label_dict),
+        output_attentions=False,
+        output_hidden_states=False,
+    )
+    model.load_state_dict(
+        torch.load(
+            args.model_path,
+            map_location=device,
+        )
+    )
+
+    # load your data
+    df = pd.read_csv(args.infile, sep="\t")
+    INPUT_TEXT_COLUMN = "query"
+    queries = df[INPUT_TEXT_COLUMN].tolist()
+
+    # iterate over the data to get the predictions
+    for query in queries:
+        inputs = tokenizer(query, return_tensors="pt").to(device)
+        logits = model(**inputs).logits.cpu().detach().numpy()
+        predicted_intent = inverse_label_dict[np.argmax(logits)]
+
+        print(f"{query=}, {predicted_intent=}")

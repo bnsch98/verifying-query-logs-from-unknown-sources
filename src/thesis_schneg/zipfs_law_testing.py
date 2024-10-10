@@ -94,7 +94,7 @@ datasets = ['aol', 'ms-marco', 'orcas', 'aql']
 
 for dataset_name in datasets:
     reader = read_parquet_data(
-        dataset_name=dataset_name, concurrency=5, num_files=3, only_english=True)  # , num_files=1
+        dataset_name=dataset_name, concurrency=5, only_english=True)  # , num_files=1
     ds = reader.read_file()
     word_counts = ds.map_batches(count_words_in_batch, batch_format="pandas")
 
