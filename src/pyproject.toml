@@ -31,7 +31,8 @@ dependencies = [
     # "transformers~=4.12.3", # für orcas-I bert classifier
     "transformers~=4.44",
     "torch~=2.4",
-    "nltk~=3.9"
+    "nltk~=3.9",
+    "safetensors~=0.4.5"
 ]
 
 [build-system]

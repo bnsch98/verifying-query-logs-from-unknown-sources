@@ -1,4 +1,4 @@
-from ray import init
+# from ray import init
 from typing import Dict
 # from ray.data import range
 # import ray
@@ -8,86 +8,15 @@ import numpy as np
 import pandas as pd
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
-
+import safetensors
 import json
-from ray.data import read_json, read_parquet, read_csv
+# from ray.data import read_json, read_parquet, read_csv
 
 # from ray.data.datasource.partitioning import Partitioning
 # from ray.data.aggregate import Count, AggregateFn
 import os
 # import matplotlib.pyplot as plt
 from transformers import pipeline
-
-
-class Ray_Dataloader:
-    def __init__(self, file_type: str, path_dataset: str, compression: str = None, num_files: int = None, concurrency: int = 5, parse_options=None, multi: bool = True):
-        """A uniform dataloader, that manages reading different query log datasets in Ray.
-
-        Args: 
-            file_type (str, compulsory): specifies the file extension, eg. json, csv, txt
-            path_dataset (str, compulsory): specifies the path to the source data. Should be a folder 
-            compression (str, compulsory): specifies whether the source data is compressed or not by passing the file extension. E.g. compressed = 'gz' 
-            num_files (int, optional): specifies the number of input files to the Data Loader
-            concurrency (int, optional) specifies the max number of processes used to read the source data
-             """
-        self.file_type = file_type
-        self.path_dataset = path_dataset
-        self.compression = compression
-        self.num_files = num_files
-        self.concurrency = concurrency
-        self.parse_options = parse_options
-        self.multi = multi
-
-        assert self.file_type in ['txt', 'csv', 'tsv', 'json',
-                                  'jsonl', 'parquet'], "Specified file type is not supported!"
-
-        assert self.compression in [
-            'gz'] or self.compression is None, 'Specified compression is not supported!'
-
-    def read_file(self):
-        if self.file_type == 'txt' or self.file_type == 'csv' or self.file_type == 'tsv':
-            reader = read_csv
-        elif self.file_type == 'json' or self.file_type == 'jsonl':
-            reader = read_json
-        else:
-            reader = read_parquet
-
-        arrow_open_stream_args = None
-        file_extensions = []
-        if self.compression is not None:
-            file_ending = self.compression
-            arrow_open_stream_args = {"compression": "gzip"}
-            file_extensions.append("gz")
-        else:
-            file_ending = self.file_type
-
-        file_extensions.append(self.file_type)
-
-        if self.multi:
-            input_paths = [os.path.join(self.path_dataset, f) for f in os.listdir(
-                self.path_dataset) if f.endswith("."+file_ending)]
-        else:
-            input_paths = self.path_dataset
-
-        if self.num_files is not None:
-            input_paths = input_paths[0:self.num_files]
-
-        if self.parse_options is not None:
-            parse_options = self.parse_options
-            if arrow_open_stream_args is not None:
-                ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
-                            parse_options=parse_options, concurrency=self.concurrency)
-            else:
-                ds = reader(paths=input_paths, file_extensions=file_extensions,
-                            parse_options=parse_options, concurrency=self.concurrency)
-        else:
-            if arrow_open_stream_args is not None:
-                ds = reader(paths=input_paths, arrow_open_stream_args=arrow_open_stream_args, file_extensions=file_extensions,
-                            concurrency=self.concurrency)
-            else:
-                ds = reader(paths=input_paths, file_extensions=file_extensions,
-                            concurrency=self.concurrency)
-        return ds
 
 
 class LanguagePredictor:
@@ -143,8 +72,8 @@ model_dir = '/home/benjamin/studium/masterarbeit/finetuned_BERT_first_level'
 """Short script describing how to load pretrained bert model for intent prediction on new data."""
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument(
@@ -176,16 +105,20 @@ if __name__ == "__main__":
         output_attentions=False,
         output_hidden_states=False,
     )
+    print("base model loaded")
+    tensors = {}
+    with safetensors.safe_open("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/finetuned_BERT_first_level.safetensors", framework="pt", device="cpu") as f:
+        for k in f.keys():
+            tensors[k] = f.get_tensor(k)
+        # del tensors["bert.embeddings.position_ids"]
     model.load_state_dict(
-        torch.load(
-            args.model_path,
-            map_location=device,
-        )
+        tensors,
+        strict=False
     )
-
+    print("weights loaded")
     # load your data
     df = pd.read_csv(args.infile, sep=",")
-    INPUT_TEXT_COLUMN = "ser_query_text_url"
+    INPUT_TEXT_COLUMN = "serp_query_text_url"
     queries = df[INPUT_TEXT_COLUMN].tolist()
 
     # iterate over the data to get the predictions

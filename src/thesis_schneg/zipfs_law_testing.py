@@ -94,19 +94,29 @@ datasets = ['aol', 'ms-marco', 'orcas', 'aql']
 
 for dataset_name in datasets:
     reader = read_parquet_data(
-        dataset_name=dataset_name, concurrency=5, only_english=True)  # , num_files=1
+        dataset_name=dataset_name, concurrency=5, only_english=True, num_files=1)  # , num_files=1
     ds = reader.read_file()
     word_counts = ds.map_batches(count_words_in_batch, batch_format="pandas")
 
-    # Zusammenführen der Ergebnisse
-    word_counts_df = word_counts.to_pandas()
-    final_word_counts = word_counts_df.groupby('word').sum().reset_index()
+    # Gruppieren und Summieren der 'count'-Werte mit Ray
+    grouped_word_counts = word_counts.groupby("word").sum("count")
+
+    # # Zusammenführen der Ergebnisse
+    # word_counts_df = word_counts.to_pandas()
+    # final_word_counts = word_counts_df.groupby('word').sum().reset_index()
+
+    final_word_counts = grouped_word_counts.to_pandas()
+
+    # print(final_word_counts.columns)
+    # print(final_word_counts.head())
+    final_word_counts.rename(columns={'sum(count)': 'count'}, inplace=True)
     # Sortieren nach der Spalte 'count'
     final_word_counts = final_word_counts.sort_values(
         by='count', ascending=False)
+    print(final_word_counts.head())
 
-    # print(final_word_counts)
-    # print(type(final_word_counts))
+    # # print(final_word_counts)
+    # # print(type(final_word_counts))
 
     final_word_counts.to_csv(
         '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/' + dataset_name + '.csv')

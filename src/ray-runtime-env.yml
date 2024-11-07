@@ -11,10 +11,14 @@ py_modules:
   - thesis_schneg/
 pip:
   - python-dotenv~=1.0
-  - matplotlib~=3.9
+  # - matplotlib~=3.9
   - nltk~=3.9
-  - transformers~=4.44
+  # - transformers~=4.44
   # - transformers~=4.12.3 # für orcas-I bert classifier
-  - torch~=2.4
+  - torch #~=2.4
+  - matplotlib
+  # - nltk
+  - transformers
+  - safetensors~=0.4.5
 logging_level: debug
 
