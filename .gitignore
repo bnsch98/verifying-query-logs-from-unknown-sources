@@ -1,2 +1,3 @@
 # ignore venvs
 /src/venv
+.venv
