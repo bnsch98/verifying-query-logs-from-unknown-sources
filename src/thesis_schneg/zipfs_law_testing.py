@@ -1,13 +1,17 @@
 # Use a pipeline as a high-level helper
-from nltk.tokenize import word_tokenize
+# from nltk.tokenize import word_tokenize
 from collections import defaultdict
 from ray import init
 from ray.data import read_parquet
 import os
 import pandas as pd
-import nltk
+# import nltk
+import spacy
+from string import punctuation
 
 init()
+
+nlp = spacy.load("en_core_web_sm")
 
 
 class read_parquet_data:
@@ -64,15 +68,17 @@ class read_parquet_data:
 
 
 def count_words(df: pd.DataFrame, column: str) -> dict:
-    try:
-        nltk.data.find('tokenizers/punkt_tab')
-    except LookupError:
-        nltk.download('punkt_tab')
+    # try:
+    #     nltk.data.find('tokenizers/punkt_tab')
+    # except LookupError:
+    #     nltk.download('punkt_tab')
+    nlp = spacy.load("en_core_web_sm")
     word_freq = defaultdict(int)
 
     for text in df[column]:
         if pd.notna(text):  # Überprüfen, ob der Text nicht NaN ist
-            words = word_tokenize(text)
+            words = [tok.text for tok in nlp(
+                text) if tok.text not in punctuation]
             for word in words:
                 # Wörter in Kleinbuchstaben umwandeln und zählen
                 word_freq[word.lower()] += 1
@@ -85,18 +91,39 @@ def count_words_in_batch(batch: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(list(word_freq.items()), columns=['word', 'count'])
 
 
-nltk.download('punkt_tab')
+class WordCounter:
+    def __init__(self):
+        self.nlp = spacy.load("en_core_web_sm")
+        self.word_freq = defaultdict(int)
+
+    def count_words(self, df: pd.DataFrame, column: str) -> dict:
+        for text in df[column]:
+            if pd.notna(text):  # Überprüfen, ob der Text nicht NaN ist
+                words = [tok.text for tok in self.nlp(
+                    text) if tok.text not in punctuation]
+                for word in words:
+                    # Wörter in Kleinbuchstaben umwandeln und zählen
+                    self.word_freq[word.lower()] += 1
+
+        return dict(self.word_freq)
+
+    def __call__(self, batch: pd.DataFrame) -> pd.DataFrame:
+        word_freq = self.count_words(batch, 'serp_query_text_url')
+        return pd.DataFrame(list(word_freq.items()), columns=['word', 'count'])
+
 
 datasets = ['aol', 'ms-marco', 'orcas', 'aql']
 # datasets = ['aol', 'ms-marco', 'orcas']
-# datasets = ['aol', 'orcas']  # only english
+datasets = ['aol', 'orcas']  # only english
+datasets = ['aol']  # only english
 
 
 for dataset_name in datasets:
     reader = read_parquet_data(
         dataset_name=dataset_name, concurrency=5, only_english=True, num_files=1)  # , num_files=1
     ds = reader.read_file()
-    word_counts = ds.map_batches(count_words_in_batch, batch_format="pandas")
+    word_counts = ds.map_batches(
+        WordCounter, batch_format="pandas", concurrency=1)  # , concurrency=4
 
     # Gruppieren und Summieren der 'count'-Werte mit Ray
     grouped_word_counts = word_counts.groupby("word").sum("count")

@@ -17,12 +17,14 @@ import json
 import os
 # import matplotlib.pyplot as plt
 from transformers import pipeline
+import time
 
 
 class LanguagePredictor:
     def __init__(self):
         model_ckpt = "papluca/xlm-roberta-base-language-detection"
-        self.model = pipeline("text-classification", model=model_ckpt)
+        self.model = pipeline("text-classification",
+                              model=model_ckpt, device='cuda:0')
 
     def __call__(self, batch: Dict[str, str]) -> Dict[str, list]:
         predictions = self.model(
@@ -72,12 +74,15 @@ model_dir = '/home/benjamin/studium/masterarbeit/finetuned_BERT_first_level'
 """Short script describing how to load pretrained bert model for intent prediction on new data."""
 
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+# device = torch.device("cpu")
 if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    start_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    print(f"Script started at {start_timestamp}")
     parser = ArgumentParser()
     parser.add_argument(
-        "--infile", default="/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/orcas_small.csv", type=str)
+        "--infile", default="/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/orcas_small_5k.csv", type=str)
     parser.add_argument("--model_name", default="bert-base-uncased", type=str)
     parser.add_argument(
         "--model_path",
@@ -97,7 +102,7 @@ if __name__ == "__main__":
     # Load the tokenizer
     tokenizer = BertTokenizer.from_pretrained(
         args.model_name, do_lower_case=True)
-
+    print(f"type of tokenizer: {type(tokenizer)}")
     # load the model and update the weights
     model = BertForSequenceClassification.from_pretrained(
         args.model_name,
@@ -105,7 +110,10 @@ if __name__ == "__main__":
         output_attentions=False,
         output_hidden_states=False,
     )
-    print("base model loaded")
+    print(f"type of model: {type(model)}")
+
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    print(f"base model loaded at {timestamp}")
     tensors = {}
     with safetensors.safe_open("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/finetuned_BERT_first_level.safetensors", framework="pt", device="cpu") as f:
         for k in f.keys():
@@ -115,16 +123,22 @@ if __name__ == "__main__":
         tensors,
         strict=False
     )
-    print("weights loaded")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    print(f"weights loaded at {timestamp}")
     # load your data
     df = pd.read_csv(args.infile, sep=",")
     INPUT_TEXT_COLUMN = "serp_query_text_url"
     queries = df[INPUT_TEXT_COLUMN].tolist()
-
+    model = model.to(device)
     # iterate over the data to get the predictions
     for query in queries:
-        inputs = tokenizer(query, return_tensors="pt").to(device)
-        logits = model(**inputs).logits.cpu().detach().numpy()
-        predicted_intent = inverse_label_dict[np.argmax(logits)]
-
+        if not pd.isna(query):
+            inputs = tokenizer(query, return_tensors="pt").to(device)
+            logits = model(**inputs).logits.cpu().detach().numpy()
+            predicted_intent = inverse_label_dict[np.argmax(logits)]
         print(f"{query=}, {predicted_intent=}")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    print(f"model inference completed at {timestamp}")
+    print(f"model inference started at {start_timestamp}")
+    if torch.cuda.is_available():
+        print("cuda used")

@@ -12,7 +12,7 @@ py_modules:
 pip:
   - python-dotenv~=1.0
   # - matplotlib~=3.9
-  - nltk~=3.9
+  # - nltk~=3.9
   # - transformers~=4.44
   # - transformers~=4.12.3 # für orcas-I bert classifier
   - torch #~=2.4
@@ -20,5 +20,7 @@ pip:
   # - nltk
   - transformers
   - safetensors~=0.4.5
+  # - spacy~=3.7.2
+  # - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 logging_level: debug
 
