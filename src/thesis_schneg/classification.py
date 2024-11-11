@@ -223,7 +223,7 @@ def classify(
         predictor,
         concurrency=predict_concurrency,
         num_gpus=1,
-        batch_size=32,
+        batch_size=16,
         batch_format="pandas",
     )
 
