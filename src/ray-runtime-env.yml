@@ -10,17 +10,22 @@ excludes:
 py_modules:
   - thesis_schneg/
 pip:
-  - python-dotenv~=1.0
+  - cyclopts~=2.9
+  # - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+  - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+  - fasttext-wheel~=0.9
+  # - huggingface-hub~=0.24
+  # - jupyter~=1.0
   # - matplotlib~=3.9
-  # - nltk~=3.9
-  # - transformers~=4.44
-  # - transformers~=4.12.3 # für orcas-I bert classifier
-  - torch #~=2.4
-  - matplotlib
-  # - nltk
-  - transformers
+  - nltk~=3.9
+  - pandas~=2.0
+  - pyarrow~=16.1
+  - pyarrow-stubs~=10.0
+  - python-dotenv~=1.0
+  - ray[data,default]~=2.33
   - safetensors~=0.4.5
-  # - spacy~=3.7.2
-  # - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+  - spacy~=3.7
+  - torch~=2.4
+  - tqdm~=4.64
+  - transformers~=4.44
 logging_level: debug
-
