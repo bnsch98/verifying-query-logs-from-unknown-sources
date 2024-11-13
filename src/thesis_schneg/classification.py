@@ -36,6 +36,9 @@ DatasetName: TypeAlias = Literal[
 PredictorName: TypeAlias = Literal[
     "query-intent",
     "language",
+    "hate-speech",
+    "spam",
+    "named-entity-recognition",
 ]
 
 
@@ -95,7 +98,7 @@ class QueryIntentPredictor(_Predictor):
             strict=False,
             device=self._device.type,
         )
-        
+
         return model
 
     def predict_batch(self, batch: DataFrame) -> DataFrame:
@@ -107,7 +110,8 @@ class QueryIntentPredictor(_Predictor):
         ).to(self._device)
         logits = self._model.forward(**inputs).logits
         label_indices = argmax(logits, dim=1)
-        batch["label"] = [self._inverse_label_mapping[index] for index in label_indices.cpu().numpy()]
+        batch["label"] = [self._inverse_label_mapping[index]
+                          for index in label_indices.cpu().numpy()]
         return batch
 
 
@@ -135,6 +139,82 @@ class LanguagePredictor(_Predictor):
         )
         batch["label"] = [sequences[0]["label"] for sequences in predictions]
         return batch
+
+
+@dataclass(frozen=True)
+class HateSpeechPredictor(_Predictor):
+    model_name: str = "facebook/roberta-hate-speech-dynabench-r4-target"
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self.model_name,
+            device=self._device,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        predictions = self._pipeline(
+            list(batch["serp_query_text_url"]),
+            top_k=1,
+            truncation=True,
+        )
+        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        return batch
+
+
+@dataclass(frozen=True)
+class SpamPredictor(_Predictor):
+    model_name: str = "mshenoda/roberta-spam"
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self.model_name,
+            device=self._device,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        predictions = self._pipeline(
+            list(batch["serp_query_text_url"]),
+            top_k=1,
+            truncation=True,
+        )
+        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+
+
+@dataclass(frozen=True)
+class NamedEntityPredictor(_Predictor):
+    model_name: str = "mdarhri00/named-entity-recognition"
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="token-classification",
+            model=self.model_name,
+            device=self._device,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        predictions = self._pipeline(
+            list(batch["serp_query_text_url"]),
+            top_k=1,
+            truncation=True,
+        )
+        batch["label"] = [sequences[0]["label"] for sequences in predictions]
 
 
 def _get_parquet_paths(
@@ -170,7 +250,8 @@ def _get_parquet_paths(
                 "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
             )
 
-    input_paths = [path for path in base_path.iterdir() if path.suffix == ".parquet"]
+    input_paths = [path for path in base_path.iterdir()
+                   if path.suffix == ".parquet"]
     if sample_files is not None:
         input_paths = choices(
             population=input_paths,
@@ -186,6 +267,12 @@ def _get_predictor(
         return LanguagePredictor()
     elif predictor_name == "query-intent":
         return QueryIntentPredictor()
+    elif predictor_name == "hate-speech":
+        return HateSpeechPredictor()
+    elif predictor_name == "spam":
+        return SpamPredictor()
+    elif predictor_name == "named-entity-recognition":
+        return NamedEntityPredictor()
 
 
 def classify(
@@ -195,6 +282,9 @@ def classify(
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = None,
+    write_results: bool = False,
+    write_concurrency: Optional[int] = None,
+
 ) -> None:
     init()
 
@@ -230,3 +320,7 @@ def classify(
     # Take a small sample
     # TODO: In reality, we should store the output again as Parquet or similar.
     print(dataset.take_batch(batch_size=100, batch_format="pandas"))
+
+    if write_results:
+        dataset.write_parquet(
+            path=f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{dataset_name}_{predictor_name}.parquet", concurrency=write_concurrency)

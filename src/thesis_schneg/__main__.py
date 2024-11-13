@@ -19,6 +19,8 @@ def classify(
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = None,
+    write_results: bool = False,
+    write_concurrency: Optional[int] = None,
 ) -> None:
     _classify(
         predictor_name=predictor,
@@ -27,6 +29,8 @@ def classify(
         only_english=only_english,
         read_concurrency=read_concurrency,
         predict_concurrency=predict_concurrency,
+        write_results=write_results,
+        write_concurrency=write_concurrency,
     )
 
 
