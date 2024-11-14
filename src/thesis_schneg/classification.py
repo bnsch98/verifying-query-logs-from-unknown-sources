@@ -172,24 +172,6 @@ class SpamPredictor(_Predictor):
 
 
 @dataclass(frozen=True)
-class NamedEntityPredictor(_Predictor):
-    model_name: str = "mdarhri00/named-entity-recognition"
-
-    @cached_property
-    def _pipeline(self) -> Pipeline:
-        return pipeline(
-            task="token-classification",
-            model=self.model_name,
-            device=self._device,
-        )
-
-    def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(list(batch["serp_query_text_url"]))
-        batch["label"] = [prediction[0]["label"] for prediction in predictions]
-        return batch
-
-
-@dataclass(frozen=True)
 class QueryRatingPredictor(_Predictor):
     """
     Rate the well-formedness of a query in grammatical terms.
@@ -268,8 +250,6 @@ def _get_predictor(
         return HateSpeechPredictor()
     elif predictor_name == "spam":
         return SpamPredictor()
-    elif predictor_name == "named-entity-recognition":
-        return NamedEntityPredictor()
     elif predictor_name == "query-rating":
         return QueryRatingPredictor()
 

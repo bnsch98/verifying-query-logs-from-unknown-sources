@@ -21,7 +21,6 @@ PredictorName: TypeAlias = Literal[
     "language",
     "hate-speech",
     "spam",
-    "named-entity-recognition",
     "query-rating",
 ]
 
