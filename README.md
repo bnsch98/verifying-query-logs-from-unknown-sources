@@ -27,7 +27,10 @@ Run the CLI with:
 ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg --<Input-Parameter> --<Parameter-Value>
 ```
 
-### Available Input Parameters
+<detail>
+<summary>
+
+Available Input Parameters and their corresponding parameter values
 
 </summary>
 
