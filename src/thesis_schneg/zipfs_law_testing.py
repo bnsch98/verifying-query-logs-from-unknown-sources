@@ -145,5 +145,5 @@ for dataset_name in datasets:
     # # print(final_word_counts)
     # # print(type(final_word_counts))
 
-    final_word_counts.to_csv(
-        '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/' + dataset_name + '.csv')
+    # final_word_counts.to_csv(
+    #     '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/results_zipfs_law/' + dataset_name + '.csv')

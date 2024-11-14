@@ -17,6 +17,7 @@ from transformers import (
     pipeline,
     Pipeline,
 )
+import numpy as np
 
 # Workaround as TypeAlias is not yet implemented in older Python versions.
 try:
@@ -189,7 +190,12 @@ class SpamPredictor(_Predictor):
             top_k=1,
             truncation=True,
         )
-        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        labels = [sequences[0]["label"] for sequences in predictions]
+        labels = np.array(labels)
+        labels[labels == 'LABEL_0'] = 'No Spam'
+        labels[labels == 'LABEL_1'] = 'Spam'
+        batch["label"] = labels
+        return batch
 
 
 @dataclass(frozen=True)
@@ -211,10 +217,9 @@ class NamedEntityPredictor(_Predictor):
     def predict_batch(self, batch: DataFrame) -> DataFrame:
         predictions = self._pipeline(
             list(batch["serp_query_text_url"]),
-            top_k=1,
-            truncation=True,
         )
         batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        return batch
 
 
 def _get_parquet_paths(

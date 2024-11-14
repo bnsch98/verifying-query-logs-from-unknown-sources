@@ -8,6 +8,12 @@ from thesis_schneg.classification import (
     classify as _classify,
 )
 
+from thesis_schneg.aggregate import (
+    DatasetName,
+    AggregatorName,
+    aggregate as _aggregate,
+)
+
 app = App()
 
 
@@ -31,6 +37,29 @@ def classify(
         predict_concurrency=predict_concurrency,
         write_results=write_results,
         write_concurrency=write_concurrency,
+    )
+
+
+@app.command
+def aggregate(
+    aggregator: AggregatorName,
+    dataset: DatasetName,
+    sample_files: Optional[int] = None,
+    only_english: bool = False,
+    read_concurrency: Optional[int] = None,
+    aggregate_concurrency: Optional[int] = None,
+    write_results: bool = False,
+    # write_concurrency: Optional[int] = None,
+) -> None:
+    _aggregate(
+        aggregator_name=aggregator,
+        dataset_name=dataset,
+        sample_files=sample_files,
+        only_english=only_english,
+        read_concurrency=read_concurrency,
+        aggregate_concurrency=aggregate_concurrency,
+        write_results=write_results,
+        # write_concurrency=write_concurrency,
     )
 
 

@@ -1,6 +1,7 @@
 # thesis-schneg
 This thesis aims at verfiying web search query logs from unknown sources by comparing them to trustworthy query logs.
 This repository contains the python code that is required to replicate the experiments, an instruction on how to set up a working environment to run the code as well as the thesis itself.
+
 Overleaf-Project: https://de.overleaf.com/read/sqcbzpjgyjpb#eb0738
 
 ## Installation
@@ -9,11 +10,14 @@ Follow these steps to set up the Python environment that is required for the pro
 
 1. Install [Python 3.11](https://www.python.org/downloads/release/python-3110/)
 2. Create and activate a virtual environment: 
+```
     python3.11 -m venv venv/
     source venv/bin/activate
+```
 3. Install project dependencies:
+```
     pip install -e .
-
+```
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
