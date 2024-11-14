@@ -10,19 +10,19 @@ Follow these steps to set up the Python environment that is required for the pro
 
 1. Install [Python 3.11](https://www.python.org/downloads/release/python-3110/)
 2. Create and activate a virtual environment: 
-```
+```shell
     python3.11 -m venv venv/
     source venv/bin/activate
 ```
 3. Install project dependencies:
-```
+```shell
     pip install -e .
 ```
 
 ## Usage
 ### CLI 
 Run the CLI with:
-```
+```shell
 ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg <analyser> --<analyser-type> hate-speech --dataset <dataset> --predict-concurrency 4 --only-english --write-results --write-concurrency 8
 ```
 ## Add your files
