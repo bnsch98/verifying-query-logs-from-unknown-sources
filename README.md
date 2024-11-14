@@ -1,5 +1,6 @@
 # thesis-schneg
 This thesis aims at verfiying web search query logs from unknown sources by comparing them to trustworthy query logs.
+
 This repository contains the python code that is required to replicate the experiments, an instruction on how to set up a working environment to run the code as well as the thesis itself.
 
 Overleaf-Project: https://de.overleaf.com/read/sqcbzpjgyjpb#eb0738
@@ -23,8 +24,22 @@ Follow these steps to set up the Python environment that is required for the pro
 ### CLI 
 Run the CLI with:
 ```shell
-ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg <analyser> --<analyser-type> hate-speech --dataset <dataset> --predict-concurrency 4 --only-english --write-results --write-concurrency 8
+ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg --<Input-Parameter> --<Parameter-Value>
 ```
+
+### Available Input Parameters
+
+</summary>
+
+|Identifier|Input-Parameter|Input-Values|Description|
+|:--|:-:|:--|--:|:-:|--:|:--|
+|Analysis mode|`--classify`, `--aggregate`|❌|Determines which analysis mode should be performed on the data|
+|Data Set|`--dataset`|`aql`,`aol`,`ms-marco`,`orcas`|Determines the data set on which the anaylsis is performed|
+|Analysis mode|`classify`, `aggregate`|Determines which analysis mode should be performed on the data|
+|Analysis mode|`classify`, `aggregate`|Determines which analysis mode should be performed on the data|
+
+
+
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
