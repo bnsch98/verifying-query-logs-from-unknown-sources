@@ -55,6 +55,7 @@ class ZipfsLawAggregator(_Aggregator):
         return pd.DataFrame(list(res_dict.items()), columns=['word', 'count'])
 
 
+# FIXME: This code is duplicated. Instead move it to some utility module and re-use the same code.
 def _get_parquet_paths(
     dataset_name: DatasetName,
     sample_files: Optional[int] = None,
