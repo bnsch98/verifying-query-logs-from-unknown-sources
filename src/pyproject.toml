@@ -4,6 +4,7 @@ requires-python = "~=3.10"
 version = "0.0.0"
 
 dependencies = [
+    "bandit[toml]~=1.7",
     "cyclopts~=2.9",
     # "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl",
@@ -11,16 +12,22 @@ dependencies = [
     "huggingface-hub~=0.24",
     "jupyter~=1.0",
     "matplotlib~=3.9",
+    "mypy~=1.5",
     "nltk~=3.9",
     "pandas~=2.0",
     "pandas-stubs~=2.0",
     "pyarrow~=16.1",
+    "pyarrow-stubs~=10.0",
+    "pytest~=8.0",
+    "pytest-cov~=5.0",
     "python-dotenv~=1.0",
     "ray[data,default]~=2.33",
+    "ruff~=0.7.0",
     "safetensors~=0.4.5",
     "spacy~=3.7",
     "torch~=2.4",
     "tqdm~=4.64",
+    "types-tqdm~=4.66",
     # "transformers~=4.12.3", # für orcas-I bert classifier
     "transformers~=4.44",
 ]
@@ -40,3 +47,37 @@ exclude = [
 
 [project.scripts]
 thesis-schneg = "thesis_schneg.__main__:app"
+
+[tool.ruff]
+exclude = [
+    "build",
+    "venv",
+    "notebooks",
+    "data",
+]
+
+[tool.mypy]
+exclude = [
+    "build",
+    "venv",
+    "notebooks",
+    "data",
+]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = [
+    "build",
+    "venv",
+    "notebooks",
+    "data",
+]
+
+[tool.bandit.assert_used]
+skips = ["**/test_*.py"]
+
+[tool.pytest.ini_options]
+log_cli = "True"
+filterwarnings = [
+    'ignore:FUNCTIONS is deprecated and will be removed in future versions:DeprecationWarning',
+]
