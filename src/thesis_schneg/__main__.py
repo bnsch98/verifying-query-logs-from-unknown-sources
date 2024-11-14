@@ -19,7 +19,8 @@ def classify(
     sample_files: Optional[int] = None,
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
-    predict_concurrency: Optional[int] = None,
+    predict_concurrency: Optional[int] = 8,
+    predict_batch_size: int = 16,
     write_results: bool = False,
     write_concurrency: Optional[int] = None,
 ) -> None:
@@ -32,6 +33,7 @@ def classify(
         only_english=only_english,
         read_concurrency=read_concurrency,
         predict_concurrency=predict_concurrency,
+        predict_batch_size=predict_batch_size,
         write_results=write_results,
         write_concurrency=write_concurrency,
     )
