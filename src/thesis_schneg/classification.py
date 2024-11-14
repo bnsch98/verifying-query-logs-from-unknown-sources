@@ -40,6 +40,7 @@ PredictorName: TypeAlias = Literal[
     "hate-speech",
     "spam",
     "named-entity-recognition",
+    "query-rating",
 ]
 
 
@@ -222,6 +223,33 @@ class NamedEntityPredictor(_Predictor):
         return batch
 
 
+@dataclass(frozen=True)
+# rates the well-formedness of a query in grammatical terms. rating is a float between 0 and 1.
+class QueryRatingPredictor(_Predictor):
+    model_name: str = "Ashishkr/query_wellformedness_score"
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self.model_name,
+            device=self._device,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        predictions = self._pipeline(
+            list(batch["serp_query_text_url"]),
+            top_k=1,
+            truncation=True,
+        )
+        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        return batch
+
+
 def _get_parquet_paths(
     dataset_name: DatasetName,
     sample_files: Optional[int] = None,
@@ -278,6 +306,8 @@ def _get_predictor(
         return SpamPredictor()
     elif predictor_name == "named-entity-recognition":
         return NamedEntityPredictor()
+    elif predictor_name == "query-rating":
+        return QueryRatingPredictor()
 
 
 def classify(
