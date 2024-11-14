@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib~=3.9",
     "nltk~=3.9",
     "pandas~=2.0",
+    "pandas-stubs~=2.0",
     "pyarrow~=16.1",
     "python-dotenv~=1.0",
     "ray[data,default]~=2.33",
