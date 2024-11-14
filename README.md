@@ -5,7 +5,7 @@ This repository contains the python code that is required to replicate the exper
 Overleaf-Project: https://de.overleaf.com/read/sqcbzpjgyjpb#eb0738
 
 ## Installation
-
+### Python Installation
 Follow these steps to set up the Python environment that is required for the provided code:
 
 1. Install [Python 3.11](https://www.python.org/downloads/release/python-3110/)
@@ -17,6 +17,13 @@ Follow these steps to set up the Python environment that is required for the pro
 3. Install project dependencies:
 ```
     pip install -e .
+```
+
+## Usage
+### CLI 
+Run the CLI with:
+```
+ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg <analyser> --<analyser-type> hate-speech --dataset <dataset> --predict-concurrency 4 --only-english --write-results --write-concurrency 8
 ```
 ## Add your files
 
