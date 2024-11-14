@@ -34,8 +34,8 @@ Available Input Parameters and their corresponding parameter values
 
 </summary>
 
-|Identifier|Input-Parameter|Input-Values|Description|
-|:---|:---:|:---|---:|:---:|---:|:---|
+| Identifier | Input-Parameter | Input-Values | Description |
+| :--- | :---: | :--- | ---: | :---: | ---: | :--- |
 |Analysis mode|`--classify`, `--aggregate`|❌|Determines which analysis mode should be performed on the data|
 |Data Set|`--dataset`|`aql`,`aol`,`ms-marco`,`orcas`|Determines the data set on which the anaylsis is performed|
 |Analysis mode|`classify`, `aggregate`|Determines which analysis mode should be performed on the data|
