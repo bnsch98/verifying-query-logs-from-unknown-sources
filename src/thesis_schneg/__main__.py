@@ -2,17 +2,12 @@ from typing import Optional
 
 from cyclopts import App
 
-from thesis_schneg.classification import (
+from thesis_schneg.model import (
     DatasetName,
     PredictorName,
-    classify as _classify,
+    AggregatorName,
 )
 
-from thesis_schneg.aggregate import (
-    DatasetName,
-    AggregatorName,
-    aggregate as _aggregate,
-)
 
 app = App()
 
@@ -28,6 +23,8 @@ def classify(
     write_results: bool = False,
     write_concurrency: Optional[int] = None,
 ) -> None:
+    from thesis_schneg.classification import classify as _classify
+
     _classify(
         predictor_name=predictor,
         dataset_name=dataset,
@@ -51,6 +48,8 @@ def aggregate(
     write_results: bool = False,
     # write_concurrency: Optional[int] = None,
 ) -> None:
+    from thesis_schneg.aggregate import aggregate as _aggregate
+
     _aggregate(
         aggregator_name=aggregator,
         dataset_name=dataset,

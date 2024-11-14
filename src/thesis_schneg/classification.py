@@ -3,7 +3,7 @@ from functools import cached_property
 from json import load
 from pathlib import Path
 from random import choices
-from typing import Literal, Protocol, Iterable, Mapping, Optional
+from typing import Protocol, Iterable, Mapping, Optional
 
 from pandas import DataFrame
 from ray import init
@@ -17,31 +17,10 @@ from transformers import (
     pipeline,
     Pipeline,
 )
+
+from thesis_schneg.model import DatasetName, PredictorName
+
 import numpy as np
-
-# Workaround as TypeAlias is not yet implemented in older Python versions.
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing import Any
-    TypeAlias = Any
-
-DatasetName: TypeAlias = Literal[
-    "aol",
-    "ms-marco",
-    "orcas",
-    "aql",
-]
-
-
-PredictorName: TypeAlias = Literal[
-    "query-intent",
-    "language",
-    "hate-speech",
-    "spam",
-    "named-entity-recognition",
-    "query-rating",
-]
 
 
 class _Predictor(Protocol):

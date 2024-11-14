@@ -16,26 +16,9 @@ from ray.data import read_parquet
 from torch import device, argmax
 from torch.cuda import is_available as cuda_is_available
 
+from thesis_schneg.model import DatasetName, AggregatorName
+
 import pandas as pd
-
-# Workaround as TypeAlias is not yet implemented in older Python versions.
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing import Any
-    TypeAlias = Any
-
-DatasetName: TypeAlias = Literal[
-    "aol",
-    "ms-marco",
-    "orcas",
-    "aql",
-]
-
-
-AggregatorName: TypeAlias = Literal[
-    "zipfs-law",
-]
 
 
 class _Aggregator(Protocol):
