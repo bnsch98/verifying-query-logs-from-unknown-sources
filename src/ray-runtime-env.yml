@@ -20,7 +20,6 @@ pip:
   - nltk~=3.9
   - pandas~=2.0
   - pyarrow~=16.1
-  - pyarrow-stubs~=10.0
   - python-dotenv~=1.0
   - ray[data,default]~=2.33
   - safetensors~=0.4.5

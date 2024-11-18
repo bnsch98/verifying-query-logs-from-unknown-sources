@@ -3,13 +3,13 @@ from functools import cached_property
 from json import load
 from pathlib import Path
 from random import choices
-from typing import Literal, Protocol, Iterable, Mapping, Optional
+from typing import Protocol, Iterable, Mapping, Optional
 
 from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet
 from safetensors.torch import load_model
-from torch import device, argmax
+from torch import device
 from torch.cuda import is_available as cuda_is_available
 from transformers import (
     BertTokenizer,
@@ -17,31 +17,8 @@ from transformers import (
     pipeline,
     Pipeline,
 )
-import numpy as np
 
-# Workaround as TypeAlias is not yet implemented in older Python versions.
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing import Any
-    TypeAlias = Any
-
-DatasetName: TypeAlias = Literal[
-    "aol",
-    "ms-marco",
-    "orcas",
-    "aql",
-]
-
-
-PredictorName: TypeAlias = Literal[
-    "query-intent",
-    "language",
-    "hate-speech",
-    "spam",
-    "named-entity-recognition",
-    "query-rating",
-]
+from thesis_schneg.model import DatasetName, PredictorName
 
 
 class _Predictor(Protocol):
@@ -50,6 +27,10 @@ class _Predictor(Protocol):
 
     def __call__(self, batch: DataFrame) -> DataFrame:
         return self.predict_batch(batch)
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
 
 
 @dataclass(frozen=True)
@@ -62,7 +43,7 @@ class QueryIntentPredictor(_Predictor):
     )
 
     @cached_property
-    def _inverse_label_mapping(self) -> Mapping[int, str]:
+    def _id2label(self) -> Mapping[int, str]:
         # Load labels.
         with self.labels_path.open("rb") as file:
             label_dict = load(fp=file)
@@ -78,15 +59,11 @@ class QueryIntentPredictor(_Predictor):
         )
 
     @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
     def _model(self) -> BertForSequenceClassification:
         # Load the BERT model.
         model = BertForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path="bert-base-uncased",
-            num_labels=len(self._inverse_label_mapping),
+            id2label=self._id2label,
             output_attentions=False,
             output_hidden_states=False,
         )
@@ -103,17 +80,23 @@ class QueryIntentPredictor(_Predictor):
 
         return model
 
-    def predict_batch(self, batch: DataFrame) -> DataFrame:
-        inputs = self._tokenizer(
-            list(batch["serp_query_text_url"]),
-            return_tensors="pt",
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self._model,
+            tokenizer=self._tokenizer,
+            device=self._device,
             padding=True,
             truncation=True,
-        ).to(self._device)
-        logits = self._model.forward(**inputs).logits
-        label_indices = argmax(logits, dim=1)
-        batch["label"] = [self._inverse_label_mapping[index]
-                          for index in label_indices.cpu().numpy()]
+            top_k=1,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        # Reset call count of classifier pipeline.
+        self._pipeline.call_count = 0
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
         return batch
 
 
@@ -122,24 +105,21 @@ class LanguagePredictor(_Predictor):
     model_name: str = "papluca/xlm-roberta-base-language-detection"
 
     @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
     def _pipeline(self) -> Pipeline:
         return pipeline(
             task="text-classification",
             model=self.model_name,
             device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
         )
 
     def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(
-            list(batch["serp_query_text_url"]),
-            top_k=1,
-            truncation=True,
-        )
-        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        # Reset call count of classifier pipeline.
+        self._pipeline.call_count = 0
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
         return batch
 
 
@@ -148,24 +128,19 @@ class HateSpeechPredictor(_Predictor):
     model_name: str = "facebook/roberta-hate-speech-dynabench-r4-target"
 
     @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
     def _pipeline(self) -> Pipeline:
         return pipeline(
             task="text-classification",
             model=self.model_name,
             device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
         )
 
     def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(
-            list(batch["serp_query_text_url"]),
-            top_k=1,
-            truncation=True,
-        )
-        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
         return batch
 
 
@@ -174,79 +149,51 @@ class SpamPredictor(_Predictor):
     model_name: str = "mshenoda/roberta-spam"
 
     @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
     def _pipeline(self) -> Pipeline:
         return pipeline(
             task="text-classification",
             model=self.model_name,
+            model_kwargs=dict(
+                id2label={
+                    0: "No Spam",
+                    1: "Spam",
+                }
+            ),
             device=self._device,
-        )
-
-    def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(
-            list(batch["serp_query_text_url"]),
-            top_k=1,
+            padding=True,
             truncation=True,
-        )
-        labels = [sequences[0]["label"] for sequences in predictions]
-        labels = np.array(labels)
-        labels[labels == 'LABEL_0'] = 'No Spam'
-        labels[labels == 'LABEL_1'] = 'Spam'
-        batch["label"] = labels
-        return batch
-
-
-@dataclass(frozen=True)
-class NamedEntityPredictor(_Predictor):
-    model_name: str = "mdarhri00/named-entity-recognition"
-
-    @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
-    def _pipeline(self) -> Pipeline:
-        return pipeline(
-            task="token-classification",
-            model=self.model_name,
-            device=self._device,
+            top_k=1,
         )
 
     def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(
-            list(batch["serp_query_text_url"]),
-        )
-        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
         return batch
 
 
 @dataclass(frozen=True)
-# rates the well-formedness of a query in grammatical terms. rating is a float between 0 and 1.
 class QueryRatingPredictor(_Predictor):
+    """
+    Rate the well-formedness of a query in grammatical terms.
+    The output rating is a float between 0 and 1.
+    """
+
     model_name: str = "Ashishkr/query_wellformedness_score"
 
     @cached_property
-    def _device(self) -> device:
-        return device("cuda" if cuda_is_available() else "cpu")
-
-    @cached_property
     def _pipeline(self) -> Pipeline:
         return pipeline(
             task="text-classification",
             model=self.model_name,
             device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
         )
 
     def predict_batch(self, batch: DataFrame) -> DataFrame:
-        predictions = self._pipeline(
-            list(batch["serp_query_text_url"]),
-            top_k=1,
-            truncation=True,
-        )
-        batch["label"] = [sequences[0]["label"] for sequences in predictions]
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["score"] = [prediction[0]["score"] for prediction in predictions]
         return batch
 
 
@@ -304,8 +251,6 @@ def _get_predictor(
         return HateSpeechPredictor()
     elif predictor_name == "spam":
         return SpamPredictor()
-    elif predictor_name == "named-entity-recognition":
-        return NamedEntityPredictor()
     elif predictor_name == "query-rating":
         return QueryRatingPredictor()
 
@@ -317,11 +262,9 @@ def classify(
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = None,
+    predict_batch_size: int = 1,
+    write_results: bool = False,
     write_concurrency: Optional[int] = None,
-    write_dir: Path = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}_{PredictorName}"),
-
-
 ) -> None:
     init()
 
@@ -350,7 +293,7 @@ def classify(
         predictor,
         concurrency=predict_concurrency,
         num_gpus=1,
-        batch_size=16,
+        batch_size=predict_batch_size,
         batch_format="pandas",
     )
 

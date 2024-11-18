@@ -4,16 +4,10 @@ from pathlib import Path
 from cyclopts import App
 from cyclopts.types import ResolvedExistingDirectory
 from pandas import DataFrame
-from thesis_schneg.classification import (
+from thesis_schneg.model import (
     DatasetName,
     PredictorName,
-    classify as _classify,
-)
-
-from thesis_schneg.aggregate import (
-    DatasetName,
     AggregatorName,
-    aggregate as _aggregate,
 )
 
 from thesis_schneg.prototype import (
@@ -21,6 +15,7 @@ from thesis_schneg.prototype import (
     AnalysisName,
     analysis_pipeline as _analysis_pipeline,
 )
+
 
 app = App()
 
@@ -32,11 +27,15 @@ def classify(
     sample_files: Optional[int] = None,
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
-    predict_concurrency: Optional[int] = None,
+    predict_concurrency: Optional[int] = 8,
+    predict_batch_size: int = 16,
+    write_results: bool = False,
     write_concurrency: Optional[int] = None,
     write_dir: ResolvedExistingDirectory = Path(
         f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}_{PredictorName}"),
 ) -> None:
+    from thesis_schneg.classification import classify as _classify
+
     _classify(
         predictor_name=predictor,
         dataset_name=dataset,
@@ -44,6 +43,8 @@ def classify(
         only_english=only_english,
         read_concurrency=read_concurrency,
         predict_concurrency=predict_concurrency,
+        predict_batch_size=predict_batch_size,
+        write_results=write_results,
         write_concurrency=write_concurrency,
         write_dir=write_dir,
     )
@@ -60,6 +61,8 @@ def aggregate(
     write_results: bool = False,
     # write_concurrency: Optional[int] = None,
 ) -> None:
+    from thesis_schneg.aggregate import aggregate as _aggregate
+
     _aggregate(
         aggregator_name=aggregator,
         dataset_name=dataset,
