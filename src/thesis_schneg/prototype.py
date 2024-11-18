@@ -6,7 +6,6 @@ from ray import init
 from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
 from thesis_schneg.model import DatasetName, AnalysisName
-# Workaround as TypeAlias is not yet implemented in older Python versions.
 
 
 def _get_parquet_paths(
@@ -121,17 +120,34 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> DataFr
 
 ############################################    Task Specific Functions    ############################################
 
-def _identity(batch: DataFrame) -> DataFrame:
+# Mapping functions
+def get_length_char(batch: DataFrame) -> DataFrame:
+    batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
+    batch['rows'] = 1
     return batch
+
+# Flat mapping functions
 
 
 def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [row] * 2
 
 
-def get_length_char(batch: Dict[str, Any]) -> Dict[str, Any]:
-    batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
-    return batch
+# Aggregation functions
+sum_rows = AggregateFn(
+    init=lambda column: 0,
+    # Apply this to each row to produce a partial aggregate result
+    accumulate_row=lambda a, row: a + 1,
+    # Apply this to merge partial aggregate results into a final result
+    merge=lambda a1, a2: a1 + a2,
+    name="sum-rows"
+)
+
+# Group-by function
+
+
+def query_length_groupby(dataset: Dataset) -> Any:
+    return dataset.groupby('query_length_chars').sum(on='rows')
 
 ############################################    Get modules of different tasks     ############################################
 
@@ -163,30 +179,22 @@ def _get_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[DataFra
 
 def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
     if analysis_name == "sum-rows":
-        return AggregateFn(
-            init=lambda column: 0,
-            # Apply this to each row to produce a partial aggregate result
-            accumulate_row=lambda a, row: a + 1,
-            # Apply this to merge partial aggregate results into a final result
-            merge=lambda a1, a2: a1 + a2,
-            name="sum-rows"
-        )
+        return sum_rows
     elif analysis_name == "zipfs-law":
         return None
     elif analysis_name == "query-length-chars":
         return None
 
 
-def _get_groupby_col(analysis_name: AnalysisName) -> Optional[str]:
+def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset], Any]]:
     if analysis_name == "sum-rows":
         return None
     elif analysis_name == "zipfs-law":
         return None
     elif analysis_name == "query-length-chars":
-        return 'query_length_chars'
+        return query_length_groupby
 
 ############################################    Pipeline    ############################################
-#
 
 
 def analysis_pipeline(dataset_name: DatasetName,
@@ -200,9 +208,14 @@ def analysis_pipeline(dataset_name: DatasetName,
                       num_cpus: Optional[int] = None,
                       num_gpus: Optional[int] = None,
                       write_dir: Path = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{AnalysisName}"),
-    write_concurrency: Optional[int] = None
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{DatasetName}-{AnalysisName}"),
+    write_concurrency: Optional[int] = 2
 ) -> None:
+    if sample_files is not None:
+        write_dir = f"{write_dir}-{sample_files}"
+    else:
+        write_dir = f"{write_dir}-all"
+
     init()
 
     # Load column filter.
@@ -218,7 +231,7 @@ def analysis_pipeline(dataset_name: DatasetName,
     aggregation_func = _get_aggregator(analysis_name=analysis_name)
 
     # Load groupby column.
-    groupby_col = _get_groupby_col(analysis_name=analysis_name)
+    groupby_func = _get_groupby_func(analysis_name=analysis_name)
 
     # Load dataset.
     ds = load_dataset(dataset_name=dataset_name, sample_files=sample_files,
@@ -245,11 +258,13 @@ def analysis_pipeline(dataset_name: DatasetName,
             dataset=ds, aggregation_func=aggregation_func)
 
     # Group by a column.
-    if groupby_col is not None:
-        ds = ds.groupby(groupby_col).sum(on=groupby_col)
+    if groupby_func is not None:
+        ds = groupby_func(dataset=ds)
 
-    # print(ds.take(30))
-    print(ds)
+    # print(ds)
+    # print(ds.take_all())
+    # print(type(ds))
+    # print(ds.columns())
     # ds.show(10)
     # Write results.
-    # ds.write_parquet(path=write_dir, concurrency=write_concurrency)
+    ds.write_parquet(path=write_dir, concurrency=write_concurrency)

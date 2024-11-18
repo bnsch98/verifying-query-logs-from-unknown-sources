@@ -263,7 +263,6 @@ def classify(
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = None,
     predict_batch_size: int = 1,
-    write_results: bool = False,
     write_concurrency: Optional[int] = None,
     write_dir: Path = Path(
         '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification'),

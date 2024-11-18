@@ -1,7 +1,7 @@
 from typing import Optional
 from pathlib import Path
 from cyclopts import App
-from cyclopts.types import ResolvedExistingDirectory
+from cyclopts.types import Directory
 from thesis_schneg.model import (
     DatasetName,
     PredictorName,
@@ -21,10 +21,9 @@ def classify(
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = 8,
     predict_batch_size: int = 16,
-    write_results: bool = False,
-    write_concurrency: Optional[int] = None,
-    write_dir: ResolvedExistingDirectory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}_{PredictorName}"),
+    write_concurrency: Optional[int] = 2,
+    write_dir: Directory = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{PredictorName}"),
 ) -> None:
     from thesis_schneg.classification import classify as _classify
 
@@ -36,7 +35,6 @@ def classify(
         read_concurrency=read_concurrency,
         predict_concurrency=predict_concurrency,
         predict_batch_size=predict_batch_size,
-        write_results=write_results,
         write_concurrency=write_concurrency,
         write_dir=write_dir,
     )
@@ -51,9 +49,9 @@ def aggregate(
     read_concurrency: Optional[int] = None,
     aggregate_concurrency: Optional[int] = None,
     write_results: bool = False,
-    # write_concurrency: Optional[int] = None,
-    write_dir: ResolvedExistingDirectory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/aggregation/{DatasetName}_{PredictorName}"),
+    write_concurrency: Optional[int] = 2,
+    write_dir: Directory = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/aggregation/{DatasetName}-{PredictorName}"),
 ) -> None:
     from thesis_schneg.aggregate import aggregate as _aggregate
 
@@ -65,7 +63,8 @@ def aggregate(
         read_concurrency=read_concurrency,
         aggregate_concurrency=aggregate_concurrency,
         write_results=write_results,
-        # write_concurrency=write_concurrency,
+        write_dir=write_dir,
+        write_concurrency=write_concurrency,
     )
 
 
@@ -81,8 +80,9 @@ def analyser(
     flatmap_concurrency: Optional[int] = None,
     num_cpus: Optional[int] = None,
     num_gpus: Optional[int] = None,
-    write_dir: ResolvedExistingDirectory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{AnalysisName}"),
+    write_concurrency: Optional[int] = 2,
+    write_dir: Directory = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{DatasetName}-{AnalysisName}"),
 ) -> None:
     from thesis_schneg.prototype import analysis_pipeline as _analysis_pipeline
 
@@ -98,6 +98,7 @@ def analyser(
         num_cpus=num_cpus,
         num_gpus=num_gpus,
         write_dir=write_dir,
+        write_concurrency=write_concurrency,
     )
 
 
