@@ -317,8 +317,10 @@ def classify(
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
     predict_concurrency: Optional[int] = None,
-    write_results: bool = False,
     write_concurrency: Optional[int] = None,
+    write_dir: Path = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}_{PredictorName}"),
+
 
 ) -> None:
     init()
@@ -352,10 +354,5 @@ def classify(
         batch_format="pandas",
     )
 
-    # Take a small sample
-    # TODO: In reality, we should store the output again as Parquet or similar.
-    print(dataset.take_batch(batch_size=100, batch_format="pandas"))
-
-    if write_results:
-        dataset.write_parquet(
-            path=f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{dataset_name}_{predictor_name}.parquet", concurrency=write_concurrency)
+    dataset.write_parquet(
+        path=write_dir, concurrency=write_concurrency)

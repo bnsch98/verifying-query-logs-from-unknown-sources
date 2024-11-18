@@ -1,0 +1,273 @@
+from pathlib import Path
+from random import choices
+from typing import Literal, Iterable, Optional, Callable, Any, Dict
+from pandas import DataFrame
+from ray import init
+from ray.data import read_parquet, Dataset
+from ray.data.aggregate import AggregateFn
+
+# Workaround as TypeAlias is not yet implemented in older Python versions.
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing import Any
+    TypeAlias = Any
+
+DatasetName: TypeAlias = Literal[
+    "aol",
+    "ms-marco",
+    "orcas",
+    "aql",
+]
+
+AnalysisName: TypeAlias = Literal[
+    'sum-rows',
+    'zipfs-law',
+    "query-length-chars",
+]
+
+
+def _get_parquet_paths(
+    dataset_name: DatasetName,
+    sample_files: Optional[int] = None,
+    only_english: bool = False,
+) -> Iterable[Path]:
+    base_path: Path
+    if dataset_name == "aol":
+        base_path = Path(
+            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
+        )
+    elif dataset_name == "ms-marco":
+        if only_english:
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
+            )
+        else:
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
+            )
+    elif dataset_name == "orcas":
+        base_path = Path(
+            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
+        )
+    elif dataset_name == "aql":
+        if only_english:
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
+            )
+        else:
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
+            )
+
+    input_paths = [path for path in base_path.iterdir()
+                   if path.suffix == ".parquet"]
+    if sample_files is not None:
+        input_paths = choices(
+            population=input_paths,
+            k=min(sample_files, len(input_paths)),
+        )
+    return input_paths
+
+
+############################################    Basic Modules    ############################################
+
+def load_dataset(dataset_name: DatasetName,
+                 sample_files: Optional[int] = None,
+                 only_english: bool = False,
+                 read_concurrency: Optional[int] = None,
+                 ) -> Dataset:
+
+    # Load dataset.
+    dataset = read_parquet(
+        paths=[
+            str(path)
+            for path in _get_parquet_paths(
+                dataset_name=dataset_name,
+                sample_files=sample_files,
+                only_english=only_english,
+            )
+        ],
+        concurrency=read_concurrency,
+    )
+    return dataset
+
+
+def filter_columns(dataset: Dataset,
+                   columns: Optional[Iterable[str]
+                                     ] = ['serp_query_text_url'],
+                   # filter out NaN values for fault tolerance
+                   filter_NaN: Optional[Iterable[str]] = [
+                       'serp_query_text_url'],
+                   ) -> Dataset:
+
+    def col_filter(df: DataFrame, col=columns, filter=filter_NaN) -> DataFrame:
+        if filter is not None:
+            return df.dropna(subset=filter)[col]
+        else:
+            return df[col]
+
+    return dataset.map_batches(col_filter, batch_format="pandas")
+
+
+def map_dataset(dataset: Dataset,
+                mapping_func: Callable[[DataFrame], DataFrame],
+                map_concurrency: Optional[int] = None,
+                mapping_batch_size: int = 16,
+                num_gpus: int = None) -> Dataset:
+    return dataset.map_batches(
+        mapping_func,
+        concurrency=map_concurrency,
+        num_gpus=num_gpus,
+        batch_size=mapping_batch_size,
+        batch_format="pandas",
+    )
+
+
+def flat_map_dataset(dataset: Dataset,
+                     flat_mapping_func: Callable[[Dict[str, Any]], Dict[str, Any]],
+                     flatmap_concurrency: Optional[int] = None,
+                     num_cpus: Optional[int] = None,
+                     num_gpus: Optional[int] = None
+                     ) -> Dataset:
+    return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
+
+
+def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> DataFrame:
+    return dataset.aggregate(aggregation_func)
+
+
+############################################    Task Specific Functions    ############################################
+
+def _identity(batch: DataFrame) -> DataFrame:
+    return batch
+
+
+def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    return [row] * 2
+
+
+def get_length_char(batch: Dict[str, Any]) -> Dict[str, Any]:
+    batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
+    return batch
+
+############################################    Get modules of different tasks     ############################################
+
+
+def _get_col_filter(analysis_name: AnalysisName) -> Optional[Dict[str, Iterable[str]]]:
+    if analysis_name == "sum-rows":
+        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+    elif analysis_name == "zipfs-law":
+        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-length-chars":
+        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+
+
+def _get_flat_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[Dict[str, Any]], Dict[str, Any]]]:
+    if analysis_name == "sum-rows":
+        return None
+    elif analysis_name == "zipfs-law":
+        return _duplicate_row
+
+
+def _get_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[DataFrame], DataFrame]]:
+    if analysis_name == "sum-rows":
+        return None
+    elif analysis_name == "zipfs-law":
+        return None
+    elif analysis_name == "query-length-chars":
+        return get_length_char
+
+
+def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
+    if analysis_name == "sum-rows":
+        return AggregateFn(
+            init=lambda column: 0,
+            # Apply this to each row to produce a partial aggregate result
+            accumulate_row=lambda a, row: a + 1,
+            # Apply this to merge partial aggregate results into a final result
+            merge=lambda a1, a2: a1 + a2,
+            name="sum-rows"
+        )
+    elif analysis_name == "zipfs-law":
+        return None
+    elif analysis_name == "query-length-chars":
+        return None
+
+
+def _get_groupby_col(analysis_name: AnalysisName) -> Optional[str]:
+    if analysis_name == "sum-rows":
+        return None
+    elif analysis_name == "zipfs-law":
+        return None
+    elif analysis_name == "query-length-chars":
+        return 'query_length_chars'
+
+############################################    Pipeline    ############################################
+#
+
+
+def analysis_pipeline(dataset_name: DatasetName,
+                      analysis_name: AnalysisName,
+                      sample_files: Optional[int] = None,
+                      only_english: bool = False,
+                      read_concurrency: Optional[int] = None,
+                      map_concurrency: Optional[int] = None,
+                      mapping_batch_size: int = 16,
+                      flatmap_concurrency: Optional[int] = None,
+                      num_cpus: Optional[int] = None,
+                      num_gpus: Optional[int] = None,
+                      write_dir: Path = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{AnalysisName}"),
+    write_concurrency: Optional[int] = None
+) -> None:
+    init()
+
+    # Load column filter.
+    col_filter = _get_col_filter(analysis_name=analysis_name)
+
+    # Load mapping function.
+    mapping_func = _get_mapping_func(analysis_name=analysis_name)
+
+    # Load function for flat mapping.
+    flat_mapping_func = _get_flat_mapping_func(analysis_name=analysis_name)
+
+    # Load function for aggregation.
+    aggregation_func = _get_aggregator(analysis_name=analysis_name)
+
+    # Load groupby column.
+    groupby_col = _get_groupby_col(analysis_name=analysis_name)
+
+    # Load dataset.
+    ds = load_dataset(dataset_name=dataset_name, sample_files=sample_files,
+                      only_english=only_english, read_concurrency=read_concurrency)
+
+    # Select required columns.
+    if col_filter is not None:
+        ds = filter_columns(
+            dataset=ds, columns=col_filter['cols'], filter_NaN=col_filter['nan_filter'])
+
+    # # Apply mapping function.
+    if mapping_func is not None:
+        ds = map_dataset(dataset=ds, mapping_func=mapping_func,
+                         map_concurrency=map_concurrency, mapping_batch_size=mapping_batch_size, num_gpus=num_gpus)
+
+    # Apply flat mapping function.
+    if flat_mapping_func is not None:
+        ds = flat_map_dataset(dataset=ds, flat_mapping_func=flat_mapping_func,
+                              flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
+
+    # Apply aggregation function.
+    if aggregation_func is not None:
+        ds = aggregate_dataset(
+            dataset=ds, aggregation_func=aggregation_func)
+
+    # Group by a column.
+    if groupby_col is not None:
+        ds = ds.groupby(groupby_col).sum(on=groupby_col)
+
+    # print(ds.take(30))
+    print(ds)
+    # ds.show(10)
+    # Write results.
+    # ds.write_parquet(path=write_dir, concurrency=write_concurrency)

@@ -36,3 +36,6 @@ exclude = [
     "data",
     "venv_test"
 ]
+
+[project.scripts]
+thesis-schneg = "thesis_schneg.__main__:app"
