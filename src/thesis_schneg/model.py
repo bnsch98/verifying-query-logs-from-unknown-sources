@@ -27,3 +27,9 @@ PredictorName: TypeAlias = Literal[
 AggregatorName: TypeAlias = Literal[
     "zipfs-law",
 ]
+
+AnalysisName: TypeAlias = Literal[
+    'sum-rows',
+    'zipfs-law',
+    "query-length-chars",
+]

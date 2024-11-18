@@ -1,30 +1,12 @@
 from pathlib import Path
 from random import choices
-from typing import Literal, Iterable, Optional, Callable, Any, Dict
+from typing import Iterable, Optional, Callable, Any, Dict
 from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
-
+from thesis_schneg.model import DatasetName, AnalysisName
 # Workaround as TypeAlias is not yet implemented in older Python versions.
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing import Any
-    TypeAlias = Any
-
-DatasetName: TypeAlias = Literal[
-    "aol",
-    "ms-marco",
-    "orcas",
-    "aql",
-]
-
-AnalysisName: TypeAlias = Literal[
-    'sum-rows',
-    'zipfs-law',
-    "query-length-chars",
-]
 
 
 def _get_parquet_paths(

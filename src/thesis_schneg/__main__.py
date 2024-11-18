@@ -3,19 +3,12 @@ from ray.data.aggregate import AggregateFn
 from pathlib import Path
 from cyclopts import App
 from cyclopts.types import ResolvedExistingDirectory
-from pandas import DataFrame
 from thesis_schneg.model import (
     DatasetName,
     PredictorName,
     AggregatorName,
-)
-
-from thesis_schneg.prototype import (
-    DatasetName,
     AnalysisName,
-    analysis_pipeline as _analysis_pipeline,
 )
-
 
 app = App()
 
@@ -60,6 +53,8 @@ def aggregate(
     aggregate_concurrency: Optional[int] = None,
     write_results: bool = False,
     # write_concurrency: Optional[int] = None,
+    write_dir: ResolvedExistingDirectory = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/aggregation/{DatasetName}_{PredictorName}"),
 ) -> None:
     from thesis_schneg.aggregate import aggregate as _aggregate
 
@@ -90,6 +85,8 @@ def analyser(
     write_dir: ResolvedExistingDirectory = Path(
         f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{AnalysisName}"),
 ) -> None:
+    from thesis_schneg.prototype import analysis_pipeline as _analysis_pipeline
+
     _analysis_pipeline(
         dataset_name=dataset,
         analysis_name=analysis,
