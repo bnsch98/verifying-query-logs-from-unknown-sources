@@ -123,7 +123,6 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> DataFr
 # Mapping functions
 def get_length_char(batch: DataFrame) -> DataFrame:
     batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
-    batch['rows'] = 1
     return batch
 
 # Flat mapping functions
@@ -147,7 +146,7 @@ sum_rows = AggregateFn(
 
 
 def query_length_groupby(dataset: Dataset) -> Any:
-    return dataset.groupby('query_length_chars').sum(on='rows')
+    return dataset.groupby('query_length_chars').count()
 
 ############################################    Get modules of different tasks     ############################################
 
@@ -262,7 +261,7 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = groupby_func(dataset=ds)
 
     # print(ds)
-    # print(ds.take_all())
+    print(ds.take_all())
     # print(type(ds))
     # print(ds.columns())
     # ds.show(10)
