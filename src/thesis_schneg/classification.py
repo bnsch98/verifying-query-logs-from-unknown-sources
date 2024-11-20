@@ -267,6 +267,11 @@ def classify(
     write_dir: Path = Path(
         '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification'),
 ) -> None:
+
+    if sample_files is not None:
+        write_dir = f"{write_dir}/{dataset_name}-{predictor_name}-{sample_files}/"
+    else:
+        write_dir = f"{write_dir}/{dataset_name}-{predictor_name}-all/"
     init()
 
     # Load dataset.

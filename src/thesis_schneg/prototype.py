@@ -208,13 +208,13 @@ def analysis_pipeline(dataset_name: DatasetName,
                       num_cpus: Optional[int] = None,
                       num_gpus: Optional[int] = None,
                       write_dir: Path = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{DatasetName}-{AnalysisName}"),
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
     write_concurrency: Optional[int] = 2
 ) -> None:
     if sample_files is not None:
-        write_dir = f"{write_dir}-{sample_files}"
+        write_dir = f"{write_dir}/{dataset_name}-{analysis_name}-{sample_files}/"
     else:
-        write_dir = f"{write_dir}-all"
+        write_dir = f"{write_dir}/{dataset_name}-{analysis_name}-all/"
 
     init()
 
@@ -267,4 +267,4 @@ def analysis_pipeline(dataset_name: DatasetName,
     # print(ds.columns())
     # ds.show(10)
     # Write results.
-    ds.write_parquet(path=write_dir, concurrency=write_concurrency)
+    ds.write_parquet(path=str(write_dir), concurrency=write_concurrency)

@@ -23,7 +23,7 @@ def classify(
     predict_batch_size: int = 16,
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification/{DatasetName}-{PredictorName}"),
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification"),
 ) -> None:
     from thesis_schneg.classification import classify as _classify
 
@@ -51,7 +51,7 @@ def aggregate(
     write_results: bool = False,
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/aggregation/{DatasetName}-{PredictorName}"),
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/aggregation"),
 ) -> None:
     from thesis_schneg.aggregate import aggregate as _aggregate
 
@@ -82,7 +82,7 @@ def analyser(
     num_gpus: Optional[int] = None,
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
-        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{DatasetName}-{AnalysisName}"),
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
 ) -> None:
     from thesis_schneg.prototype import analysis_pipeline as _analysis_pipeline
 
