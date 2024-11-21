@@ -32,4 +32,6 @@ AnalysisName: TypeAlias = Literal[
     'sum-rows',
     'zipfs-law',
     "query-length-chars",
+    "query-length-words",
+    "unique-queries",
 ]

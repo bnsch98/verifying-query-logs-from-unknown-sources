@@ -5,6 +5,7 @@ from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
+from ray.data.grouped_data import GroupedData
 from thesis_schneg.model import DatasetName, AnalysisName
 
 
@@ -114,7 +115,7 @@ def flat_map_dataset(dataset: Dataset,
     return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
 
 
-def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> DataFrame:
+def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Optional[Dict[str, Any]]:
     return dataset.aggregate(aggregation_func)
 
 
@@ -125,6 +126,11 @@ def get_length_char(batch: DataFrame) -> DataFrame:
     batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
     return batch
 
+
+def get_length_word(batch: DataFrame) -> DataFrame:
+    batch['query_length_words'] = batch['serp_query_text_url'].apply(
+        lambda x: len(x.split()))
+    return batch
 # Flat mapping functions
 
 
@@ -145,8 +151,16 @@ sum_rows = AggregateFn(
 # Group-by function
 
 
-def query_length_groupby(dataset: Dataset) -> Any:
+def query_length_chars_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('query_length_chars').count()
+
+
+def query_length_words_groupby(dataset: Dataset) -> Dataset:
+    return dataset.groupby('query_length_words').count()
+
+
+def unique_queries_groupby(dataset: Dataset) -> GroupedData:
+    return dataset.groupby('serp_query_text_url').count()
 
 ############################################    Get modules of different tasks     ############################################
 
@@ -158,6 +172,10 @@ def _get_col_filter(analysis_name: AnalysisName) -> Optional[Dict[str, Iterable[
         return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
     elif analysis_name == "query-length-chars":
         return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-length-words":
+        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+    elif analysis_name == "unique-queries":
+        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
 
 
 def _get_flat_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[Dict[str, Any]], Dict[str, Any]]]:
@@ -165,6 +183,12 @@ def _get_flat_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[Di
         return None
     elif analysis_name == "zipfs-law":
         return _duplicate_row
+    elif analysis_name == "query-length-chars":
+        return None
+    elif analysis_name == "query-length-words":
+        return None
+    elif analysis_name == "unique-queries":
+        return None
 
 
 def _get_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[DataFrame], DataFrame]]:
@@ -174,6 +198,10 @@ def _get_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[DataFra
         return None
     elif analysis_name == "query-length-chars":
         return get_length_char
+    elif analysis_name == "query-length-words":
+        return get_length_word
+    elif analysis_name == "unique-queries":
+        return None
 
 
 def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
@@ -183,6 +211,11 @@ def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
         return None
     elif analysis_name == "query-length-chars":
         return None
+    elif analysis_name == "query-length-words":
+        return None
+    elif analysis_name == "unique-queries":
+        # return sum_rows
+        return None
 
 
 def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset], Any]]:
@@ -191,7 +224,11 @@ def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset
     elif analysis_name == "zipfs-law":
         return None
     elif analysis_name == "query-length-chars":
-        return query_length_groupby
+        return query_length_chars_groupby
+    elif analysis_name == "query-length-words":
+        return query_length_words_groupby
+    elif analysis_name == "unique-queries":
+        return unique_queries_groupby
 
 ############################################    Pipeline    ############################################
 
@@ -251,17 +288,17 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = flat_map_dataset(dataset=ds, flat_mapping_func=flat_mapping_func,
                               flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
 
+    # Group by a column.
+    if groupby_func is not None:
+        ds = groupby_func(dataset=ds)
+
     # Apply aggregation function.
     if aggregation_func is not None:
         ds = aggregate_dataset(
             dataset=ds, aggregation_func=aggregation_func)
 
-    # Group by a column.
-    if groupby_func is not None:
-        ds = groupby_func(dataset=ds)
-
     # print(ds)
-    print(ds.take_all())
+    print(ds.take(15))
     # print(type(ds))
     # print(ds.columns())
     # ds.show(10)
