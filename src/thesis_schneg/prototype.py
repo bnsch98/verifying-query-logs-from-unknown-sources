@@ -7,6 +7,7 @@ from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
 from ray.data.grouped_data import GroupedData
 from thesis_schneg.model import DatasetName, AnalysisName
+from json import dumps
 
 
 def _get_parquet_paths(
@@ -53,7 +54,6 @@ def _get_parquet_paths(
 
 
 ############################################    Basic Modules    ############################################
-
 def load_dataset(dataset_name: DatasetName,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -119,6 +119,33 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
     return dataset.aggregate(aggregation_func)
 
 
+def write_dataset(dataset: Dataset | GroupedData | DataFrame | dict, write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
+    if type(dataset) is dict:
+        # Create directory to work around FileNotFoundError
+        write_dir.mkdir(parents=True, exist_ok=True)
+        # Distinguish between nested dict and flat dict. We rule out deeper nesting.
+        if type(dataset[analysis]) is dict:
+            # Write json file
+            with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
+                f.write(dumps(dataset[analysis], default=int))
+                # f.write(dumps(dataset[analysis]))
+        else:
+            # Write json file
+            with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
+                f.write(dumps(dataset), default=int)
+                # f.write(dumps(dataset))
+
+    elif type(dataset) is Dataset:
+        dataset.write_parquet(path=str(write_dir),
+                              concurrency=write_concurrency)
+    elif type(dataset) is GroupedData:
+        print(dataset.count())
+    elif type(dataset) is DataFrame:
+        dataset.to_csv(write_dir.joinpath("result.csv"), index=False)
+    else:
+        print("Unknown type of output")
+
+
 ############################################    Task Specific Functions    ############################################
 
 # Mapping functions
@@ -131,9 +158,9 @@ def get_length_word(batch: DataFrame) -> DataFrame:
     batch['query_length_words'] = batch['serp_query_text_url'].apply(
         lambda x: len(x.split()))
     return batch
+
+
 # Flat mapping functions
-
-
 def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [row] * 2
 
@@ -148,9 +175,30 @@ sum_rows = AggregateFn(
     name="sum-rows"
 )
 
+unique_queries_agg = AggregateFn(
+    init=lambda column: {"sum": 0, "unique": 0},
+    # Apply this to each row to produce a partial aggregate result
+
+    accumulate_row=lambda a, row: acc_row(a, row),
+    # Apply this to merge partial aggregate results into a final result
+    merge=lambda a1, a2: sum_dict(a1, a2),
+
+    name="unique-queries"
+)
+
+
+# Helper functions for aggregation
+def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
+    aggr_dict["sum"] += row["count()"]
+    aggr_dict["unique"] += 1
+    return aggr_dict
+
+
+def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: a1.get(k, 0) + a2.get(k, 0) for k in set(a1) | set(a2)}
+
+
 # Group-by function
-
-
 def query_length_chars_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('query_length_chars').count()
 
@@ -162,9 +210,8 @@ def query_length_words_groupby(dataset: Dataset) -> Dataset:
 def unique_queries_groupby(dataset: Dataset) -> GroupedData:
     return dataset.groupby('serp_query_text_url').count()
 
-############################################    Get modules of different tasks     ############################################
 
-
+############################################    Get task-specific modules     ############################################
 def _get_col_filter(analysis_name: AnalysisName) -> Optional[Dict[str, Iterable[str]]]:
     if analysis_name == "sum-rows":
         return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
@@ -214,8 +261,7 @@ def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
     elif analysis_name == "query-length-words":
         return None
     elif analysis_name == "unique-queries":
-        # return sum_rows
-        return None
+        return unique_queries_agg
 
 
 def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset], Any]]:
@@ -230,9 +276,8 @@ def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset
     elif analysis_name == "unique-queries":
         return unique_queries_groupby
 
+
 ############################################    Pipeline    ############################################
-
-
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       sample_files: Optional[int] = None,
@@ -248,9 +293,10 @@ def analysis_pipeline(dataset_name: DatasetName,
     write_concurrency: Optional[int] = 2
 ) -> None:
     if sample_files is not None:
-        write_dir = f"{write_dir}/{dataset_name}-{analysis_name}-{sample_files}/"
+        write_dir = write_dir.joinpath(
+            f"{dataset_name}-{analysis_name}-{sample_files}")
     else:
-        write_dir = f"{write_dir}/{dataset_name}-{analysis_name}-all/"
+        write_dir = write_dir.joinpath(f"{dataset_name}-{analysis_name}-all")
 
     init()
 
@@ -297,10 +343,6 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = aggregate_dataset(
             dataset=ds, aggregation_func=aggregation_func)
 
-    # print(ds)
-    print(ds.take(15))
-    # print(type(ds))
-    # print(ds.columns())
-    # ds.show(10)
     # Write results.
-    ds.write_parquet(path=str(write_dir), concurrency=write_concurrency)
+    write_dataset(dataset=ds, write_dir=write_dir,
+                  analysis=analysis_name, write_concurrency=write_concurrency)
