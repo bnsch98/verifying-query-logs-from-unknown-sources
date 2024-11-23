@@ -121,27 +121,23 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
 
 def write_dataset(dataset: Dataset | GroupedData | DataFrame | dict, write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
     if type(dataset) is dict:
-        # Create directory to work around FileNotFoundError
+        # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
         # Distinguish between nested dict and flat dict. We rule out deeper nesting.
         if type(dataset[analysis]) is dict:
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
-                f.write(dumps(dataset[analysis], default=int))
-                # f.write(dumps(dataset[analysis]))
+                f.write(dumps(dataset[analysis]))
         else:
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
-                f.write(dumps(dataset), default=int)
-                # f.write(dumps(dataset))
-
+                f.write(dumps(dataset))
     elif type(dataset) is Dataset:
         dataset.write_parquet(path=str(write_dir),
                               concurrency=write_concurrency)
-    elif type(dataset) is GroupedData:
-        print(dataset.count())
     elif type(dataset) is DataFrame:
-        dataset.to_csv(write_dir.joinpath("result.csv"), index=False)
+        dataset.to_csv(path_or_buf=write_dir.joinpath(
+            "result.csv"), index=False)
     else:
         print("Unknown type of output")
 
@@ -163,6 +159,10 @@ def get_length_word(batch: DataFrame) -> DataFrame:
 # Flat mapping functions
 def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [row] * 2
+
+
+def _extract_words(row: Dict[str, Any]) -> Iterable[str]:
+    return row['serp_query_text_url'].split()
 
 
 # Aggregation functions
@@ -195,7 +195,7 @@ def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: a1.get(k, 0) + a2.get(k, 0) for k in set(a1) | set(a2)}
+    return {k: int(a1.get(k, 0) + a2.get(k, 0)) for k in set(a1) | set(a2)}
 
 
 # Group-by function
