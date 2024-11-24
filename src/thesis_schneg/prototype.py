@@ -1,6 +1,6 @@
 from pathlib import Path
 from random import choices
-from typing import Iterable, Optional, Callable, Any, Dict
+from typing import Iterable, Optional, Callable, Protocol, Any, Dict
 from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet, Dataset
@@ -8,6 +8,32 @@ from ray.data.aggregate import AggregateFn
 from ray.data.grouped_data import GroupedData
 from thesis_schneg.model import DatasetName, AnalysisName
 from json import dumps
+from functools import cached_property
+from dataclasses import dataclass
+from spacy import load as spacy_load, Language
+
+
+############################################    Requirements for basic modules    ############################################
+class _spacy_framework(Protocol):
+    def get_tokens(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        raise NotImplementedError()
+
+    def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        return self.get_tokens(row)
+
+
+@dataclass(frozen=True)
+class SpacyModel(_spacy_framework):
+
+    @cached_property
+    def spacy_model(self) -> Language:
+        return spacy_load("en_core_web_sm")
+
+    def get_tokens(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        # Get tokens from text
+        doc = self.spacy_model(row["serp_query_text_url"])
+        tokens = [{"word": token.text} for token in doc]
+        return tokens
 
 
 def _get_parquet_paths(
@@ -119,7 +145,7 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
     return dataset.aggregate(aggregation_func)
 
 
-def write_dataset(dataset: Dataset | GroupedData | DataFrame | dict, write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
+def write_dataset(dataset: Dataset | DataFrame | dict, write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
     if type(dataset) is dict:
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
@@ -199,6 +225,10 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # Group-by function
+def groupby_words(dataset: Dataset) -> Dataset:
+    return dataset.groupby('word').count()
+
+
 def query_length_chars_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('query_length_chars').count()
 
@@ -212,69 +242,17 @@ def unique_queries_groupby(dataset: Dataset) -> GroupedData:
 
 
 ############################################    Get task-specific modules     ############################################
-def _get_col_filter(analysis_name: AnalysisName) -> Optional[Dict[str, Iterable[str]]]:
+def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
     if analysis_name == "sum-rows":
-        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+        return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "zipfs-law":
-        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+        return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyModel(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-chars":
-        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+        return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': get_length_char, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-words":
-        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
+        return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': get_length_word, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "unique-queries":
-        return {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}
-
-
-def _get_flat_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[Dict[str, Any]], Dict[str, Any]]]:
-    if analysis_name == "sum-rows":
-        return None
-    elif analysis_name == "zipfs-law":
-        return _duplicate_row
-    elif analysis_name == "query-length-chars":
-        return None
-    elif analysis_name == "query-length-words":
-        return None
-    elif analysis_name == "unique-queries":
-        return None
-
-
-def _get_mapping_func(analysis_name: AnalysisName) -> Optional[Callable[[DataFrame], DataFrame]]:
-    if analysis_name == "sum-rows":
-        return None
-    elif analysis_name == "zipfs-law":
-        return None
-    elif analysis_name == "query-length-chars":
-        return get_length_char
-    elif analysis_name == "query-length-words":
-        return get_length_word
-    elif analysis_name == "unique-queries":
-        return None
-
-
-def _get_aggregator(analysis_name: AnalysisName) -> Optional[AggregateFn]:
-    if analysis_name == "sum-rows":
-        return sum_rows
-    elif analysis_name == "zipfs-law":
-        return None
-    elif analysis_name == "query-length-chars":
-        return None
-    elif analysis_name == "query-length-words":
-        return None
-    elif analysis_name == "unique-queries":
-        return unique_queries_agg
-
-
-def _get_groupby_func(analysis_name: AnalysisName) -> Optional[Callable[[Dataset], Any]]:
-    if analysis_name == "sum-rows":
-        return None
-    elif analysis_name == "zipfs-law":
-        return None
-    elif analysis_name == "query-length-chars":
-        return query_length_chars_groupby
-    elif analysis_name == "query-length-words":
-        return query_length_words_groupby
-    elif analysis_name == "unique-queries":
-        return unique_queries_groupby
+        return {'groupby_func': unique_queries_groupby, 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
 
 
 ############################################    Pipeline    ############################################
@@ -300,48 +278,38 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     init()
 
-    # Load column filter.
-    col_filter = _get_col_filter(analysis_name=analysis_name)
-
-    # Load mapping function.
-    mapping_func = _get_mapping_func(analysis_name=analysis_name)
-
-    # Load function for flat mapping.
-    flat_mapping_func = _get_flat_mapping_func(analysis_name=analysis_name)
-
-    # Load function for aggregation.
-    aggregation_func = _get_aggregator(analysis_name=analysis_name)
-
-    # Load groupby column.
-    groupby_func = _get_groupby_func(analysis_name=analysis_name)
+    # Load module specifics
+    module_specifics = _get_module_specifics(analysis_name=analysis_name)
 
     # Load dataset.
     ds = load_dataset(dataset_name=dataset_name, sample_files=sample_files,
                       only_english=only_english, read_concurrency=read_concurrency)
 
     # Select required columns.
-    if col_filter is not None:
+    if module_specifics['col_filter'] is not None:
         ds = filter_columns(
-            dataset=ds, columns=col_filter['cols'], filter_NaN=col_filter['nan_filter'])
+            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'])
 
     # # Apply mapping function.
-    if mapping_func is not None:
-        ds = map_dataset(dataset=ds, mapping_func=mapping_func,
+    if module_specifics['mapping_func'] is not None:
+        ds = map_dataset(dataset=ds, mapping_func=module_specifics['mapping_func'],
                          map_concurrency=map_concurrency, mapping_batch_size=mapping_batch_size, num_gpus=num_gpus)
 
     # Apply flat mapping function.
-    if flat_mapping_func is not None:
-        ds = flat_map_dataset(dataset=ds, flat_mapping_func=flat_mapping_func,
+    if module_specifics['flat_mapping_func'] is not None:
+        ds = flat_map_dataset(dataset=ds, flat_mapping_func=module_specifics['flat_mapping_func'],
                               flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
 
     # Group by a column.
-    if groupby_func is not None:
-        ds = groupby_func(dataset=ds)
+    if module_specifics['groupby_func'] is not None:
+        ds = module_specifics['groupby_func'](dataset=ds)
 
     # Apply aggregation function.
-    if aggregation_func is not None:
+    if module_specifics['aggregator'] is not None:
         ds = aggregate_dataset(
-            dataset=ds, aggregation_func=aggregation_func)
+            dataset=ds, aggregation_func=module_specifics['aggregator'])
+
+    # print(ds.take(10))
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
