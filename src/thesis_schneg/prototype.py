@@ -1,6 +1,6 @@
 from pathlib import Path
 from random import choices
-from typing import Iterable, Optional, Callable, Protocol, Any, Dict
+from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
 from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet, Dataset
@@ -145,7 +145,7 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
     return dataset.aggregate(aggregation_func)
 
 
-def write_dataset(dataset: Dataset | DataFrame | dict, write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
     if type(dataset) is dict:
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
