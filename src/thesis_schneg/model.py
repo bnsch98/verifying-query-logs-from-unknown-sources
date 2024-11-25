@@ -30,7 +30,8 @@ AggregatorName: TypeAlias = Literal[
 
 AnalysisName: TypeAlias = Literal[
     'sum-rows',
-    'zipfs-law',
+    'zipfs-law-words',
+    'zipfs-law-chars',
     "query-length-chars",
     "query-length-words",
     "unique-queries",

@@ -187,8 +187,8 @@ def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [row] * 2
 
 
-def _extract_words(row: Dict[str, Any]) -> Iterable[str]:
-    return row['serp_query_text_url'].split()
+def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
 
 
 # Aggregation functions
@@ -229,6 +229,10 @@ def groupby_words(dataset: Dataset) -> Dataset:
     return dataset.groupby('word').count()
 
 
+def groupby_chars(dataset: Dataset) -> Dataset:
+    return dataset.groupby('char').count()
+
+
 def query_length_chars_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('query_length_chars').count()
 
@@ -245,8 +249,10 @@ def unique_queries_groupby(dataset: Dataset) -> GroupedData:
 def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
     if analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "zipfs-law":
+    elif analysis_name == "zipfs-law-words":
         return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyModel(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "zipfs-law-chars":
+        return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-chars":
         return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': get_length_char, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-words":
@@ -309,7 +315,7 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = aggregate_dataset(
             dataset=ds, aggregation_func=module_specifics['aggregator'])
 
-    # print(ds.take(10))
+    print(ds.take(10))
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
