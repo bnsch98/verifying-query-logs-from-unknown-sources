@@ -183,10 +183,6 @@ def get_length_word(batch: DataFrame) -> DataFrame:
 
 
 # Flat mapping functions
-def _duplicate_row(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
-    return [row] * 2
-
-
 def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
 
@@ -225,6 +221,10 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # Group-by function
+def groupby_queries(dataset: Dataset) -> Dataset:
+    return dataset.groupby('serp_query_text_url').count()
+
+
 def groupby_words(dataset: Dataset) -> Dataset:
     return dataset.groupby('word').count()
 
@@ -249,6 +249,8 @@ def unique_queries_groupby(dataset: Dataset) -> GroupedData:
 def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
     if analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "zipfs-law-queries":
+        return {'groupby_func': groupby_queries, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "zipfs-law-words":
         return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyModel(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "zipfs-law-chars":
