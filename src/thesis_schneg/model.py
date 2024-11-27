@@ -38,4 +38,5 @@ AnalysisName: TypeAlias = Literal[
     "query-length-chars",
     "query-length-words",
     "unique-queries",
+    "named-entities",
 ]
