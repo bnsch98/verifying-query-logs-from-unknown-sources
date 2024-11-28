@@ -5,7 +5,6 @@ from pandas import DataFrame
 from ray import init
 from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
-from ray.data.grouped_data import GroupedData
 from thesis_schneg.model import DatasetName, AnalysisName
 from json import dumps
 from functools import cached_property
@@ -46,12 +45,8 @@ class SpacyEntities(_spacy_framework):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         # Get tokens from text
         doc = self.spacy_model(row["serp_query_text_url"])
-        if doc.ents != ():
-            entities = [{"entity": ent.text, "entity-label": ent.label_}
-                        for ent in doc.ents]
-        else:
-            entities = [{"entity": "No Named Entities Found",
-                         "entity-label": "No Named Entities Found"}]
+        entities = [{"entity": ent.text, "entity-label": ent.label_}
+                    for ent in doc.ents if doc.ents != ()]
         return entities
 
 
@@ -206,6 +201,10 @@ def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
 
 
+def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    return [{"operator": operator} for operator in ["site:", "\""] if operator in row['serp_query_text_url'].replace(" ", "")]
+
+
 # Aggregation functions
 sum_rows = AggregateFn(
     init=lambda column: 0,
@@ -227,8 +226,20 @@ unique_queries_agg = AggregateFn(
     name="unique-queries"
 )
 
+unique_words_agg = AggregateFn(
+    init=lambda column: {"sum": 0, "unique": 0},
+    # Apply this to each row to produce a partial aggregate result
+
+    accumulate_row=lambda a, row: acc_row(a, row),
+    # Apply this to merge partial aggregate results into a final result
+    merge=lambda a1, a2: sum_dict(a1, a2),
+
+    name="unique-words"
+)
 
 # Helper functions for aggregation
+
+
 def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     aggr_dict["sum"] += row["count()"]
     aggr_dict["unique"] += 1
@@ -268,7 +279,12 @@ def named_entities_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby(key=['entity', 'entity-label']).count()
 
 
+def search_operators_groupby(dataset: Dataset) -> Dataset:
+    return dataset.groupby('operator').count()
+
 ############################################    Get task-specific modules     ############################################
+
+
 def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
     if analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
@@ -278,14 +294,18 @@ def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
         return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "zipfs-law-chars":
         return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "unique-queries":
+        return {'groupby_func': unique_queries_groupby, 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "heaps-law-words":
+        return {'groupby_func': groupby_words, 'aggregator': unique_words_agg, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-chars":
         return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': get_length_char, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-words":
         return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': get_length_word, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "unique-queries":
-        return {'groupby_func': unique_queries_groupby, 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "named-entities":
         return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyEntities(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "search-operators":
+        return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
 
 
 ############################################    Pipeline    ############################################

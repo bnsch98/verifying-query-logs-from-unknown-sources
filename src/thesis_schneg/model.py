@@ -33,10 +33,10 @@ AnalysisName: TypeAlias = Literal[
     'zipfs-law-queries',
     'zipfs-law-words',
     'zipfs-law-chars',
-    'heaps-law-queries',
-    'heaps-law-words',
     "query-length-chars",
     "query-length-words",
     "unique-queries",
     "named-entities",
+    "search-operators",
+    "heaps-law-words",
 ]
