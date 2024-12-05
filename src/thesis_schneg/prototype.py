@@ -93,7 +93,7 @@ def _get_parquet_paths(
     return input_paths
 
 
-############################################    Basic Modules    ###########################################
+############################################    Basic Modules    ########################################
 def load_dataset(dataset_name: DatasetName,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -122,7 +122,8 @@ def filter_columns(dataset: Dataset,
                    filter_NaN: Optional[Iterable[str]] = [
                        'serp_query_text_url'],
                    filter_concurrency: Optional[int] = 2,
-                   filter_cpus: Optional[int] = 1
+                   filter_cpus: Optional[int] = 1,
+                   filter_batch_size: Optional[int] = None,
                    ) -> Dataset:
 
     def col_filter(df: DataFrame, col=columns, filter=filter_NaN) -> DataFrame:
@@ -131,13 +132,13 @@ def filter_columns(dataset: Dataset,
         else:
             return df[col]
 
-    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus)
+    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus, memory=1*1000*1000*1000, batch_size=filter_batch_size)
 
 
 def map_dataset(dataset: Dataset,
                 mapping_func: Callable[[DataFrame], DataFrame],
                 map_concurrency: Optional[int] = None,
-                mapping_batch_size: int = 16,
+                batch_size: int = 16,
                 num_gpus: int = None,
                 num_cpus: int = None) -> Dataset:
     return dataset.map_batches(
@@ -145,8 +146,9 @@ def map_dataset(dataset: Dataset,
         concurrency=map_concurrency,
         num_gpus=num_gpus,
         num_cpus=num_cpus,
-        batch_size=mapping_batch_size,
+        batch_size=batch_size,
         batch_format="pandas",
+        memory=1*1000*1000*1000,
     )
 
 
@@ -190,7 +192,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         print("Unknown type of output")
 
 
-############################################    Task Specific Functions    ############################################
+############################################    Task Specific Functions    ###########################################
 
 # Mapping functions
 def get_length_char(batch: DataFrame) -> DataFrame:
@@ -337,7 +339,7 @@ def analysis_pipeline(dataset_name: DatasetName,
                       only_english: bool = False,
                       read_concurrency: Optional[int] = None,
                       map_concurrency: Optional[int] = None,
-                      mapping_batch_size: int = 16,
+                      batch_size: int = 16,
                       flatmap_concurrency: Optional[int] = None,
                       num_cpus: Optional[int] = None,
                       num_gpus: Optional[int] = None,
@@ -363,12 +365,12 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Select required columns.
     if module_specifics['col_filter'] is not None:
         ds = filter_columns(
-            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus)
+            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size)
 
     # # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         ds = map_dataset(dataset=ds, mapping_func=module_specifics['mapping_func'],
-                         map_concurrency=map_concurrency, mapping_batch_size=mapping_batch_size, num_gpus=num_gpus, num_cpus=num_cpus)
+                         map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus)
 
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
