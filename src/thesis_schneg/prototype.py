@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from spacy import load as spacy_load, Language
 
 
-############################################    Requirements for basic modules    ############################################
+############################################    Requirements for basic modules    ########################################
 class _spacy_framework(Protocol):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         raise NotImplementedError()
@@ -93,7 +93,7 @@ def _get_parquet_paths(
     return input_paths
 
 
-############################################    Basic Modules    ############################################
+############################################    Basic Modules    ###########################################
 def load_dataset(dataset_name: DatasetName,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -121,6 +121,8 @@ def filter_columns(dataset: Dataset,
                    # filter out NaN values for fault tolerance
                    filter_NaN: Optional[Iterable[str]] = [
                        'serp_query_text_url'],
+                   filter_concurrency: Optional[int] = 2,
+                   filter_cpus: Optional[int] = 1
                    ) -> Dataset:
 
     def col_filter(df: DataFrame, col=columns, filter=filter_NaN) -> DataFrame:
@@ -129,18 +131,20 @@ def filter_columns(dataset: Dataset,
         else:
             return df[col]
 
-    return dataset.map_batches(col_filter, batch_format="pandas")
+    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus)
 
 
 def map_dataset(dataset: Dataset,
                 mapping_func: Callable[[DataFrame], DataFrame],
                 map_concurrency: Optional[int] = None,
                 mapping_batch_size: int = 16,
-                num_gpus: int = None) -> Dataset:
+                num_gpus: int = None,
+                num_cpus: int = None) -> Dataset:
     return dataset.map_batches(
         mapping_func,
         concurrency=map_concurrency,
         num_gpus=num_gpus,
+        num_cpus=num_cpus,
         batch_size=mapping_batch_size,
         batch_format="pandas",
     )
@@ -160,6 +164,10 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
 
 
 def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
+    # Delete old files
+    if write_dir.exists():
+        [f.unlink() for f in write_dir.glob("*") if f.is_file()]
+
     if type(dataset) is dict:
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
@@ -207,7 +215,7 @@ def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
 
 # Aggregation functions
 sum_rows = AggregateFn(
-    init=lambda column: 0,
+    init=lambda: 0,
     # Apply this to each row to produce a partial aggregate result
     accumulate_row=lambda a, row: a + 1,
     # Apply this to merge partial aggregate results into a final result
@@ -216,7 +224,7 @@ sum_rows = AggregateFn(
 )
 
 unique_queries_agg = AggregateFn(
-    init=lambda column: {"sum": 0, "unique": 0},
+    init=lambda: {"sum": 0, "unique": 0},
     # Apply this to each row to produce a partial aggregate result
 
     accumulate_row=lambda a, row: acc_row(a, row),
@@ -227,7 +235,7 @@ unique_queries_agg = AggregateFn(
 )
 
 unique_words_agg = AggregateFn(
-    init=lambda column: {"sum": 0, "unique": 0},
+    init=lambda: {"sum": 0, "unique": 0},
     # Apply this to each row to produce a partial aggregate result
 
     accumulate_row=lambda a, row: acc_row(a, row),
@@ -235,6 +243,20 @@ unique_words_agg = AggregateFn(
     merge=lambda a1, a2: sum_dict(a1, a2),
 
     name="unique-words"
+)
+
+aggregation_query_length = AggregateFn(
+    init=lambda _: {},
+    accumulate_row=lambda counts, row: {
+        length:
+        count + 1 if length == row["length"] else count
+        for length, count in counts.items()
+    },
+    merge=lambda counts1, counts2: {
+        length: counts1.get(length, 0) + counts1.get(length, 0)
+        for length in {*counts1.keys(), *counts2.keys()}
+    },
+    name="count"
 )
 
 # Helper functions for aggregation
@@ -282,7 +304,7 @@ def named_entities_groupby(dataset: Dataset) -> Dataset:
 def search_operators_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('operator').count()
 
-############################################    Get task-specific modules     ############################################
+############################################    Get task-specific modules     ##############################################
 
 
 def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
@@ -308,7 +330,7 @@ def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
         return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
 
 
-############################################    Pipeline    ############################################
+############################################    Pipeline    ##############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       sample_files: Optional[int] = None,
@@ -341,12 +363,12 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Select required columns.
     if module_specifics['col_filter'] is not None:
         ds = filter_columns(
-            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'])
+            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus)
 
     # # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         ds = map_dataset(dataset=ds, mapping_func=module_specifics['mapping_func'],
-                         map_concurrency=map_concurrency, mapping_batch_size=mapping_batch_size, num_gpus=num_gpus)
+                         map_concurrency=map_concurrency, mapping_batch_size=mapping_batch_size, num_gpus=num_gpus, num_cpus=num_cpus)
 
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
@@ -362,7 +384,11 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = aggregate_dataset(
             dataset=ds, aggregation_func=module_specifics['aggregator'])
 
-    print(ds.take(10))
+    # Print results for debugging.
+    # if type(ds) is Dataset:
+    #     print(ds.take(10))
+    # elif type(ds) is dict:
+    #     print(ds)
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
