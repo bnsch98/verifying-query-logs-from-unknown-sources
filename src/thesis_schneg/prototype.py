@@ -124,6 +124,7 @@ def filter_columns(dataset: Dataset,
                    filter_concurrency: Optional[int] = 2,
                    filter_cpus: Optional[int] = 1,
                    filter_batch_size: Optional[int] = None,
+                   memory_scaler: float = 1.0
                    ) -> Dataset:
 
     def col_filter(df: DataFrame, col=columns, filter=filter_NaN) -> DataFrame:
@@ -132,7 +133,7 @@ def filter_columns(dataset: Dataset,
         else:
             return df[col]
 
-    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus, memory=1*1000*1000*1000, batch_size=filter_batch_size)
+    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus, memory=memory_scaler*1000*1000*1000, batch_size=filter_batch_size)
 
 
 def map_dataset(dataset: Dataset,
@@ -140,7 +141,8 @@ def map_dataset(dataset: Dataset,
                 map_concurrency: Optional[int] = None,
                 batch_size: int = 16,
                 num_gpus: int = None,
-                num_cpus: int = None) -> Dataset:
+                num_cpus: int = None,
+                memory_scaler: float = 1.0) -> Dataset:
     return dataset.map_batches(
         mapping_func,
         concurrency=map_concurrency,
@@ -148,7 +150,7 @@ def map_dataset(dataset: Dataset,
         num_cpus=num_cpus,
         batch_size=batch_size,
         batch_format="pandas",
-        memory=1*1000*1000*1000,
+        memory=memory_scaler*1000*1000*1000,
     )
 
 
@@ -196,12 +198,12 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
 
 # Mapping functions
 def get_length_char(batch: DataFrame) -> DataFrame:
-    batch['query_length_chars'] = batch['serp_query_text_url'].apply(len)
+    batch['query-length-chars'] = batch['serp_query_text_url'].apply(len)
     return batch
 
 
 def get_length_word(batch: DataFrame) -> DataFrame:
-    batch['query_length_words'] = batch['serp_query_text_url'].apply(
+    batch['query-length-words'] = batch['serp_query_text_url'].apply(
         lambda x: len(x.split()))
     return batch
 
@@ -288,11 +290,11 @@ def groupby_chars(dataset: Dataset) -> Dataset:
 
 
 def query_length_chars_groupby(dataset: Dataset) -> Dataset:
-    return dataset.groupby('query_length_chars').count()
+    return dataset.groupby('query-length-chars').count()
 
 
 def query_length_words_groupby(dataset: Dataset) -> Dataset:
-    return dataset.groupby('query_length_words').count()
+    return dataset.groupby('query-length-words').count()
 
 
 def unique_queries_groupby(dataset: Dataset) -> Dataset:
@@ -340,6 +342,7 @@ def analysis_pipeline(dataset_name: DatasetName,
                       read_concurrency: Optional[int] = None,
                       map_concurrency: Optional[int] = None,
                       batch_size: int = 16,
+                      memory_scaler: float = 1.0,
                       flatmap_concurrency: Optional[int] = None,
                       num_cpus: Optional[int] = None,
                       num_gpus: Optional[int] = None,
@@ -365,12 +368,12 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Select required columns.
     if module_specifics['col_filter'] is not None:
         ds = filter_columns(
-            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size)
+            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size, memory_scaler=memory_scaler)
 
     # # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         ds = map_dataset(dataset=ds, mapping_func=module_specifics['mapping_func'],
-                         map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus)
+                         map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
 
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
