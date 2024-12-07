@@ -339,7 +339,7 @@ def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
         return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
 
 
-############################################    Pipeline    ##############################################
+############################################    Pipeline    ###############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       sample_files: Optional[int] = None,
