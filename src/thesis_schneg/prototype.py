@@ -162,9 +162,10 @@ def flat_map_dataset(dataset: Dataset,
                      flat_mapping_func: Callable[[Dict[str, Any]], Dict[str, Any]],
                      flatmap_concurrency: Optional[int] = None,
                      num_cpus: Optional[float] = None,
-                     num_gpus: Optional[float] = None
+                     num_gpus: Optional[float] = None,
+                     memory_scaler: float = 1.0
                      ) -> Dataset:
-    return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
+    return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory=memory_scaler*1000*1000*1000)
 
 
 def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Optional[Dict[str, Any]]:
@@ -312,7 +313,7 @@ def named_entities_groupby(dataset: Dataset) -> Dataset:
 def search_operators_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('operator').count()
 
-############################################    Get task-specific modules     ##############################################
+############################################    Get task-specific modules     #############################################
 
 
 def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
@@ -382,7 +383,7 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
         ds = flat_map_dataset(dataset=ds, flat_mapping_func=module_specifics['flat_mapping_func'],
-                              flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
+                              flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory_scaler=memory_scaler)
 
     # Group by a column.
     if module_specifics['groupby_func'] is not None:

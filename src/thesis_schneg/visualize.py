@@ -8,7 +8,17 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 import scienceplots
-############################################    Requirements for basic modules    ########################################
+import matplotlib
+
+# latex rendering for matplotlib
+matplotlib.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": True,
+        "pgf.rcfonts": False,
+    }
+)
 
 
 def _get_results_paths(
@@ -64,10 +74,6 @@ def load_results(
     return result
 
 
-def run_visualization(vis_func: Callable, vis_data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True, label: str = None, color: str = None) -> Tuple[Figure, Axes]:
-    return vis_func(data=vis_data, subplots=subplots, vis_dir=vis_dir, save_vis=save_vis, vis_params=vis_params, show=show, label=label, color=color)
-
-
 def _get_vis_func(analysis_name: AnalysisName) -> Optional[Callable[[Any], Tuple[Figure, Axes]]]:
     if analysis_name == "sum-rows":
         return None
@@ -84,7 +90,7 @@ def _get_vis_func(analysis_name: AnalysisName) -> Optional[Callable[[Any], Tuple
     elif analysis_name == "query-length-chars":
         return bar_plot
     elif analysis_name == "query-length-words":
-        return None
+        return bar_plot
     elif analysis_name == "named-entities":
         return None
     elif analysis_name == "search-operators":
@@ -107,7 +113,7 @@ def _get_vis_parameters(analysis_name: AnalysisName) -> Dict[str, Any]:
     elif analysis_name == "query-length-chars":
         return {"dataset-col-x": "query-length-chars", "dataset-col-y": "count()", "x-label": "Number of characters", "y-label": "Relative frequency", "x-lim": (0, 50), "y-lim": None, "title": "Query length in characters"}
     elif analysis_name == "query-length-words":
-        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": "query-length-words", "dataset-col-y": "count()", "x-label": "Number of words", "y-label": "Relative frequency", "x-lim": (0, 20), "y-lim": None, "title": "Query length in words"}
     elif analysis_name == "named-entities":
         return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "search-operators":
@@ -136,10 +142,10 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
         ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
     if vis_params["y-label"] is not None:
         ax.set_title(vis_params["title"])
-    ax.grid(True, which='major', linestyle='-',
-            linewidth='0.5', color='black')
-    ax.grid(True, which='minor', linestyle=':',
-            linewidth='0.5', color='gray')
+    # ax.grid(True, which='major', linestyle='-',
+    #         linewidth='0.5', color='black')
+    # ax.grid(True, which='minor', linestyle=':',
+    #         linewidth='0.5', color='gray')
 
     return fig, ax
 
@@ -147,22 +153,35 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
 def visualize(analysis_name: AnalysisName,
               dataset_name: DatasetName = None,
               save_vis: bool = False,
-              show: bool = True,
               ) -> None:
-    plt.style.use('science')
-    # create visualization for all data sets
+    # enable pgf format for matplotlib
+    if save_vis:
+        matplotlib.use("pgf")
+    # use science style for plots from scienceplots library
+    plt.style.use(["science", "grid"])
+    vis_dir = Path(
+        f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/{analysis_name}")
+    # make directory if it does not exist
+    if not vis_dir.exists() and save_vis:
+        vis_dir.mkdir(parents=True)
+
+    # create visualization for all data sets if dataset_name is not specified
     if dataset_name is None:
+        # crawl files from all datasets and load into dictionary
         files = {f"{dataset}": _get_results_paths(dataset, analysis_name) for dataset in [
             "aol", "ms-marco", "orcas", "aql"]}
+        # create subplots for each dataset
         fig, ax = plt.subplots(ncols=4, nrows=1, figsize=(16, 4))
         cnt_datasets = 0
+        # color palette for datasets
         color = ['yellow', 'orange', 'red', 'purple']
+
+        # iterate over datasets and create visualization
         for dataset, result_files in files.items():
             vis_data = load_results(result_files)
             vis_params = _get_vis_parameters(analysis_name)
             vis_func = _get_vis_func(analysis_name)
-            vis_dir = Path(
-                f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/{dataset}-{analysis_name}.pdf")
+            # apply specific visualization function
             fig, ax[cnt_datasets] = vis_func(data=vis_data, subplots=(fig, ax[cnt_datasets]),
                                              vis_params=vis_params, label=dataset, color=color[cnt_datasets])
             cnt_datasets += 1
@@ -170,26 +189,32 @@ def visualize(analysis_name: AnalysisName,
             f'{vis_params["title"]} across multiple Datasets', fontsize=16)
 
         plt.tight_layout()
-        plt.show()
+
+        if save_vis:
+            fig.savefig(vis_dir.joinpath("all.pgf"))
+        else:
+            plt.show()
 
     else:  # create visualization for a specific data set
-        vis_dir = Path(
-            f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/{dataset_name}-{analysis_name}.pdf")
+
+        # enable pgf format for matplotlib
+        if save_vis:
+            matplotlib.use("pgf")
+        # use science style for plots from scienceplots library
+        plt.style.use(["science", "grid"])
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
         result_files = _get_results_paths(dataset_name, analysis_name)
         vis_data = load_results(result_files)
         vis_params = _get_vis_parameters(analysis_name)
         vis_func = _get_vis_func(analysis_name)
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
-        fig, ax = run_visualization(vis_func=vis_func, vis_data=vis_data, subplots=(fig, ax),
-                                    vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis)
-        if show:
-            plt.show()
-        if save_vis:
-            with PdfPages(vis_dir) as pdf:
-                pdf.savefig(fig)
+        fig, ax = vis_func(data=vis_data, subplots=(fig, ax),
+                           vis_params=vis_params)
         plt.tight_layout()
-
-        print(vis_data)
-        print(vis_data.head())
-        print(vis_data.info())
-        print(vis_data.columns)
+        if save_vis:
+            fig.savefig(vis_dir.joinpath(f"{dataset_name}.pgf"))
+        else:
+            plt.show()
+        # print(vis_data)
+        # print(vis_data.head())
+        # print(vis_data.info())
+        # print(vis_data.columns)
