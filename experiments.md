@@ -17,12 +17,12 @@
 | zipfs law chars       | aol       | `python -m thesis_schneg analyser --dataset aol --analysis zipfs-law-chars --read-concurrency 100 --map-concurrency 32 --write-concurrency 100 --memory-scaler 5 --batch-size 256`    | `2024/12/07 20:49:44`   | `2024/12/07 21:07:24` | 17m 44s  | ✔️       |
 | zipfs law chars       | ms-marco  | `python -m thesis_schneg analyser --dataset ms-marco --analysis zipfs-law-chars --read-concurrency 100 --map-concurrency 32 --write-concurrency 100 --memory-scaler 5 --batch-size 256`    | `2024/12/07 20:55:06`   | `2024/12/07 21:06:05` | 11m 10s  | ✔️       |
 | zipfs law chars       | orcas     | `python -m thesis_schneg analyser --dataset orcas --analysis zipfs-law-chars --read-concurrency 100 --map-concurrency 32 --write-concurrency 100 --memory-scaler 5 --batch-size 256`    | `2024/12/07 20:55:17`   | `2024/12/07 21:18:30` | 8m 45s  | ✔️       |
-| zipfs law words       | aql       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ❌      |
-| zipfs law words       | aol       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ✔️       |
-| zipfs law words       | ms-marco  | -    | 00:00 PM   | 00:00 PM | 00 mins  | ✔️       |
-| zipfs law words       | orcas     | -    | 00:00 PM   | 00:00 PM | 00 mins  | ✔️       |
-| zipfs law queries     | aql       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ✔️       |
-| zipfs law queries     | aol       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ✔️       |
-| zipfs law queries     | ms-marco  | -    | 00:00 PM   | 00:00 PM | 00 mins  | ✔️       |
-| zipfs law queries     | orcas     | -    | 00:00 PM   | 00:00 PM | 00 mins  | ✔️       |
+| zipfs law words       | aql       | `python -m thesis_schneg analyser --dataset aql --analysis zipfs-law-words --read-concurrency 100 --map-concurrency 64 --write-concurrency 100 --memory-scaler 5 --batch-size 256`    | `2024/12/07 21:38:03`   | 00:00 AM | 00 mins  | ❌      |
+| zipfs law words       | aol       | `python -m thesis_schneg analyser --dataset aol --analysis zipfs-law-words --read-concurrency 100 --map-concurrency 64 --write-concurrency 100 --memory-scaler 5 --batch-size 256`    | `2024/12/07 21:38:07`   | 00:00 AM | 00 mins  | ❌       |
+| zipfs law words       | ms-marco  | -    | 00:00 PM   | 00:00 PM | 00 mins  | ❌       |
+| zipfs law words       | orcas     | -    | 00:00 PM   | 00:00 PM | 00 mins  | ❌       |
+| zipfs law queries     | aql       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ❌       |
+| zipfs law queries     | aol       | -    | 00:00 AM   | 00:00 AM | 00 mins  | ❌       |
+| zipfs law queries     | ms-marco  | -    | 00:00 PM   | 00:00 PM | 00 mins  | ❌       |
+| zipfs law queries     | orcas     | -    | 00:00 PM   | 00:00 PM | 00 mins  | ❌       |
 

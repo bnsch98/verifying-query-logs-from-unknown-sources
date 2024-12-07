@@ -348,7 +348,6 @@ def analysis_pipeline(dataset_name: DatasetName,
                       map_concurrency: Optional[int] = None,
                       batch_size: int = 16,
                       memory_scaler: float = 1.0,
-                      flatmap_concurrency: Optional[int] = None,
                       num_cpus: Optional[float] = None,
                       num_gpus: Optional[float] = None,
                       write_dir: Path = Path(
@@ -383,7 +382,7 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
         ds = flat_map_dataset(dataset=ds, flat_mapping_func=module_specifics['flat_mapping_func'],
-                              flatmap_concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory_scaler=memory_scaler)
+                              flatmap_concurrency=map_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory_scaler=memory_scaler)
 
     # Group by a column.
     if module_specifics['groupby_func'] is not None:
