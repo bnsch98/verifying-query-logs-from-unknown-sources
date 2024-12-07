@@ -98,6 +98,8 @@ def load_dataset(dataset_name: DatasetName,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
                  read_concurrency: Optional[int] = None,
+                 columns: Optional[Iterable[str]] = None,
+                 memory_scaler: float = 1.0,
                  ) -> Dataset:
 
     # Load dataset.
@@ -111,6 +113,8 @@ def load_dataset(dataset_name: DatasetName,
             )
         ],
         concurrency=read_concurrency,
+        columns=columns,
+        ray_remote_args={"memory": memory_scaler*1000*1000*1000}
     )
     return dataset
 
@@ -140,8 +144,8 @@ def map_dataset(dataset: Dataset,
                 mapping_func: Callable[[DataFrame], DataFrame],
                 map_concurrency: Optional[int] = None,
                 batch_size: int = 16,
-                num_gpus: int = None,
-                num_cpus: int = None,
+                num_gpus: float = None,
+                num_cpus: float = None,
                 memory_scaler: float = 1.0) -> Dataset:
     return dataset.map_batches(
         mapping_func,
@@ -157,8 +161,8 @@ def map_dataset(dataset: Dataset,
 def flat_map_dataset(dataset: Dataset,
                      flat_mapping_func: Callable[[Dict[str, Any]], Dict[str, Any]],
                      flatmap_concurrency: Optional[int] = None,
-                     num_cpus: Optional[int] = None,
-                     num_gpus: Optional[int] = None
+                     num_cpus: Optional[float] = None,
+                     num_gpus: Optional[float] = None
                      ) -> Dataset:
     return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus)
 
@@ -344,8 +348,8 @@ def analysis_pipeline(dataset_name: DatasetName,
                       batch_size: int = 16,
                       memory_scaler: float = 1.0,
                       flatmap_concurrency: Optional[int] = None,
-                      num_cpus: Optional[int] = None,
-                      num_gpus: Optional[int] = None,
+                      num_cpus: Optional[float] = None,
+                      num_gpus: Optional[float] = None,
                       write_dir: Path = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
     write_concurrency: Optional[int] = 2
@@ -363,12 +367,12 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Load dataset.
     ds = load_dataset(dataset_name=dataset_name, sample_files=sample_files,
-                      only_english=only_english, read_concurrency=read_concurrency)
+                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter']['cols'], memory_scaler=memory_scaler)  # , memory_scaler=memory_scaler
 
-    # Select required columns.
-    if module_specifics['col_filter'] is not None:
-        ds = filter_columns(
-            dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size, memory_scaler=memory_scaler)
+    # # Select required columns.
+    # if module_specifics['col_filter'] is not None:
+    #     ds = filter_columns(
+    #         dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size, memory_scaler=memory_scaler)
 
     # # Apply mapping function.
     if module_specifics['mapping_func'] is not None:

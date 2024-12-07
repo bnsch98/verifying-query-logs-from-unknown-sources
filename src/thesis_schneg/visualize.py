@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, Callable, Dict, Any
+from typing import Tuple, Callable, Optional, Dict, Any
 from typing import Iterable
 from thesis_schneg.model import DatasetName, AnalysisName
 from pandas import DataFrame, concat, read_json, read_parquet
@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-
+import scienceplots
 ############################################    Requirements for basic modules    ########################################
 
 
@@ -68,7 +68,7 @@ def run_visualization(vis_func: Callable, vis_data: DataFrame, subplots: Tuple[F
     return vis_func(data=vis_data, subplots=subplots, vis_dir=vis_dir, save_vis=save_vis, vis_params=vis_params, show=show, label=label, color=color)
 
 
-def _get_vis_func(analysis_name: AnalysisName) -> Callable:
+def _get_vis_func(analysis_name: AnalysisName) -> Optional[Callable[[Any], Tuple[Figure, Axes]]]:
     if analysis_name == "sum-rows":
         return None
     elif analysis_name == "zipfs-law-queries":
@@ -82,7 +82,7 @@ def _get_vis_func(analysis_name: AnalysisName) -> Callable:
     elif analysis_name == "heaps-law-words":
         return None
     elif analysis_name == "query-length-chars":
-        return query_length_vis
+        return bar_plot
     elif analysis_name == "query-length-words":
         return None
     elif analysis_name == "named-entities":
@@ -93,37 +93,38 @@ def _get_vis_func(analysis_name: AnalysisName) -> Callable:
 
 def _get_vis_parameters(analysis_name: AnalysisName) -> Dict[str, Any]:
     if analysis_name == "sum-rows":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "zipfs-law-queries":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "zipfs-law-words":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "zipfs-law-chars":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "unique-queries":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "heaps-law-words":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "query-length-chars":
-        return {"dataset-col": "query-length-chars", "x-label": "Number of characters", "y-label": "Relative frequency", "x-lim": (0, 50), "y-lim": None, "title": "Query length in characters"}
+        return {"dataset-col-x": "query-length-chars", "dataset-col-y": "count()", "x-label": "Number of characters", "y-label": "Relative frequency", "x-lim": (0, 50), "y-lim": None, "title": "Query length in characters"}
     elif analysis_name == "query-length-words":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "named-entities":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "search-operators":
-        return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
 
 
-def query_length_vis(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True, label: str = None, color: str = None) -> Tuple[Figure, Axes]:
-
+def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
     fig, ax = subplots
-    total_rows = data['count()'].sum()
+    x = data[vis_params["dataset-col-x"]].to_numpy()
+    height = data[vis_params["dataset-col-y"]].to_numpy()
+    total_rows = data[vis_params["dataset-col-y"]].sum()
+    height = height/total_rows
     if label is not None:
-        ax.bar(data[vis_params["dataset-col"]], data['count()']/total_rows,
-               alpha=0.5, label=label, color=color)
+        ax.bar(x=x, height=height, alpha=0.5, label=label, color=color)
         ax.legend()
     else:
-        ax.bar(data[vis_params["dataset-col"]], data['count()']/total_rows,
+        ax.bar(x=x, height=height,
                alpha=0.5)
     if vis_params["x-label"] is not None:
         ax.set_xlabel(vis_params["x-label"])
@@ -139,12 +140,6 @@ def query_length_vis(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params:
             linewidth='0.5', color='black')
     ax.grid(True, which='minor', linestyle=':',
             linewidth='0.5', color='gray')
-    plt.tight_layout()
-    if show:
-        plt.show()
-    if save_vis:
-        with PdfPages(vis_dir) as pdf:
-            pdf.savefig(fig)
 
     return fig, ax
 
@@ -152,25 +147,29 @@ def query_length_vis(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params:
 def visualize(analysis_name: AnalysisName,
               dataset_name: DatasetName = None,
               save_vis: bool = False,
+              show: bool = True,
               ) -> None:
+    plt.style.use('science')
     # create visualization for all data sets
     if dataset_name is None:
         files = {f"{dataset}": _get_results_paths(dataset, analysis_name) for dataset in [
             "aol", "ms-marco", "orcas", "aql"]}
         fig, ax = plt.subplots(ncols=4, nrows=1, figsize=(16, 4))
         cnt_datasets = 0
-        color = ['blue', 'green', 'red', 'purple']
+        color = ['yellow', 'orange', 'red', 'purple']
         for dataset, result_files in files.items():
             vis_data = load_results(result_files)
             vis_params = _get_vis_parameters(analysis_name)
             vis_func = _get_vis_func(analysis_name)
             vis_dir = Path(
                 f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/{dataset}-{analysis_name}.pdf")
-            fig, ax[cnt_datasets] = run_visualization(vis_func=vis_func, vis_data=vis_data, subplots=(fig, ax[cnt_datasets]),
-                                                      vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis, show=False, label=dataset, color=color[cnt_datasets])
+            fig, ax[cnt_datasets] = vis_func(data=vis_data, subplots=(fig, ax[cnt_datasets]),
+                                             vis_params=vis_params, label=dataset, color=color[cnt_datasets])
             cnt_datasets += 1
         fig.suptitle(
             f'{vis_params["title"]} across multiple Datasets', fontsize=16)
+
+        plt.tight_layout()
         plt.show()
 
     else:  # create visualization for a specific data set
@@ -183,6 +182,12 @@ def visualize(analysis_name: AnalysisName,
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
         fig, ax = run_visualization(vis_func=vis_func, vis_data=vis_data, subplots=(fig, ax),
                                     vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis)
+        if show:
+            plt.show()
+        if save_vis:
+            with PdfPages(vis_dir) as pdf:
+                pdf.savefig(fig)
+        plt.tight_layout()
 
         print(vis_data)
         print(vis_data.head())

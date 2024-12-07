@@ -79,8 +79,8 @@ def analyser(
     batch_size: int = 16,
     memory_scaler: float = 1.0,
     flatmap_concurrency: Optional[int] = None,
-    num_cpus: Optional[int] = None,
-    num_gpus: Optional[int] = None,
+    num_cpus: Optional[float] = None,
+    num_gpus: Optional[float] = None,
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
