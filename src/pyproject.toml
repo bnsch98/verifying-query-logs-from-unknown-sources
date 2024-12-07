@@ -30,6 +30,7 @@ dependencies = [
     "types-tqdm~=4.66",
     # "transformers~=4.12.3", # für orcas-I bert classifier
     "transformers~=4.44",
+    "SciencePlots~=2.1",
 ]
 
 [build-system]

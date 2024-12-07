@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Tuple, Callable, Dict, Any
+from typing import Tuple, Callable, Dict, Any
 from typing import Iterable
 from thesis_schneg.model import DatasetName, AnalysisName
 from pandas import DataFrame, concat, read_json, read_parquet
@@ -64,8 +64,8 @@ def load_results(
     return result
 
 
-def run_visualization(vis_func: Callable, vis_data: DataFrame, vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True) -> Tuple[Figure, Axes]:
-    return vis_func(data=vis_data, vis_dir=vis_dir, save_vis=save_vis, vis_params=vis_params, show=show)
+def run_visualization(vis_func: Callable, vis_data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True, label: str = None, color: str = None) -> Tuple[Figure, Axes]:
+    return vis_func(data=vis_data, subplots=subplots, vis_dir=vis_dir, save_vis=save_vis, vis_params=vis_params, show=show, label=label, color=color)
 
 
 def _get_vis_func(analysis_name: AnalysisName) -> Callable:
@@ -114,12 +114,17 @@ def _get_vis_parameters(analysis_name: AnalysisName) -> Dict[str, Any]:
         return {"dataset-col": None, "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
 
 
-def query_length_vis(data: DataFrame, vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True) -> Tuple[Figure, Axes]:
+def query_length_vis(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], vis_dir: Path, save_vis: bool = False, show: bool = True, label: str = None, color: str = None) -> Tuple[Figure, Axes]:
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
+    fig, ax = subplots
     total_rows = data['count()'].sum()
-    ax.bar(data[vis_params["dataset-col"]], data['count()']/total_rows,
-           alpha=0.5)
+    if label is not None:
+        ax.bar(data[vis_params["dataset-col"]], data['count()']/total_rows,
+               alpha=0.5, label=label, color=color)
+        ax.legend()
+    else:
+        ax.bar(data[vis_params["dataset-col"]], data['count()']/total_rows,
+               alpha=0.5)
     if vis_params["x-label"] is not None:
         ax.set_xlabel(vis_params["x-label"])
     if vis_params["y-label"] is not None:
@@ -152,18 +157,20 @@ def visualize(analysis_name: AnalysisName,
     if dataset_name is None:
         files = {f"{dataset}": _get_results_paths(dataset, analysis_name) for dataset in [
             "aol", "ms-marco", "orcas", "aql"]}
-        glob_fig, glob_axes = plt.subplots(ncols=4, nrows=1, figsize=(16, 4))
+        fig, ax = plt.subplots(ncols=4, nrows=1, figsize=(16, 4))
         cnt_datasets = 0
+        color = ['blue', 'green', 'red', 'purple']
         for dataset, result_files in files.items():
             vis_data = load_results(result_files)
             vis_params = _get_vis_parameters(analysis_name)
             vis_func = _get_vis_func(analysis_name)
             vis_dir = Path(
                 f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/plots/{dataset}-{analysis_name}.pdf")
-            fig, ax = run_visualization(vis_func=vis_func, vis_data=vis_data,
-                                        vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis, show=False)
-            glob_axes[cnt_datasets] = ax
+            fig, ax[cnt_datasets] = run_visualization(vis_func=vis_func, vis_data=vis_data, subplots=(fig, ax[cnt_datasets]),
+                                                      vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis, show=False, label=dataset, color=color[cnt_datasets])
             cnt_datasets += 1
+        fig.suptitle(
+            f'{vis_params["title"]} across multiple Datasets', fontsize=16)
         plt.show()
 
     else:  # create visualization for a specific data set
@@ -173,7 +180,8 @@ def visualize(analysis_name: AnalysisName,
         vis_data = load_results(result_files)
         vis_params = _get_vis_parameters(analysis_name)
         vis_func = _get_vis_func(analysis_name)
-        fig, ax = run_visualization(vis_func=vis_func, vis_data=vis_data,
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
+        fig, ax = run_visualization(vis_func=vis_func, vis_data=vis_data, subplots=(fig, ax),
                                     vis_params=vis_params, vis_dir=vis_dir, save_vis=save_vis)
 
         print(vis_data)
