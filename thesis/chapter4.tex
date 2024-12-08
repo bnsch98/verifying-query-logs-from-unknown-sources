@@ -1,0 +1,118 @@
+
+\chapter{Analysis/Methodology}
+\section{Characteristics-based}
+Here, various characteristics of the data sets are measured and displayed. The comparison of these characteristics should provide a first impression of the involved query logs' nature.
+
+\begin{itemize}
+    \item Query length 
+    \begin{itemize}
+        \item Length in words 
+        \begin{itemize}
+            \item mapping->group->reduction
+        \end{itemize} 
+        \item Length in characters \begin{itemize}
+            \item mapping->group->reduction
+        \end{itemize} 
+        \item Plot histogram
+    \end{itemize}
+    \item Unique queries
+    \begin{itemize}
+        \item Proportion of unique queries group by query
+        \item List of top n most common queries
+        \begin{itemize}
+            \item group->reduction->sort
+        \end{itemize} 
+        \item Compare most common queries
+    \end{itemize}
+    \item Named Entities
+    \begin{itemize}
+        \item Frequency of named entities \begin{itemize}
+            \item flat mapping->group->reduction
+        \end{itemize} 
+        \item Most common named entities
+        \item Categorize named entities according to ... -> apply classifier?
+    \end{itemize}
+    \item Token frequency
+    \begin{itemize}
+        \item Zipf's Law of words and/or queries
+        \begin{itemize}
+            \item Words:  flat mapping->group->reduction
+        \end{itemize}
+        \begin{itemize}
+            \item Queries: group->reduction
+            \item character-based (evtl. anderes gesetz)
+        \end{itemize}
+        \item Heap's Law
+        \begin{itemize}
+            \item group->reduction
+        \end{itemize} 
+    \end{itemize}
+    \item Search Operators
+    \begin{itemize}
+        \item Frequency of operators
+        \begin{itemize}
+            \item flat mapping->group by
+        \end{itemize}
+        \item most common operators
+        \item phrasensuche, site:
+    \end{itemize}
+    
+\end{itemize} 
+
+
+
+\section{Distribution-based}
+In this section, distributions of labels are created from different NLP predictors. The general idea is to compare the different data sets according to their resulting distributions of different domains.  
+\begin{itemize}
+    \item Plausibilitätsstudie für die classifier: 50-100 samples pro label pro classifier: manuell annotieren und dann accuracy bestimmen.
+    \item Intent
+    \begin{itemize}
+        \item Navigational, transactional and informational
+        \begin{itemize}
+            \item mapping (apply ORCAS-I classifier)
+        \end{itemize}
+        
+    \end{itemize}
+    \item Hate speech
+    \begin{itemize}
+        \item mapping (apply hate speech classifier)
+    \end{itemize}
+    \item NSFW
+    \begin{itemize}
+        \item mapping (apply NSFW classifier)
+    \end{itemize}
+    \item Spam
+    \begin{itemize}
+        \item mapping (apply spam classifier)
+    \end{itemize}
+    \item Content
+    \begin{itemize}
+        
+        \item Classify into topic taxonomy 
+        \begin{itemize}
+            \item mapping apply topic classifier
+        \end{itemize}
+    \end{itemize}
+    
+\end{itemize}
+\section{Temporal-based}
+\begin{itemize}
+    \item Discover Google Trends in Data
+    \item Plot frequency of selected topics over time per data set
+    \item Seasonal topics
+
+    
+\end{itemize}
+\section{Embedding-based}
+\begin{itemize}
+    \item Extract document vectors from e.g. BERT
+    \begin{itemize}
+        \item Create t-SNE plot with regard to intent, topics,... further categories
+        \item Apply clusterting algorithm and compare resulting clusters 
+    \end{itemize}
+    \item Topic Modeling
+        \begin{itemize}
+            \item Compare most common topics
+            \item Compare variety of topics
+        \end{itemize}
+\end{itemize}
