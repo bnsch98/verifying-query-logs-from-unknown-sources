@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from spacy import load as spacy_load, Language
 
 
-############################################    Requirements for basic modules    ########################################
+############################################    Requirements for basic modules    #####################################
 class _spacy_framework(Protocol):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         raise NotImplementedError()
