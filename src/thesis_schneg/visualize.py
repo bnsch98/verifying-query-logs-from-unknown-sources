@@ -11,14 +11,14 @@ import scienceplots
 import matplotlib
 
 # latex rendering for matplotlib
-matplotlib.rcParams.update(
-    {
-        "pgf.texsystem": "pdflatex",
-        "font.family": "serif",
-        "text.usetex": True,
-        "pgf.rcfonts": False,
-    }
-)
+# matplotlib.rcParams.update(
+#     {
+#         "pgf.texsystem": "pdflatex",
+#         "font.family": "serif",
+#         "text.usetex": True,
+#         "pgf.rcfonts": False,
+#     }
+# )
 
 
 def _get_results_paths(
@@ -82,7 +82,7 @@ def _get_vis_func(analysis_name: AnalysisName) -> Optional[Callable[[Any], Tuple
     elif analysis_name == "zipfs-law-words":
         return None
     elif analysis_name == "zipfs-law-chars":
-        return None
+        return log_plot
     elif analysis_name == "unique-queries":
         return None
     elif analysis_name == "heaps-law-words":
@@ -105,7 +105,7 @@ def _get_vis_parameters(analysis_name: AnalysisName) -> Dict[str, Any]:
     elif analysis_name == "zipfs-law-words":
         return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "zipfs-law-chars":
-        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": "char", "dataset-col-y": "count()", "x-label": "Rank", "y-label": "Frequency", "x-lim": None, "y-lim": None, "title": "Zipfs Law for characters"}
     elif analysis_name == "unique-queries":
         return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "heaps-law-words":
@@ -140,7 +140,7 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
         ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
     if vis_params["y-lim"] is not None:
         ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
-    if vis_params["y-label"] is not None:
+    if vis_params["title"] is not None:
         ax.set_title(vis_params["title"])
     # ax.grid(True, which='major', linestyle='-',
     #         linewidth='0.5', color='black')
@@ -150,13 +150,38 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
     return fig, ax
 
 
+def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
+    fig, ax = subplots
+    x = data[vis_params["dataset-col-x"]].to_numpy()
+    height = data[vis_params["dataset-col-y"]].to_numpy()
+    # total_rows = data[vis_params["dataset-col-y"]].sum()
+    # height = height/total_rows
+    if label is not None:
+        ax.plot(x, height, label=label, color=color)
+        ax.legend()
+    else:
+        ax.plot(x, height)
+    if vis_params["x-label"] is not None:
+        ax.set_xlabel(vis_params["x-label"])
+    if vis_params["y-label"] is not None:
+        ax.set_ylabel(vis_params["y-label"])
+    if vis_params["x-lim"] is not None:
+        ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
+    if vis_params["y-lim"] is not None:
+        ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
+    if vis_params["title"] is not None:
+        ax.set_title(vis_params["title"])
+    ax.set_yscale('log')
+    return fig, ax
+
+
 def visualize(analysis_name: AnalysisName,
               dataset_name: DatasetName = None,
               save_vis: bool = False,
               ) -> None:
     # enable pgf format for matplotlib
-    if save_vis:
-        matplotlib.use("pgf")
+    # if save_vis:
+    #     matplotlib.use("pgf")
     # use science style for plots from scienceplots library
     plt.style.use(["science", "grid"])
     vis_dir = Path(
