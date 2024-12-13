@@ -11,14 +11,14 @@ import scienceplots
 import matplotlib
 
 # latex rendering for matplotlib
-# matplotlib.rcParams.update(
-#     {
-#         "pgf.texsystem": "pdflatex",
-#         "font.family": "serif",
-#         "text.usetex": True,
-#         "pgf.rcfonts": False,
-#     }
-# )
+matplotlib.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": True,
+        "pgf.rcfonts": False,
+    }
+)
 
 
 def _get_results_paths(
@@ -152,7 +152,10 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
 
 def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
     fig, ax = subplots
-    x = data[vis_params["dataset-col-x"]].to_numpy()
+    if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
+        x = list(range(1, len(vis_params["dataset-col-x"])+1))
+    else:
+        x = data[vis_params["dataset-col-x"]].to_numpy()
     height = data[vis_params["dataset-col-y"]].to_numpy()
     # total_rows = data[vis_params["dataset-col-y"]].sum()
     # height = height/total_rows
@@ -180,8 +183,8 @@ def visualize(analysis_name: AnalysisName,
               save_vis: bool = False,
               ) -> None:
     # enable pgf format for matplotlib
-    # if save_vis:
-    #     matplotlib.use("pgf")
+    if save_vis:
+        matplotlib.use("pgf")
     # use science style for plots from scienceplots library
     plt.style.use(["science", "grid"])
     vis_dir = Path(
