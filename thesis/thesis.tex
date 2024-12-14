@@ -19,7 +19,7 @@
 %
 % Values
 % ------
-\ThesisSetTitle{Master Thesis Benjamin Schneg}
+\ThesisSetTitle{Verifying Query Logs from Unkown Sources} % Title of the thesis
 \ThesisSetKeywords{These, are, my, Keywords} % only for PDF meta attributes
 \ThesisSetLocation{Jena} 
 \thesisprogramme{Computational and Data Science, M.Sc.}
@@ -55,6 +55,20 @@
 \usepackage{fontawesome}
 %    For lots of awesome glyphs: https://mirror.physik.tu-berlin.de/pub/CTAN/fonts/fontawesome/doc/fontawesome.pdf
 
+%% Packages included by me %%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{pgfplots} % for pgf plots (addded 12/14/2024)
+\usepackage{import} % for pgf plots (addded 12/14/2024)
+\pgfplotsset{compat=1.18} % for pgf plots (addded 12/14/2024)
+\usepackage{lmodern} % for pgf plots (addded 12/14/2024)
+\def\mathdefault#1{#1} % for pgf plots (addded 12/14/2024)
+\everymath=\expandafter{\the\everymath\displaystyle} % for pgf plots (addded 12/14/2024)
+
+\ifdefined\pdftexversion\else  % non-pdftex case. % for pgf plots (addded 12/14/2024)
+  \usepackage{fontspec} % for pgf plots (addded 12/14/2024)
+\fi % for pgf plots (addded 12/14/2024)
+\makeatletter\@ifpackageloaded{underscore}{}{\usepackage[strings]{underscore}}\makeatother % for pgf plots (addded 12/14/2024)
+\usepackage{layouts} % to print /textwidth
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Commenting (by your supervisor)
 % -------------------------------

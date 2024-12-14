@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+from numpy import sort as np_sort
 import scienceplots
 import matplotlib
 
@@ -80,7 +81,7 @@ def _get_vis_func(analysis_name: AnalysisName) -> Optional[Callable[[Any], Tuple
     elif analysis_name == "zipfs-law-queries":
         return None
     elif analysis_name == "zipfs-law-words":
-        return None
+        return log_plot
     elif analysis_name == "zipfs-law-chars":
         return log_plot
     elif analysis_name == "unique-queries":
@@ -103,9 +104,9 @@ def _get_vis_parameters(analysis_name: AnalysisName) -> Dict[str, Any]:
     elif analysis_name == "zipfs-law-queries":
         return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "zipfs-law-words":
-        return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
+        return {"dataset-col-x": "word", "dataset-col-y": "count()", "x-label": "Rank", "y-label": "Frequency", "x-lim": None, "y-lim": None, "title": "Zipf's law for words"}
     elif analysis_name == "zipfs-law-chars":
-        return {"dataset-col-x": "char", "dataset-col-y": "count()", "x-label": "Rank", "y-label": "Frequency", "x-lim": None, "y-lim": None, "title": "Zipfs Law for characters"}
+        return {"dataset-col-x": "char", "dataset-col-y": "count()", "x-label": "Rank", "y-label": "Frequency", "x-lim": None, "y-lim": None, "title": "Zipf's Law for characters"}
     elif analysis_name == "unique-queries":
         return {"dataset-col-x": None, "dataset-col-y": "count()", "x-label": None, "y-label": None, "x-lim": None, "y-lim": None, "title": None}
     elif analysis_name == "heaps-law-words":
@@ -152,11 +153,13 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
 
 def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
     fig, ax = subplots
+    height = data[vis_params["dataset-col-y"]].to_numpy()
+
     if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
-        x = list(range(1, len(vis_params["dataset-col-x"])+1))
+        x = list(range(1, len(data[vis_params["dataset-col-x"]])+1))
+        height = np_sort(a=height, kind='mergesort')[::-1]
     else:
         x = data[vis_params["dataset-col-x"]].to_numpy()
-    height = data[vis_params["dataset-col-y"]].to_numpy()
     # total_rows = data[vis_params["dataset-col-y"]].sum()
     # height = height/total_rows
     if label is not None:

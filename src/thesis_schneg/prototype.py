@@ -219,7 +219,7 @@ def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
 
 
 def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
-    return [{"operator": operator} for operator in ["site:", "\""] if operator in row['serp_query_text_url'].replace(" ", "")]
+    return [{"operator": operator} for operator in ["site:", "\"", "filetype:", " -", "*", " or ", " and ", "intitle:", "allinurl:", "allintitle:", "intext:", "allintext:", "related:", "define:", "cache:", "around("] if operator in row['serp_query_text_url'].lower()]
 
 
 # Aggregation functions
