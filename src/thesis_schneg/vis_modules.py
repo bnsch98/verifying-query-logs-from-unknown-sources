@@ -118,4 +118,5 @@ def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
     if vis_params["title"] is not None:
         ax.set_title(vis_params["title"])
     ax.set_yscale('log')
+    ax.set_xscale('log')
     return fig, ax

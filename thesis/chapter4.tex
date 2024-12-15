@@ -24,14 +24,7 @@ Here, various characteristics of the data sets are measured and displayed. The c
         \end{itemize} 
         \item Compare most common queries
     \end{itemize}
-    \item Named Entities
-    \begin{itemize}
-        \item Frequency of named entities \begin{itemize}
-            \item flat mapping->group->reduction
-        \end{itemize} 
-        \item Most common named entities
-        \item Categorize named entities according to ... -> apply classifier?
-    \end{itemize}
+
     \item Token frequency
     \begin{itemize}
         \item Zipf's Law of words and/or queries
@@ -41,6 +34,7 @@ Here, various characteristics of the data sets are measured and displayed. The c
         \begin{itemize}
             \item Queries: group->reduction
             \item character-based (evtl. anderes gesetz)
+            \item total number of characters
         \end{itemize}
         \item Heap's Law
         \begin{itemize}
@@ -55,6 +49,18 @@ Here, various characteristics of the data sets are measured and displayed. The c
         \end{itemize}
         \item most common operators
         \item phrasensuche, site:
+    \end{itemize}
+    \item Word frequencies
+    \begin{itemize}
+        \item most common words, bigrams, n-grams
+        \item list of top n common words, bigrams, n-grasms
+        \item flat_mapping (apply tokenizer) -> group-by token -> count
+        \item total number of words
+    \end{itemize}
+    \item Word lengths
+    \begin{itemize}
+        \item can be measured during word-frequency-experiment?
+        \item average word length, deviation, distribution of word lengths? 
     \end{itemize}
     
 \end{itemize} 
@@ -71,7 +77,14 @@ In this section, distributions of labels are created from different NLP predicto
         \begin{itemize}
             \item mapping (apply ORCAS-I classifier)
         \end{itemize}
-        
+    \end{itemize}
+    \item Named Entities
+    \begin{itemize}
+        \item Frequency of named entities \begin{itemize}
+            \item flat mapping->group->reduction
+        \end{itemize} 
+        \item Most common named entities
+        \item Categorize named entities according to ... -> apply classifier?
     \end{itemize}
     \item Hate speech
     \begin{itemize}
