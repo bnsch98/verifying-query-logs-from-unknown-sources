@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Tuple, Callable, Optional, Dict, Any
-from typing import Iterable
+from typing import Tuple, Callable, Optional, Dict, Any, List
+from typing import Iterable, Sequence
+from numpy.typing import ArrayLike
 from thesis_schneg.model import DatasetName, AnalysisName
 from pandas import DataFrame, concat, read_json, read_parquet
 from matplotlib import pyplot as plt
@@ -65,6 +66,26 @@ def load_results(
     return result
 
 
+def set_plot_properties(subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any]) -> Tuple[Figure, Axes]:
+    fig, ax = subplots
+    if vis_params["x-label"] is not None:
+        ax.set_xlabel(vis_params["x-label"])
+    if vis_params["y-label"] is not None:
+        ax.set_ylabel(vis_params["y-label"])
+    if vis_params["x-lim"] is not None:
+        ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
+    if vis_params["y-lim"] is not None:
+        ax.set_ylim(bottom=vis_params["y-lim"][0], top=vis_params["y-lim"][1])
+    if vis_params["title"] is not None:
+        ax.set_title(vis_params["title"])
+    return fig, ax
+
+
+def get_frequency_dict(counts: List[Any], lengths: List[Any]) -> Dict[str, Any]:
+    freq_dict = {str(key): value for key, value in zip(lengths, counts)}
+    return freq_dict
+
+
 def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
@@ -76,6 +97,27 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
     else:
         ax.bar(x=x, height=height,
                alpha=0.5)
+    if vis_params["x-label"] is not None:
+        ax.set_xlabel(vis_params["x-label"])
+    if vis_params["y-label"] is not None:
+        ax.set_ylabel(vis_params["y-label"])
+    if vis_params["x-lim"] is not None:
+        ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
+    if vis_params["y-lim"] is not None:
+        ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
+    if vis_params["title"] is not None:
+        ax.set_title(vis_params["title"])
+
+    return fig, ax
+
+
+def hist_plot(x: ArrayLike,  bins: Optional[Sequence[int]], subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, **kwargs) -> Tuple[Figure, Axes]:
+    fig, ax = subplots
+
+    ax.hist(x=x, bins=bins, alpha=0.5, label=label, color=color, **kwargs)
+    ax.legend(fancybox=False,
+              edgecolor="black").get_frame().set_linewidth(0.5)
+
     if vis_params["x-label"] is not None:
         ax.set_xlabel(vis_params["x-label"])
     if vis_params["y-label"] is not None:

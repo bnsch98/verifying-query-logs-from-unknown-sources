@@ -1,126 +1,47 @@
-# import matplotlib.pyplot as plt
-# from ray import init
-# from typing import Any, Dict
-# from ray.data.aggregate import AggregateFn
-# from ray.data import read_parquet
-# import os
-# import pandas as pd
-# init()
+import matplotlib.pyplot as plt
+import numpy as np
 
+# Beispiel-Dictionaries mit Häufigkeitsverteilungen aus mehreren Experimenten
+experiment1 = {'A': 10, 'B': 15, 'C': 5, 'D': 20, 'E': 10, 'F': 5}
+experiment2 = {'A': 5, 'B': 10, 'C': 15, 'D': 10}
+experiment3 = {'A': 20, 'B': 5, 'C': 10, 'D': 15}
+experiment4 = {'A': 10, 'B': 20, 'C': 10, 'D': 5, 'E': 15}
 
-# class read_parquet_data:
-#     def __init__(self, dataset_name: str, num_files: int = None, concurrency: int = 5, multi: bool = True):
-#         """A uniform dataloader, that manages reading different query log datasets in Ray.
+# Kombinieren der Dictionaries in eine Liste
+experiments = [experiment1, experiment2, experiment3, experiment4]
 
-#         Args:
-#             dataset_name (str, compulsory): specifies which dataset should be read: aol, ms, orcas, aql
-#             num_files (int, optional): specifies the number of input files to be read
-#             concurrency (int, optional) specifies the max number of processes used to read the source data
-#              """
-#         self.dataset_name = dataset_name
-#         self.num_files = num_files
-#         self.concurrency = concurrency
-#         self.multi = multi
+# Alle eindeutigen Schlüssel extrahieren
+all_keys = set()
+for experiment in experiments:
+    all_keys.update(experiment.keys())
 
-#         assert self.dataset_name in [
-#             'aol', 'ms', 'orcas', 'aql'], "Specified dataset_name is not supported!"
-#         assert not (self.multi is False and self.num_files is not None), "Can't request single file and simoultenously specify multiple files! For single file, set multi to False and num_files to None!"
+# Schlüssel sortieren, um eine konsistente Reihenfolge beizubehalten
+all_keys = sorted(all_keys)
 
-#         if self.dataset_name == 'aol':
-#             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/'
-#         elif self.dataset_name == 'ms':
-#             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/'
-#         elif self.dataset_name == 'orcas':
-#             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/'
-#         else:
-#             self.paths = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/'
+# Daten für das Plotten vorbereiten
+data = {key: [0] * len(experiments) for key in all_keys}
+for i, experiment in enumerate(experiments):
+    for key in all_keys:
+        data[key][i] = experiment.get(key, 0)
 
-#     def read_file(self):
+# Breite der Balken
+bar_width = 0.18
 
-#         input_paths = [os.path.join(self.paths, f) for f in os.listdir(
-#             self.paths) if f.endswith(".parquet")]
-#         if self.multi:
-#             if self.num_files is not None:
-#                 input_paths = input_paths[0:self.num_files]
-#         else:
-#             input_paths = input_paths[0]
+# Positionen der Balken auf der x-Achse
+r = np.arange(len(all_keys))
 
-#         ds = read_parquet(paths=input_paths, concurrency=self.concurrency)
+# Plotten der Balken für jedes Experiment
+for i in range(len(experiments)):
+    values = [data[key][i] for key in all_keys]
+    plt.bar(r + i * (bar_width+0.02), values,
+            width=bar_width, label=f'Experiment {i+1}')
 
-#         return ds
+# Achsenbeschriftungen und Titel hinzufügen
+plt.xlabel('Ausprägung')
+plt.ylabel('Anzahl')
+plt.title('Histogramm der Häufigkeitsverteilungen')
+plt.xticks(r + bar_width * (len(experiments) - 1) / 2, all_keys)
+plt.legend()
 
-
-# aggregation_row_count = AggregateFn(
-#     init=lambda column: 0,
-#     # Apply this to each row to produce a partial aggregate result
-#     accumulate_row=lambda a, row: a + 1,
-#     # Apply this to merge partial aggregate results into a final result
-#     merge=lambda a1, a2: a1 + a2,
-#     name="sum_rows"
-# )
-
-# # datasets = ['aol', 'ms', 'orcas', 'aql']
-# datasets = ['ms', 'aql']
-
-# sizes = []
-# for dataset_name in datasets:
-#     reader = read_parquet_data(
-#         dataset_name=dataset_name, concurrency=5)
-#     ds = reader.read_file()
-#     sizes.append(ds.aggregate(aggregation_row_count)['sum_rows'])
-
-#     ds = ds.filter(lambda row: row['serp_query_text_url'] is not None)
-#     sizes.append(ds.aggregate(aggregation_row_count)['sum_rows'])
-
-# print(f"\n\n\n\nSIZES: {sizes}\n\n\n\n")
-# # for dataset_name in datasets:
-# #     reader = read_parquet_data(
-# #         dataset_name=dataset_name, concurrency=5, num_files=2)
-# #     ds = reader.read_file()
-# #     print(ds.take(1))
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-tokenizer = AutoTokenizer.from_pretrained(
-    "Ashishkr/query_wellformedness_score")
-model = AutoModelForSequenceClassification.from_pretrained(
-    "Ashishkr/query_wellformedness_score")
-sentences = [
-    "The quarterly financial report are showing an increase.",  # Incorrect
-    "Him has completed the audit for last fiscal year.",  # Incorrect
-    "Please to inform the board about the recent developments.",  # Incorrect
-    "The team successfully achieved all its targets for the last quarter.",  # Correct
-    "youtube",  # Correct
-    "what is msci",  # Correct
-    "best netflix movie",  # Correct
-    "huggingface AND openAI",  # Correct
-]
-
-features = tokenizer(sentences, padding=True,
-                     truncation=True, return_tensors="pt")
-model.eval()
-with torch.no_grad():
-    scores = model(**features).logits
-print(scores)
-
-
-tokenizer = AutoTokenizer.from_pretrained("Yanni8/google-query-rating")
-model = AutoModelForSequenceClassification.from_pretrained(
-    "Yanni8/google-query-rating")
-
-sentences = [
-    "The quarterly financial report are showing an increase.",  # Incorrect
-    "Him has completed the audit for last fiscal year.",  # Incorrect
-    "Please to inform the board about the recent developments.",  # Incorrect
-    "The team successfully achieved all its targets for the last quarter.",  # Correct
-    "youtube",  # Correct
-    "what is msci",  # Correct
-    "best netflix movie",  # Correct
-    "huggingface AND openAI",  # Correct
-]
-
-features = tokenizer(sentences, padding=True,
-                     truncation=True, return_tensors="pt")
-model.eval()
-with torch.no_grad():
-    scores = model(**features).logits
-print(scores)
+# Plot anzeigen
+plt.show()
