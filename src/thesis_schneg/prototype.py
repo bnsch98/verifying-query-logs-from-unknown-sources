@@ -9,7 +9,7 @@ from thesis_schneg.model import DatasetName, AnalysisName
 from json import dumps
 from functools import cached_property
 from dataclasses import dataclass
-from spacy import load as spacy_load, Language
+from spacy import load as spacy_load, Language, explain
 
 
 ############################################    Requirements for basic modules    #####################################
@@ -36,7 +36,7 @@ class SpacyWords(_spacy_framework):
 
 
 @dataclass(frozen=True)
-class SpacyEntities(_spacy_framework):
+class SpacyGetEntities(_spacy_framework):
 
     @cached_property
     def spacy_model(self) -> Language:
@@ -45,9 +45,24 @@ class SpacyEntities(_spacy_framework):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         # Get tokens from text
         doc = self.spacy_model(row["serp_query_text_url"])
-        entities = [{"entity": ent.text, "entity-label": ent.label_}
+        entities = [{"entity": ent.text, "entity-label": ent.label_+'-'+str(explain(ent.label_))}
                     for ent in doc.ents if doc.ents != ()]
         return entities
+
+
+@dataclass(frozen=True)
+class SpacyEntityCount(_spacy_framework):
+
+    @cached_property
+    def spacy_model(self) -> Language:
+        return spacy_load("en_core_web_sm")
+
+    def get_spacy_vals(self, batch: DataFrame) -> DataFrame:
+        # Get entity count
+        predictions = [len([ent for ent in self.spacy_model(query).ents])
+                       for query in list(batch["serp_query_text_url"])]
+        batch['entity-count'] = predictions
+        return batch
 
 
 def _get_parquet_paths(
@@ -213,13 +228,25 @@ def get_length_word(batch: DataFrame) -> DataFrame:
     return batch
 
 
+def get_operator_count(batch: DataFrame) -> DataFrame:
+    batch['operator-count'] = batch['serp_query_text_url'].apply(
+        lambda x: sum([x.count(operator) for operator in ["site:", "\"", "filetype:", " -", "*", " or ", " and ", "intitle:", "allinurl:", "allintitle:", "intext:", "allintext:", "related:", "define:", "cache:", "around("]]))
+    return batch
+
+
 # Flat mapping functions
 def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
 
 
 def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
-    return [{"operator": operator} for operator in ["site:", "\"", "filetype:", " -", "*", " or ", " and ", "intitle:", "allinurl:", "allintitle:", "intext:", "allintext:", "related:", "define:", "cache:", "around("] if operator in row['serp_query_text_url'].lower()]
+    res = [{"operator": operator} for operator in ["site:", "filetype:", "intitle:", "allinurl:", "allintitle:",
+                                                   "intext:", "allintext:", "related:", "define:", "cache:", "around("] if operator in row['serp_query_text_url'].lower()]
+    if " OR " in row['serp_query_text_url']:
+        res.append({"operator": "OR"})
+    elif " AND " in row['serp_query_text_url']:
+        res.append({"operator": "AND"})
+    return res
 
 
 # Aggregation functions
@@ -310,8 +337,16 @@ def named_entities_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby(key=['entity', 'entity-label']).count()
 
 
+def named_entities_count_groupby(dataset: Dataset) -> Dataset:
+    return dataset.groupby('entity-count').count()
+
+
 def search_operators_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('operator').count()
+
+
+def operator_count_groupby(dataset: Dataset) -> Dataset:
+    return dataset.groupby('operator-count').count()
 
 ############################################    Get task-specific modules     #############################################
 
@@ -334,9 +369,13 @@ def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
     elif analysis_name == "query-length-words":
         return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': get_length_word, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "named-entities":
-        return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyEntities(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+        return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "named-entities-count":
+        return {'groupby_func': named_entities_count_groupby, 'aggregator': None, 'mapping_func': SpacyEntityCount(), 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "search-operators":
         return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+    elif analysis_name == "search-operators-count":
+        return {'groupby_func': operator_count_groupby, 'aggregator': None, 'mapping_func': get_operator_count, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
 
 
 ############################################    Pipeline    ###############################################
