@@ -368,11 +368,11 @@ def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
         return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': get_length_char, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "query-length-words":
         return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': get_length_word, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "named-entities":
+    elif analysis_name == "extract-named-entities":
         return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "named-entities-count":
         return {'groupby_func': named_entities_count_groupby, 'aggregator': None, 'mapping_func': SpacyEntityCount(), 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "search-operators":
+    elif analysis_name == "extract-search-operators":
         return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
     elif analysis_name == "search-operators-count":
         return {'groupby_func': operator_count_groupby, 'aggregator': None, 'mapping_func': get_operator_count, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
@@ -433,10 +433,10 @@ def analysis_pipeline(dataset_name: DatasetName,
             dataset=ds, aggregation_func=module_specifics['aggregator'])
 
     # Print results for debugging.
-    # if type(ds) is Dataset:
-    #     print(ds.take(10))
-    # elif type(ds) is dict:
-    #     print(ds)
+    if type(ds) is Dataset:
+        print(ds.take(10))
+    elif type(ds) is dict:
+        print(ds)
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
