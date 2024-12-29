@@ -37,6 +37,7 @@ AnalysisName: TypeAlias = Literal[
     "words-count-frequencies",
     "entity-count-frequencies",
     "query-count-frequencies",
+    "query-intent",
     "zipfs-law-queries",
     "zipfs-law-words",
     "zipfs-law-chars",

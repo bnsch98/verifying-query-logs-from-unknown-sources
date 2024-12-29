@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from json import load
 from pathlib import Path
-from typing import Protocol, Iterable, Mapping, Optional
+from typing import Protocol, Mapping
 
 from pandas import DataFrame
 from safetensors.torch import load_model
@@ -34,7 +34,7 @@ class QueryIntentPredictor(_Predictor):
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/model/labels.json"
     )
     model_path: Path = Path(
-        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/model/finetuned_BERT_first_level.safetensors"
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/model/bert-orcas-i-level1-query.safetensors"
     )
 
     @cached_property
@@ -91,7 +91,8 @@ class QueryIntentPredictor(_Predictor):
         # Reset call count of classifier pipeline.
         self._pipeline.call_count = 0
         predictions = self._pipeline(list(batch["serp_query_text_url"]))
-        batch["label"] = [prediction[0]["label"] for prediction in predictions]
+        batch["query-intent"] = [prediction[0]["label"]
+                                 for prediction in predictions]
         return batch
 
 

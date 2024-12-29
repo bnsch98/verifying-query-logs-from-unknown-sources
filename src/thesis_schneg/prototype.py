@@ -11,9 +11,11 @@ from functools import cached_property
 from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
 from functools import partial
-
+from thesis_schneg.classification_module import QueryIntentPredictor
 
 ############################################    Requirements for basic modules    #####################################
+
+
 class _spacy_framework(Protocol):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         raise NotImplementedError()
@@ -372,6 +374,10 @@ def operator_count_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('operator-count').count()
 
 
+def groupby_query_intent(dataset: Dataset) -> Dataset:
+    return dataset.groupby('query-intent').count()
+
+
 ############################################    Get task-specific modules     ############################################
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
     if analysis_name == "extract-chars":
@@ -391,6 +397,9 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': groupby_entity_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['entity-count']}
     elif analysis_name == "query-count-frequencies":
         return {'groupby_func': groupby_queries_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+
+    elif analysis_name == "query-intent":
+        return {'groupby_func': groupby_query_intent, 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     elif analysis_name == "zipfs-law-queries":
         return {'groupby_func': groupby_queries, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
