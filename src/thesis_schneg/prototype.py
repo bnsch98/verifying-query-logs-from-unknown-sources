@@ -10,6 +10,7 @@ from json import dumps
 from functools import cached_property
 from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
+from functools import partial
 
 
 ############################################    Requirements for basic modules    #####################################
@@ -51,13 +52,16 @@ class SpacyGetEntities(_spacy_framework):
 
 
 @dataclass(frozen=True)
-class SpacyEntityCount(_spacy_framework):
+class SpacyQueryLevelStructures(_spacy_framework):
 
     @cached_property
     def spacy_model(self) -> Language:
         return spacy_load("en_core_web_sm")
 
     def get_spacy_vals(self, batch: DataFrame) -> DataFrame:
+        batch['character-count'] = batch['serp_query_text_url'].apply(len)
+        batch['word-count'] = batch['serp_query_text_url'].apply(
+            lambda x: len(x.split()))
         # Get entity count
         predictions = [len([ent for ent in self.spacy_model(query).ents])
                        for query in list(batch["serp_query_text_url"])]
@@ -67,36 +71,44 @@ class SpacyEntityCount(_spacy_framework):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
+    struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
 ) -> Iterable[Path]:
     base_path: Path
-    if dataset_name == "aol":
+    if struc_level in [None, "queries"]:
+        if dataset_name == "aol":
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
+            )
+        elif dataset_name == "ms-marco":
+            if only_english:
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
+                )
+            else:
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
+                )
+        elif dataset_name == "orcas":
+            base_path = Path(
+                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
+            )
+        elif dataset_name == "aql":
+            if only_english:
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
+                )
+            else:
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
+                )
+    else:
         base_path = Path(
-            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
+            f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
         )
-    elif dataset_name == "ms-marco":
-        if only_english:
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
-            )
-        else:
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
-            )
-    elif dataset_name == "orcas":
-        base_path = Path(
-            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
-        )
-    elif dataset_name == "aql":
-        if only_english:
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
-            )
-        else:
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
-            )
+        assert base_path.is_dir(
+        ), f"No directories found for dataset = {dataset_name} and struc_level = {struc_level}"
 
     input_paths = [path for path in base_path.iterdir()
                    if path.suffix == ".parquet"]
@@ -110,6 +122,7 @@ def _get_parquet_paths(
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
+                 struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
                  read_concurrency: Optional[int] = None,
@@ -123,6 +136,7 @@ def load_dataset(dataset_name: DatasetName,
             str(path)
             for path in _get_parquet_paths(
                 dataset_name=dataset_name,
+                struc_level=struc_level,
                 sample_files=sample_files,
                 only_english=only_english,
             )
@@ -132,27 +146,6 @@ def load_dataset(dataset_name: DatasetName,
         ray_remote_args={"memory": memory_scaler*1000*1000*1000}
     )
     return dataset
-
-
-def filter_columns(dataset: Dataset,
-                   columns: Optional[Iterable[str]
-                                     ] = ['serp_query_text_url'],
-                   # filter out NaN values for fault tolerance
-                   filter_NaN: Optional[Iterable[str]] = [
-                       'serp_query_text_url'],
-                   filter_concurrency: Optional[int] = 2,
-                   filter_cpus: Optional[int] = 1,
-                   filter_batch_size: Optional[int] = None,
-                   memory_scaler: float = 1.0
-                   ) -> Dataset:
-
-    def col_filter(df: DataFrame, col=columns, filter=filter_NaN) -> DataFrame:
-        if filter is not None:
-            return df.dropna(subset=filter)[col]
-        else:
-            return df[col]
-
-    return dataset.map_batches(col_filter, batch_format="pandas", concurrency=filter_concurrency, num_cpus=filter_cpus, memory=memory_scaler*1000*1000*1000, batch_size=filter_batch_size)
 
 
 def map_dataset(dataset: Dataset,
@@ -187,7 +180,23 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
     return dataset.aggregate(aggregation_func)
 
 
-def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis: str, write_concurrency: Optional[int] = 2) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, write_concurrency: Optional[int] = 2) -> None:
+    # Specifiy output directory
+    if struc_level is not None:
+        if sample_files is not None:
+            write_dir = write_dir.joinpath(
+                f"{dataset_name}-{analysis_name}-{struc_level}-{sample_files}")
+        else:
+            write_dir = write_dir.joinpath(
+                f"{dataset_name}-{analysis_name}-{struc_level}-all")
+    else:
+        if sample_files is not None:
+            write_dir = write_dir.joinpath(
+                f"{dataset_name}-{analysis_name}-{sample_files}")
+        else:
+            write_dir = write_dir.joinpath(
+                f"{dataset_name}-{analysis_name}-all")
+
     # Delete old files
     if write_dir.exists():
         [f.unlink() for f in write_dir.glob("*") if f.is_file()]
@@ -196,10 +205,10 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
         # Distinguish between nested dict and flat dict. We rule out deeper nesting.
-        if type(dataset[analysis]) is dict:
+        if type(dataset[analysis_name]) is dict:
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
-                f.write(dumps(dataset[analysis]))
+                f.write(dumps(dataset[analysis_name]))
         else:
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
@@ -230,7 +239,18 @@ def get_length_word(batch: DataFrame) -> DataFrame:
 
 def get_operator_count(batch: DataFrame) -> DataFrame:
     batch['operator-count'] = batch['serp_query_text_url'].apply(
-        lambda x: sum([x.count(operator) for operator in ["site:", "\"", "filetype:", " -", "*", " or ", " and ", "intitle:", "allinurl:", "allintitle:", "intext:", "allintext:", "related:", "define:", "cache:", "around("]]))
+        lambda x: sum([x.count(operator) for operator in ["site:", "filetype:", "intitle:", "allinurl:", "allintitle:",
+                                                          "intext:", "allintext:", "related:", "define:", "cache:", "around(", " OR ", " AND "]]))
+    return batch
+
+
+def get_lengths(batch: DataFrame, structural_level: str) -> DataFrame:
+    if structural_level == "words":
+        batch['character-count'] = batch['word'].apply(len)
+    elif structural_level == "named-entities":
+        batch['character-count'] = batch['entity'].apply(len)
+        batch['word-count'] = batch['entity'].apply(lambda x: len(x.split()))
+
     return batch
 
 
@@ -241,11 +261,7 @@ def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
 
 def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     res = [{"operator": operator} for operator in ["site:", "filetype:", "intitle:", "allinurl:", "allintitle:",
-                                                   "intext:", "allintext:", "related:", "define:", "cache:", "around("] if operator in row['serp_query_text_url'].lower()]
-    if " OR " in row['serp_query_text_url']:
-        res.append({"operator": "OR"})
-    elif " AND " in row['serp_query_text_url']:
-        res.append({"operator": "AND"})
+                                                   "intext:", "allintext:", "related:", "define:", "cache:", "around(", " OR ", " AND "] if operator in row['serp_query_text_url']]
     return res
 
 
@@ -295,9 +311,8 @@ aggregation_query_length = AggregateFn(
     name="count"
 )
 
+
 # Helper functions for aggregation
-
-
 def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     aggr_dict["sum"] += row["count()"]
     aggr_dict["unique"] += 1
@@ -329,16 +344,24 @@ def query_length_words_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('query-length-words').count()
 
 
-def unique_queries_groupby(dataset: Dataset) -> Dataset:
-    return dataset.groupby('serp_query_text_url').count()
-
-
 def named_entities_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby(key=['entity', 'entity-label']).count()
 
 
-def named_entities_count_groupby(dataset: Dataset) -> Dataset:
+def groupby_character_count(dataset: Dataset) -> Dataset:
+    return dataset.groupby('character-count').count()
+
+
+def groupby_word_count(dataset: Dataset) -> Dataset:
+    return dataset.groupby('word-count').count()
+
+
+def groupby_entity_count(dataset: Dataset) -> Dataset:
     return dataset.groupby('entity-count').count()
+
+
+def groupby_queries_count(dataset: Dataset) -> Dataset:
+    return dataset.groupby('serp_query_text_url').count()
 
 
 def search_operators_groupby(dataset: Dataset) -> Dataset:
@@ -348,39 +371,54 @@ def search_operators_groupby(dataset: Dataset) -> Dataset:
 def operator_count_groupby(dataset: Dataset) -> Dataset:
     return dataset.groupby('operator-count').count()
 
-############################################    Get task-specific modules     #############################################
 
-
-def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
-    if analysis_name == "sum-rows":
-        return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "zipfs-law-queries":
-        return {'groupby_func': groupby_queries, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "zipfs-law-words":
-        return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "zipfs-law-chars":
-        return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "unique-queries":
-        return {'groupby_func': unique_queries_groupby, 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "heaps-law-words":
-        return {'groupby_func': groupby_words, 'aggregator': unique_words_agg, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "query-length-chars":
-        return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': get_length_char, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
-    elif analysis_name == "query-length-words":
-        return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': get_length_word, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+############################################    Get task-specific modules     ############################################
+def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
+    if analysis_name == "extract-chars":
+        return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-words":
+        return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-named-entities":
-        return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+        return {'groupby_func': named_entities_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "get-lengths":
+        assert struc_level is not None, "Structural level must be specified"
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
+    elif analysis_name == "character-count-frequencies":
+        return {'groupby_func': groupby_character_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['character-count']}
+    elif analysis_name == "word-count-frequencies":
+        return {'groupby_func': groupby_word_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['word-count']}
+    elif analysis_name == "entity-count-frequencies":
+        return {'groupby_func': groupby_entity_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['entity-count']}
+    elif analysis_name == "query-count-frequencies":
+        return {'groupby_func': groupby_queries_count, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+
+    elif analysis_name == "zipfs-law-queries":
+        return {'groupby_func': groupby_queries, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "zipfs-law-words":
+        return {'groupby_func': groupby_words, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "zipfs-law-chars":
+        return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "unique-queries":
+        return {'groupby_func': groupby_queries_count, 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "heaps-law-words":
+        return {'groupby_func': groupby_words, 'aggregator': unique_words_agg, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-length-chars":
+        return {'groupby_func': query_length_chars_groupby, 'aggregator': None, 'mapping_func': [get_length_char], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-length-words":
+        return {'groupby_func': query_length_words_groupby, 'aggregator': None, 'mapping_func': [get_length_word], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+
     elif analysis_name == "named-entities-count":
-        return {'groupby_func': named_entities_count_groupby, 'aggregator': None, 'mapping_func': SpacyEntityCount(), 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-search-operators":
-        return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+        return {'groupby_func': search_operators_groupby, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "search-operators-count":
-        return {'groupby_func': operator_count_groupby, 'aggregator': None, 'mapping_func': get_operator_count, 'flat_mapping_func': None, 'col_filter': {'cols': ['serp_query_text_url'], 'nan_filter': ['serp_query_text_url']}}
+        return {'groupby_func': operator_count_groupby, 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
 
 ############################################    Pipeline    ###############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
+                      struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
                       only_english: bool = False,
                       read_concurrency: Optional[int] = None,
@@ -393,30 +431,25 @@ def analysis_pipeline(dataset_name: DatasetName,
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
     write_concurrency: Optional[int] = 2
 ) -> None:
-    if sample_files is not None:
-        write_dir = write_dir.joinpath(
-            f"{dataset_name}-{analysis_name}-{sample_files}")
-    else:
-        write_dir = write_dir.joinpath(f"{dataset_name}-{analysis_name}-all")
+    assert struc_level in [None, "words",
+                           "named-entities", "queries"], "Invalid structural level"
 
     init()
 
     # Load module specifics
-    module_specifics = _get_module_specifics(analysis_name=analysis_name)
+    module_specifics = _get_module_specifics(
+        analysis_name=analysis_name, struc_level=struc_level)
 
     # Load dataset.
-    ds = load_dataset(dataset_name=dataset_name, sample_files=sample_files,
-                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter']['cols'], memory_scaler=memory_scaler)  # , memory_scaler=memory_scaler
+    ds = load_dataset(dataset_name=dataset_name, struc_level=struc_level, sample_files=sample_files,
+                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler)
 
-    # # Select required columns.
-    # if module_specifics['col_filter'] is not None:
-    #     ds = filter_columns(
-    #         dataset=ds, columns=module_specifics['col_filter']['cols'], filter_NaN=module_specifics['col_filter']['nan_filter'], filter_concurrency=map_concurrency, filter_cpus=num_cpus, filter_batch_size=batch_size, memory_scaler=memory_scaler)
-
-    # # Apply mapping function.
+    # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
-        ds = map_dataset(dataset=ds, mapping_func=module_specifics['mapping_func'],
-                         map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+        # iterate through list of mapping functions
+        for func in module_specifics['mapping_func']:
+            ds = map_dataset(dataset=ds, mapping_func=func,
+                             map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
 
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
@@ -433,11 +466,11 @@ def analysis_pipeline(dataset_name: DatasetName,
             dataset=ds, aggregation_func=module_specifics['aggregator'])
 
     # Print results for debugging.
-    if type(ds) is Dataset:
-        print(ds.take(10))
-    elif type(ds) is dict:
-        print(ds)
+    # if type(ds) is Dataset:
+    #     print(ds.take(10))
+    # elif type(ds) is dict:
+    #     print(ds)
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
-                  analysis=analysis_name, write_concurrency=write_concurrency)
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files)

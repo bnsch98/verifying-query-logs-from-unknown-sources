@@ -72,6 +72,7 @@ def aggregate(
 def analyser(
     dataset: DatasetName,
     analysis: AnalysisName,
+    struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
     read_concurrency: Optional[int] = None,
@@ -89,6 +90,7 @@ def analyser(
     _analysis_pipeline(
         dataset_name=dataset,
         analysis_name=analysis,
+        struc_level=struc_level,
         sample_files=sample_files,
         only_english=only_english,
         read_concurrency=read_concurrency,
