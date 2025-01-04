@@ -15,15 +15,6 @@ DatasetName: TypeAlias = Literal[
     "aql",
 ]
 
-
-PredictorName: TypeAlias = Literal[
-    "query-intent",
-    "language",
-    "hate-speech",
-    "spam",
-    "query-rating",
-]
-
 AggregatorName: TypeAlias = Literal[
     "zipfs-law",
 ]
@@ -38,6 +29,9 @@ AnalysisName: TypeAlias = Literal[
     "entity-count-frequencies",
     "query-count-frequencies",
     "query-intent",
+    "query-domain",
+    "query-quality",
+    "query-nsfw",
     "zipfs-law-queries",
     "zipfs-law-words",
     "zipfs-law-chars",

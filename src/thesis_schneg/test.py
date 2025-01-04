@@ -1,47 +1,172 @@
-import matplotlib.pyplot as plt
-import numpy as np
+import torch
+from torch import nn
+from huggingface_hub import PyTorchModelHubMixin
 
-# Beispiel-Dictionaries mit Häufigkeitsverteilungen aus mehreren Experimenten
-experiment1 = {'A': 10, 'B': 15, 'C': 5, 'D': 20, 'E': 10, 'F': 5}
-experiment2 = {'A': 5, 'B': 10, 'C': 15, 'D': 10}
-experiment3 = {'A': 20, 'B': 5, 'C': 10, 'D': 15}
-experiment4 = {'A': 10, 'B': 20, 'C': 10, 'D': 5, 'E': 15}
+from dataclasses import dataclass
+from functools import cached_property
+from typing import Any, Union, Protocol
 
-# Kombinieren der Dictionaries in eine Liste
-experiments = [experiment1, experiment2, experiment3, experiment4]
+from pandas import DataFrame
+from torch import device, argmax
+from torch.cuda import is_available as cuda_is_available
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    AutoConfig,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+    Pipeline,
+    pipeline,
+)
 
-# Alle eindeutigen Schlüssel extrahieren
-all_keys = set()
-for experiment in experiments:
-    all_keys.update(experiment.keys())
 
-# Schlüssel sortieren, um eine konsistente Reihenfolge beizubehalten
-all_keys = sorted(all_keys)
+class _Predictor(Protocol):
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        raise NotImplementedError()
 
-# Daten für das Plotten vorbereiten
-data = {key: [0] * len(experiments) for key in all_keys}
-for i, experiment in enumerate(experiments):
-    for key in all_keys:
-        data[key][i] = experiment.get(key, 0)
+    def __call__(self, batch: DataFrame) -> DataFrame:
+        return self.predict_batch(batch)
 
-# Breite der Balken
-bar_width = 0.18
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
 
-# Positionen der Balken auf der x-Achse
-r = np.arange(len(all_keys))
 
-# Plotten der Balken für jedes Experiment
-for i in range(len(experiments)):
-    values = [data[key][i] for key in all_keys]
-    plt.bar(r + i * (bar_width+0.02), values,
-            width=bar_width, label=f'Experiment {i+1}')
+class CustomModel(nn.Module, PyTorchModelHubMixin):
+    def __init__(self, config):
+        super(CustomModel, self).__init__()
+        self.model = AutoModel.from_pretrained(config["base_model"])
+        self.dropout = nn.Dropout(config["fc_dropout"])
+        self.fc = nn.Linear(self.model.config.hidden_size,
+                            len(config["id2label"]))
 
-# Achsenbeschriftungen und Titel hinzufügen
-plt.xlabel('Ausprägung')
-plt.ylabel('Anzahl')
-plt.title('Histogramm der Häufigkeitsverteilungen')
-plt.xticks(r + bar_width * (len(experiments) - 1) / 2, all_keys)
-plt.legend()
+    def forward(self, input_ids, attention_mask):
+        features = self.model(input_ids=input_ids,
+                              attention_mask=attention_mask).last_hidden_state
+        dropped = self.dropout(features)
+        outputs = self.fc(dropped)
+        return torch.softmax(outputs[:, 0, :], dim=1)
 
-# Plot anzeigen
-plt.show()
+
+@dataclass(frozen=True)
+class nvidiaDomainClassifier(_Predictor):
+    @cached_property
+    def _config(self) -> Any:
+        return AutoConfig.from_pretrained("nvidia/domain-classifier")
+
+    @cached_property
+    def _tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+        return AutoTokenizer.from_pretrained("nvidia/domain-classifier")
+
+    @cached_property
+    def _model(self) -> CustomModel:
+        model = CustomModel.from_pretrained("nvidia/domain-classifier")
+        model = model.to(self._device)
+        model = model.eval()
+        return model
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        inputs = self._tokenizer(list(
+            batch["serp_query_text_url"]), return_tensors="pt", padding="longest", truncation=True).to(self._device)
+        outputs = self._model(inputs["input_ids"], inputs["attention_mask"])
+        predicted_classes = argmax(outputs, dim=1)
+        predicted_domains = [self._config.id2label[class_idx.item()]
+                             for class_idx in predicted_classes.cpu().numpy()]
+        batch["query-domain"] = predicted_domains
+        return batch
+
+
+@dataclass(frozen=True)
+class nvidiaQualityClassifier(_Predictor):
+    @cached_property
+    def _config(self) -> Any:
+        return AutoConfig.from_pretrained("nvidia/quality-classifier-deberta")
+
+    @cached_property
+    def _tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+        return AutoTokenizer.from_pretrained("nvidia/quality-classifier-deberta")
+
+    @cached_property
+    def _model(self) -> CustomModel:
+        model = CustomModel.from_pretrained(
+            "nvidia/quality-classifier-deberta")
+        model = model.to(self._device)
+        model = model.eval()
+        return model
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        inputs = self._tokenizer(list(
+            batch["serp_query_text_url"]), return_tensors="pt", padding="longest", truncation=True).to(self._device)
+        outputs = self._model(inputs["input_ids"], inputs["attention_mask"])
+        predicted_classes = argmax(outputs, dim=1)
+        predicted_domains = [self._config.id2label[class_idx.item()]
+                             for class_idx in predicted_classes.cpu().numpy()]
+        batch["query-quality"] = predicted_domains
+        return batch
+
+
+@dataclass(frozen=True)
+class NSFWPredictor(_Predictor):
+    model_name: str = "eliasalbouzidi/distilbert-nsfw-text-classifier"
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self.model_name,
+            device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        # Reset call count of classifier pipeline.
+        self._pipeline.call_count = 0
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
+        return batch
+
+
+# Setup configuration and model
+config = AutoConfig.from_pretrained("nvidia/domain-classifier")
+tokenizer = AutoTokenizer.from_pretrained("nvidia/domain-classifier")
+model = CustomModel.from_pretrained("nvidia/domain-classifier")
+model.eval()
+
+# Prepare and process inputs
+text_samples = ["Sports is a popular domain", "Politics is a popular domain", "ahdsa skjfh a",
+                "Today is a good day", "This is a test sample. If this works, then it is a success."]
+inputs = tokenizer(text_samples, return_tensors="pt",
+                   padding="longest", truncation=True)
+outputs = model(inputs["input_ids"], inputs["attention_mask"])
+
+# Predict and display results
+predicted_classes = torch.argmax(outputs, dim=1)
+predicted_domains = [config.id2label[class_idx.item()]
+                     for class_idx in predicted_classes.cpu().numpy()]
+print(predicted_domains)
+# ['Sports', 'News']
+
+
+print("####################################")
+
+
+pred = nvidiaDomainClassifier()
+
+print(pred.predict_batch(DataFrame({"serp_query_text_url": text_samples})))
+print(pred(DataFrame({"serp_query_text_url": text_samples})))
+
+print("####################################")
+
+pred = nvidiaQualityClassifier()
+
+print(pred.predict_batch(DataFrame({"serp_query_text_url": text_samples})))
+print(pred(DataFrame({"serp_query_text_url": text_samples})))
+
+print("####################################")
+text_samples = ["fuck you", "Hello, how are you?"]
+pred = NSFWPredictor()
+
+print(pred.predict_batch(DataFrame({"serp_query_text_url": text_samples})))
+print(pred(DataFrame({"serp_query_text_url": text_samples})))

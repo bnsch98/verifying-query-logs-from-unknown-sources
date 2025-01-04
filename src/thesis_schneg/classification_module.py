@@ -2,18 +2,26 @@ from dataclasses import dataclass
 from functools import cached_property
 from json import load
 from pathlib import Path
-from typing import Protocol, Mapping
+from typing import Protocol, Mapping, Any, Union
 
 from pandas import DataFrame
 from safetensors.torch import load_model
-from torch import device
+from torch import device, nn, softmax, argmax, sigmoid
 from torch.cuda import is_available as cuda_is_available
 from transformers import (
     BertTokenizer,
     BertForSequenceClassification,
     pipeline,
     Pipeline,
+    AutoModel,
+    AutoTokenizer,
+    AutoConfig,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+
+
 )
+from huggingface_hub import PyTorchModelHubMixin
 
 
 class _Predictor(Protocol):
@@ -26,6 +34,117 @@ class _Predictor(Protocol):
     @cached_property
     def _device(self) -> device:
         return device("cuda" if cuda_is_available() else "cpu")
+
+
+class CustomModel(nn.Module, PyTorchModelHubMixin):
+    def __init__(self, config):
+        super(CustomModel, self).__init__()
+        self.model = AutoModel.from_pretrained(config["base_model"])
+        self.dropout = nn.Dropout(config["fc_dropout"])
+        self.fc = nn.Linear(self.model.config.hidden_size,
+                            len(config["id2label"]))
+
+    def forward(self, input_ids, attention_mask):
+        features = self.model(input_ids=input_ids,
+                              attention_mask=attention_mask).last_hidden_state
+        dropped = self.dropout(features)
+        outputs = self.fc(dropped)
+        return softmax(outputs[:, 0, :], dim=1)
+
+# class RegressionModel(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.model = AutoModelForSequenceClassification.from_pretrained("AdamCodd/distilroberta-query-wellformedness")
+#         self.regression_head = nn.Linear(self.model.config.hidden_size, 1)
+
+#     def forward(self, input_ids, attention_mask, **kwargs):
+#         outputs = self.model.base_model(input_ids=input_ids, attention_mask=attention_mask)
+#         rating = self.regression_head(outputs.last_hidden_state[:, 0, :])
+#         rating = sigmoid(rating)
+#         return rating.squeeze()
+
+
+# @dataclass(frozen=True)
+# class WellFormednessClassifier(_Predictor):
+
+#     @cached_property
+#     def _tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+#         return AutoTokenizer.from_pretrained("AdamCodd/distilroberta-query-wellformedness")
+
+#     @cached_property
+#     def _model(self) -> RegressionModel:
+#         model = RegressionModel()
+#         model = model.regression_head.load_state_dict(torch.load("path_to_the_regression_head.pth"))
+#         model = model.to(self._device)
+#         model = model.eval()
+#         return model
+
+#     def predict_batch(self, batch: DataFrame) -> DataFrame:
+#         inputs = self._tokenizer(list(
+#             batch["serp_query_text_url"]), return_tensors="pt", padding="longest", truncation=True).to(self._device)
+#         outputs = self._model(inputs["input_ids"], inputs["attention_mask"])
+#         predicted_classes = argmax(outputs, dim=1)
+#         predicted_domains = [self._config.id2label[class_idx.item()]
+#                              for class_idx in predicted_classes.cpu().numpy()]
+#         batch["query-quality"] = predicted_domains
+#         return batch
+
+
+@dataclass(frozen=True)
+class nvidiaQualityClassifier(_Predictor):
+    @cached_property
+    def _config(self) -> Any:
+        return AutoConfig.from_pretrained("nvidia/quality-classifier-deberta")
+
+    @cached_property
+    def _tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+        return AutoTokenizer.from_pretrained("nvidia/quality-classifier-deberta")
+
+    @cached_property
+    def _model(self) -> CustomModel:
+        model = CustomModel.from_pretrained(
+            "nvidia/quality-classifier-deberta")
+        model = model.to(self._device)
+        model = model.eval()
+        return model
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        inputs = self._tokenizer(list(
+            batch["serp_query_text_url"]), return_tensors="pt", padding="longest", truncation=True).to(self._device)
+        outputs = self._model(inputs["input_ids"], inputs["attention_mask"])
+        predicted_classes = argmax(outputs, dim=1)
+        predicted_domains = [self._config.id2label[class_idx.item()]
+                             for class_idx in predicted_classes.cpu().numpy()]
+        batch["query-quality"] = predicted_domains
+        return batch
+
+
+@dataclass(frozen=True)
+class nvidiaDomainClassifier(_Predictor):
+    @cached_property
+    def _config(self) -> Any:
+        return AutoConfig.from_pretrained("nvidia/domain-classifier")
+
+    @cached_property
+    def _tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+        return AutoTokenizer.from_pretrained("nvidia/domain-classifier")
+
+    @cached_property
+    def _model(self) -> CustomModel:
+        model = CustomModel.from_pretrained("nvidia/domain-classifier")
+        model = model.to(self._device)
+        model = model.eval()
+        return model
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        inputs = self._tokenizer(list(
+            batch["serp_query_text_url"]), return_tensors="pt", padding="longest", truncation=True).to(self._device)
+        outputs = self._model(inputs["input_ids"], inputs["attention_mask"])
+        predicted_classes = argmax(outputs, dim=1)
+        predicted_domains = [self._config.id2label[class_idx.item()]
+                             for class_idx in predicted_classes.cpu().numpy()]
+        batch["query-domain"] = predicted_domains
+        return batch
 
 
 @dataclass(frozen=True)
@@ -93,6 +212,29 @@ class QueryIntentPredictor(_Predictor):
         predictions = self._pipeline(list(batch["serp_query_text_url"]))
         batch["query-intent"] = [prediction[0]["label"]
                                  for prediction in predictions]
+        return batch
+
+
+@dataclass(frozen=True)
+class NSFWPredictor(_Predictor):
+    model_name: str = "eliasalbouzidi/distilbert-nsfw-text-classifier"
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self.model_name,
+            device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        # Reset call count of classifier pipeline.
+        self._pipeline.call_count = 0
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["label"] = [prediction[0]["label"] for prediction in predictions]
         return batch
 
 

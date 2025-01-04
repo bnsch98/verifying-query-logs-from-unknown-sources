@@ -4,40 +4,11 @@ from cyclopts import App
 from cyclopts.types import Directory
 from thesis_schneg.model import (
     DatasetName,
-    PredictorName,
     AggregatorName,
     AnalysisName,
 )
 
 app = App()
-
-
-@app.command
-def classify(
-    predictor: PredictorName,
-    dataset: DatasetName,
-    sample_files: Optional[int] = None,
-    only_english: bool = False,
-    read_concurrency: Optional[int] = None,
-    predict_concurrency: Optional[int] = 8,
-    predict_batch_size: int = 16,
-    write_concurrency: Optional[int] = 2,
-    write_dir: Directory = Path(
-        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/classification"),
-) -> None:
-    from thesis_schneg.classification import classify as _classify
-
-    _classify(
-        predictor_name=predictor,
-        dataset_name=dataset,
-        sample_files=sample_files,
-        only_english=only_english,
-        read_concurrency=read_concurrency,
-        predict_concurrency=predict_concurrency,
-        predict_batch_size=predict_batch_size,
-        write_concurrency=write_concurrency,
-        write_dir=write_dir,
-    )
 
 
 @app.command
@@ -85,7 +56,7 @@ def analyser(
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
 ) -> None:
-    from thesis_schneg.prototype import analysis_pipeline as _analysis_pipeline
+    from thesis_schneg.analysis import analysis_pipeline as _analysis_pipeline
 
     _analysis_pipeline(
         dataset_name=dataset,

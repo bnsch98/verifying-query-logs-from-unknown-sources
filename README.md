@@ -4,8 +4,6 @@ This thesis aims at verifying web search query logs from unknown sources by comp
 
 This repository contains the python code that is required to replicate the experiments, an instruction on how to set up a working environment to run the code as well as the thesis itself.
 
-Overleaf-Project: <https://de.overleaf.com/read/sqcbzpjgyjpb#eb0738>
-
 ## Installation
 
 ### Python Installation

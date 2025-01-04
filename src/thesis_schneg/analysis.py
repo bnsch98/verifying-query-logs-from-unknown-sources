@@ -11,7 +11,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
 from functools import partial
-from thesis_schneg.classification_module import QueryIntentPredictor
+from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
 
 ############################################    Requirements for basic modules    #####################################
 
@@ -110,15 +110,18 @@ def _get_parquet_paths(
             f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
         )
         assert base_path.is_dir(
-        ), f"No directories found for dataset = {dataset_name} and struc_level = {struc_level}"
+        ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
 
     input_paths = [path for path in base_path.iterdir()
                    if path.suffix == ".parquet"]
+    assert len(input_paths) > 0, f"No parquet files found in {base_path}"
+
     if sample_files is not None:
         input_paths = choices(
             population=input_paths,
             k=min(sample_files, len(input_paths)),
         )
+
     return input_paths
 
 
@@ -378,7 +381,11 @@ def groupby_query_intent(dataset: Dataset) -> Dataset:
     return dataset.groupby('query-intent').count()
 
 
-############################################    Get task-specific modules     ############################################
+def groupby_query_domain(dataset: Dataset) -> Dataset:
+    return dataset.groupby('query-domain').count()
+
+
+############################################    Get task-specific modules     ##########################################
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
     if analysis_name == "extract-chars":
         return {'groupby_func': groupby_chars, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
@@ -400,6 +407,12 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
     elif analysis_name == "query-intent":
         return {'groupby_func': groupby_query_intent, 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-domain":
+        return {'groupby_func': groupby_query_intent, 'aggregator': None, 'mapping_func': [nvidiaDomainClassifier()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-quality":
+        return {'groupby_func': groupby_query_intent, 'aggregator': None, 'mapping_func': [nvidiaQualityClassifier()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "query-nsfw":
+        return {'groupby_func': groupby_query_intent, 'aggregator': None, 'mapping_func': [NSFWPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     elif analysis_name == "zipfs-law-queries":
         return {'groupby_func': groupby_queries, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
@@ -424,7 +437,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': operator_count_groupby, 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
 
-############################################    Pipeline    ###############################################
+############################################    Pipeline    ##############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       struc_level: Optional[str] = None,
