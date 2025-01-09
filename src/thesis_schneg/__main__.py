@@ -46,6 +46,7 @@ def analyser(
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
+    which_half: Optional[str] = None,
     read_concurrency: Optional[int] = None,
     map_concurrency: Optional[int] = None,
     batch_size: int = 16,
@@ -64,6 +65,7 @@ def analyser(
         struc_level=struc_level,
         sample_files=sample_files,
         only_english=only_english,
+        which_half=which_half,
         read_concurrency=read_concurrency,
         map_concurrency=map_concurrency,
         batch_size=batch_size,
@@ -72,22 +74,6 @@ def analyser(
         num_gpus=num_gpus,
         write_dir=write_dir,
         write_concurrency=write_concurrency,
-    )
-
-
-@app.command
-def visualize(
-    analysis: AnalysisName,
-    dataset: DatasetName = None,
-    save_vis: bool = False,
-
-) -> None:
-    from thesis_schneg.visualize import visualize as _visualize
-
-    _visualize(
-        dataset_name=dataset,
-        analysis_name=analysis,
-        save_vis=save_vis,
     )
 
 

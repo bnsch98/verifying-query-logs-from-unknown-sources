@@ -3,12 +3,15 @@ from typing import Tuple, Callable, Optional, Dict, Any, List
 from typing import Iterable, Sequence
 from numpy.typing import ArrayLike
 from thesis_schneg.model import DatasetName, AnalysisName
-from pandas import DataFrame, concat, read_json, read_parquet
+from pandas import DataFrame, concat, read_json, read_parquet as pd_read_parquet
+from pyarrow.parquet import read_table as pa_read_table
+from ray.data import read_parquet as ray_read_parquet
+from ray import init
 from matplotlib import pyplot as plt
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from numpy import sort as np_sort
+from numpy import sort as np_sort, linspace
 import scienceplots
 import matplotlib
 
@@ -51,14 +54,21 @@ def _get_results_paths(
 
 
 def load_results(
-    result_files: Iterable[Path]
+    result_files: Iterable[Path],
+    use_arrow: bool = False,
+    cols: Optional[List[str]] = None
 ) -> DataFrame:
     # check if there are multiple files
     if len(result_files) > 1:
         # by now only parquet files are expected as multiple files
         assert all(
             file.suffix == ".parquet" for file in result_files), "Non-parquet files found"
-        result = concat([read_parquet(file) for file in result_files])
+        if use_arrow:
+            result = concat(objs=[pa_read_table(file, columns=cols).to_pandas()
+                                  for file in result_files], axis=0)
+        else:
+            result = concat(objs=[pd_read_parquet(file) for file in result_files],
+                            axis=0)
     else:
         # by now only json files are expected as a single file
         result = read_json(result_files[0])
@@ -137,10 +147,12 @@ def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
     height = data[vis_params["dataset-col-y"]].to_numpy()
 
     if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
-        x = list(range(1, len(data[vis_params["dataset-col-x"]])+1))
+        x = linspace(start=1, stop=len(data[vis_params["dataset-col-x"]])+1, num=len(
+            data[vis_params["dataset-col-x"]]), dtype=int)
         height = np_sort(a=height, kind='mergesort')[::-1]
     else:
         x = data[vis_params["dataset-col-x"]].to_numpy()
+    assert len(x) == len(height), "Length of x and height must be equal"
     # total_rows = data[vis_params["dataset-col-y"]].sum()
     # height = height/total_rows
     if label is not None:

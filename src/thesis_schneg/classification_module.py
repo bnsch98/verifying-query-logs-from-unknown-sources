@@ -6,7 +6,7 @@ from typing import Protocol, Mapping, Any, Union
 
 from pandas import DataFrame
 from safetensors.torch import load_model
-from torch import device, nn, softmax, argmax, sigmoid
+from torch import device, nn, softmax, argmax
 from torch.cuda import is_available as cuda_is_available
 from transformers import (
     BertTokenizer,
@@ -234,7 +234,8 @@ class NSFWPredictor(_Predictor):
         # Reset call count of classifier pipeline.
         self._pipeline.call_count = 0
         predictions = self._pipeline(list(batch["serp_query_text_url"]))
-        batch["label"] = [prediction[0]["label"] for prediction in predictions]
+        batch["query-nsfw"] = [prediction[0]["label"]
+                               for prediction in predictions]
         return batch
 
 
