@@ -161,10 +161,11 @@ def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
                   edgecolor="black").get_frame().set_linewidth(0.5)
     else:
         ax.plot(x, height)
-    if vis_params["x-label"] is not None:
-        ax.set_xlabel(vis_params["x-label"])
-    if vis_params["y-label"] is not None:
-        ax.set_ylabel(vis_params["y-label"])
+    if not multi:
+        if vis_params["x-label"] is not None:
+            ax.set_xlabel(vis_params["x-label"])
+        if vis_params["y-label"] is not None:
+            ax.set_ylabel(vis_params["y-label"])
     if vis_params["x-lim"] is not None:
         ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
     if vis_params["y-lim"] is not None:

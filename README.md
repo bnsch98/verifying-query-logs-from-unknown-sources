@@ -46,27 +46,27 @@ This repository is structured as follows:
 The source code is executable via a CLI.
 ### CLI
 
-Run the CLI with:
+Usage of the CLI:
 
 ```shell script
 python -m thesis_schneg --<Input-Parameter> <Parameter-Value>
 ```
-Run the CLI on a [Ray Cluster](https://docs.ray.io/en/latest/) with: 
+Run experiments on a [Ray Cluster](https://docs.ray.io/en/latest/): 
 ```shell script
 ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg --<Input-Parameter> <Parameter-Value>
 ```
 
-Available Input Parameters and their corresponding parameter values
+Available Input Parameters and their corresponding parameter values:
 
 | Identifier     | Input-Parameter                             | Parameter-Values                   | Description                                                                             |
 |----------------|---------------------------------------------|------------------------------------|-----------------------------------------------------------------------------------------| 
 |Analysis mode   |`--analysis`                                 |[`<analysis-type>`](#analysis-table)|Specify the desired analysis. Get an overview from the provided table. Find the script containing the analysis [here](src/thesis_schneg/analysis.py).                  |
-|Dataset         |`--dataset`                                  |`aql`,`aol`,`ms-marco`,`orcas`      |Specify the data set on which the analysis is performed.                                 |
+|Dataset         |`--dataset`                                  |`aql`,`aol`,`ms-marco`,`orcas`      |Specify the data set to be analyzed                                 |
 |Concurrency     |`--concurrency`                              |`<int>`                             |Set the concurrency to transform data.                           |
 |Read concurrency|`--read-concurrency`                         |`<int>`                             |Set the concurrency to read data.                                               |
 |Write concurrency|`--write-concurrency`                       |`<int>`                             |Set the concurrency to write data.                                              |
 |Batch size      |`--batch-size`                               |`<int>`                             |Set the batch size to transform data.                                               |
-|Memory scaler   |`--memory-scaler`                            |`<float>`                           |Minimum number of memory in GB for involved nodes.                                               |
+|Memory scaler   |`--memory-scaler`                            |`<float>`                           |Minimum number of available memory in GB for involved nodes.                                               |
 |Sample files    |`--sample-files`                             |`<int>`                             |Number of sample files.                                                |
 |Num CPUs        |`--num-cpus`                                 |`<float>`                           |Number of CPUs per node.                                                |
 |Num GPUs        |`--num-gpus`                                 |`<float>`                           |Number of GPUs per node.                                                |
@@ -76,7 +76,7 @@ Available Input Parameters and their corresponding parameter values
 
 
 
-## Analysis-Table
+### Analysis-Table
 
 | `<analysis-type>`                                         | Description                                                                                                                    |
 |-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
