@@ -55,20 +55,20 @@ def _get_results_paths(
 
 def load_results(
     result_files: Iterable[Path],
-    use_arrow: bool = False,
-    cols: Optional[List[str]] = None
+    cols: Optional[List[str]] = None,
+    test_data: bool = False,
 ) -> DataFrame:
     # check if there are multiple files
     if len(result_files) > 1:
         # by now only parquet files are expected as multiple files
         assert all(
             file.suffix == ".parquet" for file in result_files), "Non-parquet files found"
-        if use_arrow:
+        if test_data:
+            # read only the first file
+            result = pd_read_parquet(result_files[0])
+        else:
             result = concat(objs=[pa_read_table(file, columns=cols).to_pandas()
                                   for file in result_files], axis=0)
-        else:
-            result = concat(objs=[pd_read_parquet(file) for file in result_files],
-                            axis=0)
     else:
         # by now only json files are expected as a single file
         result = read_json(result_files[0])

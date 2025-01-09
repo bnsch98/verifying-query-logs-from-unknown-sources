@@ -166,14 +166,14 @@ def load_dataset(dataset_name: DatasetName,
 
 def map_dataset(dataset: Dataset,
                 mapping_func: Callable[[DataFrame], DataFrame],
-                map_concurrency: Optional[int] = None,
+                concurrency: Optional[int] = None,
                 batch_size: int = 16,
                 num_gpus: float = None,
                 num_cpus: float = None,
                 memory_scaler: float = 1.0) -> Dataset:
     return dataset.map_batches(
         mapping_func,
-        concurrency=map_concurrency,
+        concurrency=concurrency,
         num_gpus=num_gpus,
         num_cpus=num_cpus,
         batch_size=batch_size,
@@ -184,12 +184,12 @@ def map_dataset(dataset: Dataset,
 
 def flat_map_dataset(dataset: Dataset,
                      flat_mapping_func: Callable[[Dict[str, Any]], Dict[str, Any]],
-                     flatmap_concurrency: Optional[int] = None,
+                     concurrency: Optional[int] = None,
                      num_cpus: Optional[float] = None,
                      num_gpus: Optional[float] = None,
                      memory_scaler: float = 1.0
                      ) -> Dataset:
-    return dataset.flat_map(fn=flat_mapping_func, concurrency=flatmap_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory=memory_scaler*1000*1000*1000)
+    return dataset.flat_map(fn=flat_mapping_func, concurrency=concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory=memory_scaler*1000*1000*1000)
 
 
 def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Optional[Dict[str, Any]]:
@@ -413,7 +413,7 @@ def analysis_pipeline(dataset_name: DatasetName,
                       only_english: bool = False,
                       which_half: Optional[str] = None,
                       read_concurrency: Optional[int] = None,
-                      map_concurrency: Optional[int] = None,
+                      concurrency: Optional[int] = None,
                       batch_size: int = 16,
                       memory_scaler: float = 1.0,
                       num_cpus: Optional[float] = None,
@@ -440,12 +440,12 @@ def analysis_pipeline(dataset_name: DatasetName,
         # iterate through list of mapping functions
         for func in module_specifics['mapping_func']:
             ds = map_dataset(dataset=ds, mapping_func=func,
-                             map_concurrency=map_concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+                             concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
 
     # Apply flat mapping function.
     if module_specifics['flat_mapping_func'] is not None:
         ds = flat_map_dataset(dataset=ds, flat_mapping_func=module_specifics['flat_mapping_func'],
-                              flatmap_concurrency=map_concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory_scaler=memory_scaler)
+                              concurrency=concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory_scaler=memory_scaler)
 
     # Group by a column.
     if module_specifics['groupby_func'] is not None:
