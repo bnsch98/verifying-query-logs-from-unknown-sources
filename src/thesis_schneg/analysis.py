@@ -241,6 +241,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
     if write_dir.exists():
         [f.unlink() for f in write_dir.glob("*") if f.is_file()]
 
+    # Write output
     if type(dataset) is dict:
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
@@ -254,9 +255,11 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset))
     elif type(dataset) is Dataset:
+        # Write parquet file
         dataset.write_parquet(path=str(write_dir),
                               concurrency=write_concurrency)
     elif type(dataset) is DataFrame:
+        # Write csv file
         dataset.to_csv(path_or_buf=write_dir.joinpath(
             "result.csv"), index=False)
     else:

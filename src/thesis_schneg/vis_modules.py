@@ -5,8 +5,6 @@ from numpy.typing import ArrayLike
 from thesis_schneg.model import DatasetName, AnalysisName
 from pandas import DataFrame, concat, read_json, read_parquet as pd_read_parquet
 from pyarrow.parquet import read_table as pa_read_table
-from ray.data import read_parquet as ray_read_parquet
-from ray import init
 from matplotlib import pyplot as plt
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
