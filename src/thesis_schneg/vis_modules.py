@@ -12,8 +12,6 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from numpy import sort as np_sort, linspace
-import scienceplots
-import matplotlib
 
 
 def _get_results_paths(

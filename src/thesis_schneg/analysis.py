@@ -73,45 +73,58 @@ class SpacyQueryLevelStructures(_spacy_framework):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
+    analysis_name: AnalysisName,  # word-count-frequencies
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
     which_half: Optional[str] = None
 ) -> Iterable[Path]:
     base_path: Path
-    if struc_level in [None, "queries"]:
-        if dataset_name == "aol":
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
-            )
-        elif dataset_name == "ms-marco":
-            if only_english:
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
-                )
-            else:
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
-                )
-        elif dataset_name == "orcas":
-            base_path = Path(
-                "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
-            )
-        elif dataset_name == "aql":
-            if only_english:
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
-                )
-            else:
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
-                )
-    else:
+
+    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies"]:
+        assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
         base_path = Path(
-            f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
+            f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-get-lengths-{struc_level}-all/"
         )
         assert base_path.is_dir(
         ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
+    else:
+        if struc_level in [None, "queries"]:
+            if dataset_name == "aol":
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
+                )
+            elif dataset_name == "ms-marco":
+                if only_english:
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
+                    )
+                else:
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
+                    )
+            elif dataset_name == "orcas":
+                base_path = Path(
+                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
+                )
+            elif dataset_name == "aql":
+                if only_english:
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
+                    )
+                else:
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
+                    )
+                base_path = Path(
+                    f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}/"
+                )
+        else:
+            base_path = Path(
+                f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
+            )
+            assert base_path.is_dir(
+            ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
 
     input_paths = [path for path in base_path.iterdir()
                    if path.suffix == ".parquet"]
@@ -119,7 +132,7 @@ def _get_parquet_paths(
 
     assert which_half in [None, "first", "second"], "Invalid half specified"
     assert not (
-        sample_files is not None and which_half is not None), "Cannot specify both sample_files and which_half"
+        sample_files is not None and which_half is not None), "Cannot specify both \"sample_files\" and \"which_half\""
 
     if sample_files is not None and which_half is None:
         input_paths = choices(
@@ -131,18 +144,20 @@ def _get_parquet_paths(
             input_paths = input_paths[:len(input_paths)//2]
         elif which_half == "second":
             input_paths = input_paths[len(input_paths)//2:]
+    assert input_paths, f"No files found in {base_path.name}"
     return input_paths
 
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
+                 analysis_name: AnalysisName,
                  struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
                  read_concurrency: Optional[int] = None,
                  columns: Optional[Iterable[str]] = None,
                  memory_scaler: float = 1.0,
-                 which_half: Optional[str] = None
+                 which_half: Optional[str] = None,
                  ) -> Dataset:
 
     # Load dataset.
@@ -151,6 +166,7 @@ def load_dataset(dataset_name: DatasetName,
             str(path)
             for path in _get_parquet_paths(
                 dataset_name=dataset_name,
+                analysis_name=analysis_name,
                 struc_level=struc_level,
                 sample_files=sample_files,
                 only_english=only_english,
@@ -365,11 +381,11 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         assert struc_level is not None, "Structural level must be specified"
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
     elif analysis_name == "character-count-frequencies":
-        return {'groupby_func': partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['character-count']}
+        return {'groupby_func': partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "word-count-frequencies":
-        return {'groupby_func': partial(groupby_count, col='word-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['word-count']}
+        return {'groupby_func': partial(groupby_count, col='word-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "entity-count-frequencies":
-        return {'groupby_func': partial(groupby_count, col='entity-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['entity-count']}
+        return {'groupby_func': partial(groupby_count, col='entity-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "query-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
@@ -433,7 +449,7 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Load dataset.
     ds = load_dataset(dataset_name=dataset_name, struc_level=struc_level, sample_files=sample_files,
-                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half)
+                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name)
 
     # Apply mapping function.
     if module_specifics['mapping_func'] is not None:

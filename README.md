@@ -12,7 +12,7 @@ Master's thesis by Benjamin Schneg
 
 ### Python Installation
 
-Follow these steps to set up the environment to reproduce our experiments:
+Follow these steps to set up the project's working environment:
 
 1. Connect to the Webis [VPN](https://webis.de/facilities.html#?q=vpn) and mount the [Ceph FS](https://faq.webis.de#how-to-use-ceph-cephfs-s3) at `/mnt/ceph/storage`. [Contact staff](https://webis.de/people.html) if you need assistance.
 2. Install [LaTeX](https://www.tug.org/texlive/)
@@ -49,18 +49,18 @@ The source code is executable via a CLI.
 Usage of the CLI:
 
 ```shell script
-python -m thesis_schneg --<Input-Parameter> <Parameter-Value>
+python -m thesis_schneg --<command> <command-value>
 ```
 Run experiments on a [Ray Cluster](https://docs.ray.io/en/latest/): 
 ```shell script
-ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg --<Input-Parameter> <Parameter-Value>
+ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg --<command> <command-value>
 ```
 
-Available Input Parameters and their corresponding parameter values:
+### CLI Commands
 
-| Identifier     | Input-Parameter                             | Parameter-Values                   | Description                                                                             |
+| Identifier     | `<command>`                            | `<command-value>`                   | Description                                                                             |
 |----------------|---------------------------------------------|------------------------------------|-----------------------------------------------------------------------------------------| 
-|Analysis mode   |`--analysis`                                 |[`<analysis-type>`](#analysis-table)|Specify the desired analysis. Get an overview from the provided table. Find the script containing the analysis [here](src/thesis_schneg/analysis.py).                  |
+|Analysis mode   |`--analysis`                                 |[`<analysis-type>`](#analysis-modes)|Specify the desired analysis. Get an overview from the provided table. Find the script containing the analysis [here](src/thesis_schneg/analysis.py).                  |
 |Dataset         |`--dataset`                                  |`aql`,`aol`,`ms-marco`,`orcas`      |Specify the data set to be analyzed                                 |
 |Concurrency     |`--concurrency`                              |`<int>`                             |Set the concurrency to transform data.                           |
 |Read concurrency|`--read-concurrency`                         |`<int>`                             |Set the concurrency to read data.                                               |
@@ -70,13 +70,13 @@ Available Input Parameters and their corresponding parameter values:
 |Sample files    |`--sample-files`                             |`<int>`                             |Number of sample files.                                                |
 |Num CPUs        |`--num-cpus`                                 |`<float>`                           |Number of CPUs per node.                                                |
 |Num GPUs        |`--num-gpus`                                 |`<float>`                           |Number of GPUs per node.                                                |
-|Struc Level     |`--struc-level`                              |`queries`, `named-entities`, `words`|Only relevant for the anaysis "`get-lengths`". Provides the structural level on which the lengths should be determinde. E.g. for named entities we can measure the length in words or in characters.                                                |
+|Struc Level     |`--struc-level`                              |`queries`, `named-entities`, `words`|Only relevant for the anaysis "`get-lengths`". Provides the structural level on which the lengths should be determined. E.g. for named entities we can measure the length in words or in characters.                                                |
 |Write Directory |`--write-dir`                                |`<path>`                            |Specify where to write the results.                                                |
 
 
 
 
-### Analysis-Table
+### Analysis Modes
 
 | `<analysis-type>`                                         | Description                                                                                                                    |
 |-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
@@ -89,7 +89,7 @@ Available Input Parameters and their corresponding parameter values:
 | `character-count-frequencies`                             | Group data by the character count and count their frequency.                                                                   | 
 | `word-count-frequencies`                                  | Group data by the word count and count their frequency.                                                                        | 
 | `entity-count-frequency`                                  | Group data by the entity count and count their frequency.                                                                      | 
-| `query-intent`                                            | Classify queries with regard to their intent acoording to [Alexander, Kusa, de Vries](https://dl.acm.org/doi/10.1145/3477495.3531737)| 
-| `query-quality`                                           | Classify queries in terms of their grammatical quality                                                                         | 
-| `query-domain`                                            | Classify queries into a domain taxonomy                                                                                        | 
-| `query-nsfw`                                              | Determine if the query is *safe for work* or *nots safe for work*, e.g. if it uses inappropriate language                      | 
+| `query-intent`                                            | Classify queries with regard to their intent acoording to [Alexander, Kusa, de Vries](https://dl.acm.org/doi/10.1145/3477495.3531737).| 
+| `query-quality`                                           | Classify queries in terms of their grammatical quality.                                                                         | 
+| `query-domain`                                            | Classify queries into a domain taxonomy.                                                                                        | 
+| `query-nsfw`                                              | Determine if the query is *safe for work* or *not safe for work*, that is, if it contains inappropriate language.                      | 
