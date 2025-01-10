@@ -1,11 +1,10 @@
 from pathlib import Path
-from typing import Tuple, Callable, Optional, Dict, Any, List
+from typing import Tuple, Optional, Dict, Any, List
 from typing import Iterable, Sequence
 from numpy.typing import ArrayLike
 from thesis_schneg.model import DatasetName, AnalysisName
 from pandas import DataFrame, concat, read_json, read_parquet as pd_read_parquet
 from pyarrow.parquet import read_table as pa_read_table
-from matplotlib import pyplot as plt
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
