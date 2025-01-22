@@ -91,27 +91,31 @@ def get_frequency_dict(counts: List[Any], lengths: List[Any]) -> Dict[str, Any]:
     return freq_dict
 
 
-def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None) -> Tuple[Figure, Axes]:
+def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, multi: bool = False, bar_width: float = 0.5) -> Tuple[Figure, Axes]:
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
-    x = data[vis_params["dataset-col-x"]].to_numpy()
+    x = linspace(start=0, stop=len(height), num=len(
+        height), dtype=int)
     if label is not None:
-        ax.bar(x=x, height=height, alpha=0.5, label=label, color=color)
+        ax.bar(x=x, height=height, alpha=0.5,
+               label=label, color=color, width=bar_width)
         ax.legend(fancybox=False,
                   edgecolor="black").get_frame().set_linewidth(0.5)
     else:
         ax.bar(x=x, height=height,
-               alpha=0.5)
-    if vis_params["x-label"] is not None:
-        ax.set_xlabel(vis_params["x-label"])
-    if vis_params["y-label"] is not None:
-        ax.set_ylabel(vis_params["y-label"])
+               alpha=0.5, width=bar_width)
+    if not multi:
+        if vis_params["x-label"] is not None:
+            ax.set_xlabel(vis_params["x-label"])
+        if vis_params["y-label"] is not None:
+            ax.set_ylabel(vis_params["y-label"])
+        if vis_params["title"] is not None:
+            ax.set_title(vis_params["title"])
+
     if vis_params["x-lim"] is not None:
         ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
     if vis_params["y-lim"] is not None:
         ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
-    if vis_params["title"] is not None:
-        ax.set_title(vis_params["title"])
 
     return fig, ax
 
@@ -137,23 +141,22 @@ def hist_plot(x: ArrayLike,  bins: Optional[Sequence[int]], subplots: Tuple[Figu
     return fig, ax
 
 
-def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, multi: bool = False) -> Tuple[Figure, Axes]:
+def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, linestyle: str = None, multi: bool = False) -> Tuple[Figure, Axes]:
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
+    height = np_sort(a=height, kind='mergesort')[::-1]
 
-    if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
-        x = linspace(start=1, stop=len(data[vis_params["dataset-col-x"]])+1, num=len(
-            data[vis_params["dataset-col-x"]]), dtype=int)
-        height = np_sort(a=height, kind='mergesort')[::-1]
-    else:
-        x = data[vis_params["dataset-col-x"]].to_numpy()
+    x = linspace(start=1, stop=len(height)+1, num=len(
+        height), dtype=int)
+
     assert len(x) == len(height), "Length of x and height must be equal"
     # total_rows = data[vis_params["dataset-col-y"]].sum()
     # height = height/total_rows
     if label is not None:
-        ax.plot(x, height, label=label, color=color)
+        ax.plot(x, height, label=label, color=color,
+                linestyle=linestyle, alpha=0.6)
         ax.legend(fancybox=False,
-                  edgecolor="black").get_frame().set_linewidth(0.5)
+                  edgecolor="black", labelspacing=0.1, handletextpad=0.1, framealpha=0.5).get_frame().set_linewidth(0.5)
     else:
         ax.plot(x, height)
     if not multi:
@@ -167,6 +170,15 @@ def log_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
         ax.set_ylim(left=vis_params["y-lim"][0], right=vis_params["y-lim"][1])
     if vis_params["title"] is not None and not multi:
         ax.set_title(vis_params["title"])
+    if label == "AOL":
+        ax.set_title(vis_params["title"])
     ax.set_yscale('log')
     ax.set_xscale('log')
     return fig, ax
+
+
+def get_xlim(data: DataFrame, vis_params: Dict[str, Any], threshold: float, bar_width: float) -> Tuple[float, float]:
+    x_max = data[vis_params["dataset-col-x"]][data[vis_params["dataset-col-y"]]
+                                              > threshold*data[vis_params["dataset-col-y"]].max()].max() + bar_width/2
+    x_min = 0 - bar_width/2
+    return x_min, x_max

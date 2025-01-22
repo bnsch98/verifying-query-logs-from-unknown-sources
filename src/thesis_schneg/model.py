@@ -27,7 +27,7 @@ AnalysisName: TypeAlias = Literal[
     "character-count-frequencies",
     "word-count-frequencies",
     "entity-count-frequencies",
-    "query-count-frequencies",
+    "query-frequencies",
     "query-intent",
     "query-domain",
     "query-quality",

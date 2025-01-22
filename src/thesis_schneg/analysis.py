@@ -116,9 +116,6 @@ def _get_parquet_paths(
                     base_path = Path(
                         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
                     )
-                base_path = Path(
-                    f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}/"
-                )
         else:
             base_path = Path(
                 f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
@@ -269,6 +266,11 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
 ############################################    Task Specific Functions    ###########################################
 
 # Mapping functions
+
+def identity(batch: DataFrame) -> DataFrame:
+    return batch
+
+
 def get_length_char(batch: DataFrame) -> DataFrame:
     batch['query-length-chars'] = batch['serp_query_text_url'].apply(len)
     return batch
@@ -370,7 +372,7 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
 def groupby_count(dataset: Dataset, col: str) -> Dataset:
     return dataset.groupby(key=col).count()
 
-############################################    Get task-specific modules     ##########################################
+############################################    Get task-specific modules     #########################################
 
 
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
@@ -389,7 +391,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='word-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "entity-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='entity-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
-    elif analysis_name == "query-count-frequencies":
+    elif analysis_name == "query-frequencies":
         return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     elif analysis_name == "query-intent":
@@ -468,7 +470,8 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Group by a column.
     if module_specifics['groupby_func'] is not None:
-        ds = module_specifics['groupby_func'](dataset=ds)
+        ds = module_specifics['groupby_func'](
+            dataset=ds)
 
     # Apply aggregation function.
     if module_specifics['aggregator'] is not None:
