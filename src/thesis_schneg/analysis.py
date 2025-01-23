@@ -10,6 +10,7 @@ from json import dumps
 from functools import cached_property
 from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
+from gliner import GLiNER
 from functools import partial
 from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
 
@@ -22,6 +23,36 @@ class _spacy_framework(Protocol):
 
     def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         return self.get_spacy_vals(row)
+
+
+class _gliner_framework(Protocol):
+    def get_gliner_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        raise NotImplementedError()
+
+    def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        return self.get_gliner_vals(row)
+
+
+@dataclass(frozen=True)
+class GlinerGetEntities(_gliner_framework):
+
+    @cached_property
+    def gliner_model(self) -> GLiNER:
+        return GLiNER.from_pretrained("urchade/gliner_multi_pii-v1")
+
+    @cached_property
+    def gliner_labels(self) -> Iterable[str]:
+        return ["person", "organization", "phone number", "address", "passport number", "email", "credit card number", "social security number", "health insurance id number", "date of birth", "mobile phone number", "bank account number", "medication", "cpf", "driver's license number", "tax identification number", "medical condition", "identity card number", "national id number", "ip address", "email address", "iban", "credit card expiration date", "username", "health insurance number", "registration number", "student id number",
+                "insurance number", "flight number", "landline phone number", "blood type", "cvv", "reservation number", "digital signature", "social media handle", "license plate number", "cnpj", "postal code", "passport_number", "serial number", "vehicle registration number", "credit card brand", "fax number", "visa number", "insurance company", "identity document number", "transaction number", "national health insurance number", "cvc", "birth certificate number", "train ticket number", "passport expiration date", "social_security_number"]
+
+    def get_gliner_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        # Get tokens from text
+        doc = self.gliner_model.predict_entities(
+            text=row["serp_query_text_url"], labels=self.gliner_labels)
+
+        entities = [{"entity": ent["text"], "entity-label": ent["label"]}
+                    for ent in doc if doc]
+        return entities
 
 
 @dataclass(frozen=True)
@@ -382,6 +413,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='word'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-named-entities":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-pii":
+        return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
         assert struc_level is not None, "Structural level must be specified"
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
@@ -479,10 +512,10 @@ def analysis_pipeline(dataset_name: DatasetName,
             dataset=ds, aggregation_func=module_specifics['aggregator'])
 
     # Print results for debugging.
-    # if type(ds) is Dataset:
-    #     print(ds.take(10))
-    # elif type(ds) is dict:
-    #     print(ds)
+    if type(ds) is Dataset:
+        print(ds.take(10))
+    elif type(ds) is dict:
+        print(ds)
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,

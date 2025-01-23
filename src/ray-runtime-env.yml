@@ -27,4 +27,5 @@ pip:
   - torch~=2.4
   - tqdm~=4.64
   - transformers~=4.44
+  - gliner~=0.2
 logging_level: debug

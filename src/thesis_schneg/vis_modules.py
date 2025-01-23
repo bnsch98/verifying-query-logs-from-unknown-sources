@@ -94,8 +94,12 @@ def get_frequency_dict(counts: List[Any], lengths: List[Any]) -> Dict[str, Any]:
 def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, multi: bool = False, bar_width: float = 0.5) -> Tuple[Figure, Axes]:
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
-    x = linspace(start=0, stop=len(height), num=len(
-        height), dtype=int)
+    if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
+        start = int(data[vis_params["dataset-col-x"]].iloc[0])
+        x = linspace(start=start, stop=start+len(height), num=len(
+            height), dtype=int)
+    else:
+        x = data[vis_params["dataset-col-x"]].to_numpy()
     if label is not None:
         ax.bar(x=x, height=height, alpha=0.5,
                label=label, color=color, width=bar_width)

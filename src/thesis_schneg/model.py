@@ -15,14 +15,11 @@ DatasetName: TypeAlias = Literal[
     "aql",
 ]
 
-AggregatorName: TypeAlias = Literal[
-    "zipfs-law",
-]
-
 AnalysisName: TypeAlias = Literal[
     "extract-chars",
     "extract-words",
     "extract-named-entities",
+    "extract-pii",
     "get-lengths",
     "character-count-frequencies",
     "word-count-frequencies",
