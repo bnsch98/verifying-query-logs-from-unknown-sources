@@ -29,6 +29,7 @@ AnalysisName: TypeAlias = Literal[
     "query-domain",
     "query-quality",
     "query-nsfw",
+    "filter-urls",
     "zipfs-law-queries",
     "zipfs-law-words",
     "zipfs-law-chars",

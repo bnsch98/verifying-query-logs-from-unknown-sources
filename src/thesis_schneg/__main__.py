@@ -27,6 +27,7 @@ def analyser(
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
+    read_dir: Optional[Directory] = None
 ) -> None:
     from thesis_schneg.analysis import analysis_pipeline as _analysis_pipeline
 
@@ -45,6 +46,7 @@ def analyser(
         num_gpus=num_gpus,
         write_dir=write_dir,
         write_concurrency=write_concurrency,
+        read_dir=read_dir,
     )
 
 

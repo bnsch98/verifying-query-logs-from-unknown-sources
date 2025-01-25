@@ -112,7 +112,7 @@ def _get_parquet_paths(
 ) -> Iterable[Path]:
     base_path: Path
 
-    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies"]:
+    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies", "filter-urls"]:
         assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
         base_path = Path(
             f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-get-lengths-{struc_level}-all/"
@@ -186,25 +186,34 @@ def load_dataset(dataset_name: DatasetName,
                  columns: Optional[Iterable[str]] = None,
                  memory_scaler: float = 1.0,
                  which_half: Optional[str] = None,
+                 read_dir: Optional[Path] = None
                  ) -> Dataset:
 
     # Load dataset.
-    dataset = read_parquet(
-        paths=[
-            str(path)
-            for path in _get_parquet_paths(
-                dataset_name=dataset_name,
-                analysis_name=analysis_name,
-                struc_level=struc_level,
-                sample_files=sample_files,
-                only_english=only_english,
-                which_half=which_half
-            )
-        ],
-        concurrency=read_concurrency,
-        columns=columns,
-        ray_remote_args={"memory": memory_scaler*1000*1000*1000}
-    )
+    if read_dir is not None:
+        dataset = read_parquet(
+            paths=read_dir,
+            concurrency=read_concurrency,
+            columns=columns,
+            ray_remote_args={"memory": memory_scaler*1000*1000*1000}
+        )
+    else:
+        dataset = read_parquet(
+            paths=[
+                str(path)
+                for path in _get_parquet_paths(
+                    dataset_name=dataset_name,
+                    analysis_name=analysis_name,
+                    struc_level=struc_level,
+                    sample_files=sample_files,
+                    only_english=only_english,
+                    which_half=which_half
+                )
+            ],
+            concurrency=read_concurrency,
+            columns=columns,
+            ray_remote_args={"memory": memory_scaler*1000*1000*1000}
+        )
     return dataset
 
 
@@ -240,7 +249,7 @@ def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Option
     return dataset.aggregate(aggregation_func)
 
 
-def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], write_concurrency: Optional[int] = 2) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Path], write_concurrency: Optional[int] = 2) -> None:
     # Specifiy output directory
     if struc_level is not None:
         if sample_files is not None:
@@ -251,8 +260,12 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
                 write_dir = write_dir.joinpath(
                     f"{dataset_name}-{analysis_name}-{struc_level}-{which_half}")
             else:
-                write_dir = write_dir.joinpath(
-                    f"{dataset_name}-{analysis_name}-{struc_level}-all")
+                if read_dir is not None:
+                    write_dir = write_dir.joinpath(
+                        f"{dataset_name}-{struc_level}-{analysis_name}-special")
+                else:
+                    write_dir = write_dir.joinpath(
+                        f"{dataset_name}-{analysis_name}-{struc_level}-all")
     else:
         if sample_files is not None:
             write_dir = write_dir.joinpath(
@@ -297,7 +310,6 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
 ############################################    Task Specific Functions    ###########################################
 
 # Mapping functions
-
 def identity(batch: DataFrame) -> DataFrame:
     return batch
 
@@ -328,6 +340,10 @@ def get_lengths(batch: DataFrame, structural_level: str) -> DataFrame:
         batch['word-count'] = batch['entity'].apply(lambda x: len(x.split()))
 
     return batch
+
+
+def filter_urls(batch: DataFrame) -> DataFrame:
+    return batch[~batch['word'].str.contains(pat="http|www.|.com|.net|.org|.int|.edu", na=False)]
 
 
 # Flat mapping functions
@@ -436,6 +452,9 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "query-nsfw":
         return {'groupby_func': partial(groupby_count, col='query-nsfw'), 'aggregator': None, 'mapping_func': [NSFWPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
+    elif analysis_name == "filter-urls":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': filter_urls, 'col_filter': None}
+
     elif analysis_name == "zipfs-law-queries":
         return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "zipfs-law-words":
@@ -459,7 +478,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='operator-count'), 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
 
-############################################    Pipeline    ##############################################
+############################################    Pipeline    #############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       struc_level: Optional[str] = None,
@@ -474,7 +493,8 @@ def analysis_pipeline(dataset_name: DatasetName,
                       num_gpus: Optional[float] = None,
                       write_dir: Path = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
-    write_concurrency: Optional[int] = 2
+    write_concurrency: Optional[int] = 2,
+    read_dir: Optional[Path] = None
 ) -> None:
     assert struc_level in [None, "words",
                            "named-entities", "queries"], "Invalid structural level"
@@ -487,7 +507,7 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Load dataset.
     ds = load_dataset(dataset_name=dataset_name, struc_level=struc_level, sample_files=sample_files,
-                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name)
+                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
 
     # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
@@ -519,4 +539,4 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
-                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half)
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir)
