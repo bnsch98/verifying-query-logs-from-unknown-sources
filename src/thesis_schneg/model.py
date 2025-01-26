@@ -21,6 +21,7 @@ AnalysisName: TypeAlias = Literal[
     "extract-named-entities",
     "extract-pii",
     "get-lengths",
+    "aql-anomaly",
     "character-count-frequencies",
     "word-count-frequencies",
     "entity-count-frequencies",

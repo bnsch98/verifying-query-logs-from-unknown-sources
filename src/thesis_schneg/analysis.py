@@ -112,7 +112,7 @@ def _get_parquet_paths(
 ) -> Iterable[Path]:
     base_path: Path
 
-    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies", "filter-urls"]:
+    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies", "filter-urls", "aql-anomaly"]:
         assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
         base_path = Path(
             f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-get-lengths-{struc_level}-all/"
@@ -346,7 +346,12 @@ def filter_urls(batch: DataFrame) -> DataFrame:
     return batch[~batch['word'].str.contains(pat="http|www.|.com|.net|.org|.int|.edu", na=False)]
 
 
+def filter_lengths(batch: DataFrame) -> DataFrame:
+    return batch[(batch['character-count'] == 14) | (batch['character-count'] == 16) | (batch['character-count'] == 24)]
+
 # Flat mapping functions
+
+
 def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
 
@@ -434,6 +439,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "get-lengths":
         assert struc_level is not None, "Structural level must be specified"
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
+    elif analysis_name == "aql-anomaly":
+        return {'groupby_func': partial(groupby_count, col=['serp_query_text_url', 'character-count']), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
     elif analysis_name == "character-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "word-count-frequencies":

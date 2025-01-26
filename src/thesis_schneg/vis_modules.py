@@ -52,6 +52,7 @@ def load_results(
     result_files: Iterable[Path],
     cols: Optional[List[str]] = None,
     test_data: bool = False,
+    filter_cols: Optional[List[Tuple]] = None,
 ) -> DataFrame:
     # check if there are multiple files
     if len(result_files) > 1:
@@ -62,7 +63,7 @@ def load_results(
             # read only the first file
             result = pd_read_parquet(result_files[0])
         else:
-            result = concat(objs=[pa_read_table(file, columns=cols).to_pandas()
+            result = concat(objs=[pa_read_table(file, columns=cols, filters=filter_cols).to_pandas()
                                   for file in result_files], axis=0)
     else:
         # by now only json files are expected as a single file
