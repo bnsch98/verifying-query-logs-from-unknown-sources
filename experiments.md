@@ -94,6 +94,30 @@
 | query intent    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis query-intent --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 7 --batch-size 32 --dataset aql --num-cpus 3 --only-english`    | `2025/01/17 17:21:47` | `2025/01/19 00:21:12` | 1d 6h | ✔️    |
 | query intent    |  ms-marco| `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis query-intent --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 7 --batch-size 32 --dataset ms-marco --num-cpus 3`    | `2025/01/15 15:57:29` | `2025/01/15 23:10:30` | 7h 13m | ✔️    |
 | query intent    |  orcas   | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis query-intent --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 7 --batch-size 32 --dataset orcas --num-cpus 3 --only-english`    | `2025/01/17 17:21:39` | `2025/01/18 01:33:29` | 8h 11m | ✔️    |
+| extract personal information    |  aol     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aol --analysis extract-pii --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 12 --batch-size 256 --only-english`    | `2025/01/26 00:29:56` | `2025/01/27 22:35:56` | 1d 22h | ❌ Stopped    |
+| extract personal information    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis extract-pii --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 12 --batch-size 256 --only-english`    | `` | `` | 1m 2s | ❌ Stopped    |
+| extract personal information    |  ms-marco| `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset ms-marco --analysis extract-pii --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 12 --batch-size 256 --only-english`    | `` | `` | 1m 2s | ❌ Stopped    |
+| extract personal information    |  orcas   | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset orcas --analysis extract-pii --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 12 --batch-size 256 --only-english`    | `` | `` | 1m 2s | ❌ Stopped    |
+| aql anomaly    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis aql-anomaly --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --struc-level queries`    | `2025/01/26 20:35:26` | `2025/01/26 21:12:57` | 37m 30s | ✔️    |
+| aql filter outlier    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis filter-aql-outlier --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/01/27 22:30:17` | `2025/01/27 22:37:48` | 7m 30s | ✔️    |
+| aql temporal url proportion    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis get-temporal-url-proportion --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/01/28 22:16:36` | `` | 1m 2s | ✔️❌    |
+| aql get words 2006    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis aql-get-words-2006 --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/01/28 22:15:02` | `` | 1m 2s | ✔️❌    |
+|     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
 |     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
 |     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
 |     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |

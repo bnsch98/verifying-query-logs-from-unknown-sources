@@ -22,6 +22,10 @@ AnalysisName: TypeAlias = Literal[
     "extract-pii",
     "get-lengths",
     "aql-anomaly",
+    "filter-aql-outlier",
+    "get-temporal-url-proportion",
+    "aql-get-words-2006",
+    "filter-by-year",
     "character-count-frequencies",
     "word-count-frequencies",
     "entity-count-frequencies",
@@ -41,4 +45,5 @@ AnalysisName: TypeAlias = Literal[
     "extract-search-operators",
     "search-operators-count",
     "heaps-law-words",
+    "debug",
 ]
