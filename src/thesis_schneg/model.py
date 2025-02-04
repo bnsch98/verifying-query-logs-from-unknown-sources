@@ -25,6 +25,8 @@ AnalysisName: TypeAlias = Literal[
     "filter-aql-outlier",
     "get-temporal-url-proportion",
     "aql-get-words-2006",
+    "get-char-count",
+    "get-repl-char-proportion",
     "filter-by-year",
     "character-count-frequencies",
     "word-count-frequencies",
@@ -46,4 +48,6 @@ AnalysisName: TypeAlias = Literal[
     "search-operators-count",
     "heaps-law-words",
     "debug",
+    "sort-data",
+
 ]

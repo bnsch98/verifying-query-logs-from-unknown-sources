@@ -264,7 +264,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
             else:
                 if read_dir is not None:
                     write_dir = write_dir.joinpath(
-                        f"{dataset_name}-{struc_level}-{analysis_name}-special")
+                        f"{dataset_name}-{analysis_name}-{struc_level}-special")
                 else:
                     write_dir = write_dir.joinpath(
                         f"{dataset_name}-{analysis_name}-{struc_level}-all")
@@ -277,8 +277,12 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
                 write_dir = write_dir.joinpath(
                     f"{dataset_name}-{analysis_name}-{which_half}")
             else:
-                write_dir = write_dir.joinpath(
-                    f"{dataset_name}-{analysis_name}-all")
+                if read_dir is not None:
+                    write_dir = write_dir.joinpath(
+                        f"{dataset_name}-{analysis_name}-special")
+                else:
+                    write_dir = write_dir.joinpath(
+                        f"{dataset_name}-{analysis_name}-all")
 
     # Delete old files
     if write_dir.exists():
@@ -344,23 +348,41 @@ def get_lengths(batch: DataFrame, structural_level: str) -> DataFrame:
     return batch
 
 
+def get_char_length(batch: DataFrame) -> DataFrame:
+    batch['character-count'] = batch['serp_query_text_url'].apply(len)
+    return batch
+
+
 def filter_lengths(batch: DataFrame) -> DataFrame:
     return batch[(batch['character-count'] == 14) | (batch['character-count'] == 16) | (batch['character-count'] == 24)]
 
 
 def filter_aql(batch: DataFrame) -> DataFrame:
     # filter out some absurtly frequent queries
-    return batch[~batch['serp_query_text_url'].isin(["茅聵驴茅聡聦猫聹聵猫聸聸忙卤", "#FreeMariaButina", "พระชัยหลวงพ่อโสธรปี 2505"])]
+    return batch[~batch['serp_query_text_url'].isin(["茅聵驴茅聡聦猫聹聵猫聸聸忙卤", "#FreeMariaButina", "พระชัยหลวงพ่อโสธรปี 2505", "é\x98¿é\x87\x8cè\x9c\x98è\x9b\x9bæ±"])]
 
 
 def filter_empty_timestamps(batch: DataFrame) -> DataFrame:
     return batch[~batch['serp_timestamp'].isnull()]
 
 
-def filter_by_year(batch: DataFrame, year: int) -> DataFrame:  # aol log release: 2006
+# aol log release: 2006
+def filter_by_year(batch: DataFrame, year: Iterable[int]) -> DataFrame:
     # filter out empty timestamps
     batch = batch[~batch['serp_timestamp'].isnull()]
-    return batch[batch['serp_timestamp'].apply(lambda x: datetime.fromtimestamp(x).year) == year]
+    batch['year'] = batch['serp_timestamp'].apply(
+        lambda x: datetime.fromtimestamp(x).year)
+    return batch[batch['year'].isin(year)]
+
+
+def filter_by_char(batch: DataFrame, char: str) -> DataFrame:
+    return batch[~batch['serp_query_text_url'].str.contains(char)]
+
+
+def get_repl_char(batch: DataFrame) -> DataFrame:
+    batch['is-repl-char'] = batch['serp_query_text_url'].apply(
+        lambda x: '�' in x)
+    return batch
 
 
 # Flat mapping functions
@@ -442,6 +464,10 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
 def groupby_count(dataset: Dataset, col: str) -> Dataset:
     return dataset.groupby(key=col).count()
 
+
+def groupby_count_sort(dataset: Dataset, col_group: str, col_sort: str) -> Dataset:
+    return dataset.groupby(key=col_group).count().sort(key=col_sort, descending=True)
+
 ############################################    Get task-specific modules     #########################################
 
 
@@ -457,8 +483,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "get-lengths":
         assert struc_level is not None, "Structural level must be specified"
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
+    elif analysis_name == "get-char-count":
+        return {'groupby_func':  partial(groupby_count, col=['character-count']), 'aggregator': None, 'mapping_func': [get_char_length], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "aql-anomaly":
-        return {'groupby_func': partial(groupby_count, col=['serp_query_text_url', 'character-count']), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
     elif analysis_name == "filter-aql-outlier":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql], 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "character-count-frequencies":
@@ -481,10 +509,12 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
     elif analysis_name == "get-temporal-url-proportion":
         return {'groupby_func': partial(groupby_count, col=['year', 'is-url']), 'aggregator': None, 'mapping_func': [filter_empty_timestamps], 'flat_mapping_func': filter_urls, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-repl-char-proportion":
+        return {'groupby_func': partial(groupby_count, col=['is-repl-char', 'year']), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]), get_repl_char], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "aql-get-words-2006":
-        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=2006)], 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[2006, 2005, 2004, 2003, 2002, 2001, 2000]), partial(filter_by_char, char='�')], 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "filter-by-year":
-        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=2006)], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'serp_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[2006]), partial(filter_by_char, char='�')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'serp_url']}
     elif analysis_name == "zipfs-law-queries":
         return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "zipfs-law-words":
@@ -502,6 +532,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
     elif analysis_name == "debug":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "sort-data":
+        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "extract-search-operators":
         return {'groupby_func': partial(groupby_count, col='operator'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "search-operators-count":
@@ -563,7 +595,7 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Print results for debugging.
     # if type(ds) is Dataset:
-    #     print(ds.take(10))
+    #     print(ds.take(48))
     # elif type(ds) is dict:
     #     print(ds)
 
