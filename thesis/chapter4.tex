@@ -3,8 +3,18 @@
 
 \section{Descriptive Statistics/ Text-related statistics}
 
-In this section we generate a set of descriptive/text-related statistics from the query logs. The goal is to perform a comparison of the linguistic and grammatical composition of the query logs, neglecting semantical information of the queries.    
-Specifically, we perform a hypothesis test to determine if the syntactical differences between the AQL and the other query logs are statistically significant. For this analysis, we subdivide queries into different syntactical subcategories and measure the frequencies of these subcategories. We consider named entities, words and characters as syntactical subcategories.   
+In this section, we generate a set of descriptive/text-related statistics from the query logs. The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries.    
+Specifically, we perform a hypothesis test to determine if the syntactical differences between the AQL and the other query logs are statistically significant. For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
+\begin{enumerate}
+    \item Queries
+    \item Named Entities
+    \item Words
+    \item Characters
+\end{enumerate} 
+Even though named entities are not considered a syntactic category primarily, we include them in this analysis since they are frequent enough to be regarded a structural element of queries. Hence, their analysis might provide an additional valuable insight to the structure of query logs. For each of the aforementioned categories, we carry out two types of measurements: First, we collect all existing items of the category in a query log and determine the frequency of each item. Secondly, we measure the lengths of all extracted items in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e. queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories we gain a thorough set of measurements for each query log. The resulting distributions of the measurements are then compared to each other. Essentially, we test the AQL's distributions for an equality of distribution with the other query logs to judge the AQL's authenticity.
+\subsection{Category-Related Frequencies}
+For each query log, we extract all elements of a category and determine the frequency of each element. E.g. we extract all exisiting words from the query log and measure each word's frequency. The distribution of words or characters are dependent on language and context but generally follow a Zipfian distribution. 
+\subsection{Length-Related Frequencies}
 \section{Characteristics-based}
 Here, various characteristics of the data sets are measured and displayed. The comparison of these characteristics should provide a first impression of the involved query logs' nature.
 

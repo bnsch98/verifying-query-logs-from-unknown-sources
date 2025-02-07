@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
 from gliner import GLiNER
 from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.recognizer_result import RecognizerResult
 from functools import partial
 from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
 
