@@ -28,4 +28,5 @@ pip:
   - tqdm~=4.64
   - transformers~=4.44
   - gliner~=0.2
+  - presidio-analyzer~=2.2.3
 logging_level: debug

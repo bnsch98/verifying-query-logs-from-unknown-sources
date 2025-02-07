@@ -13,6 +13,8 @@ from functools import cached_property
 from dataclasses import dataclass
 from spacy import load as spacy_load, Language, explain
 from gliner import GLiNER
+from presidio_analyzer import AnalyzerEngine
+from presidio_analyzer.recognizer_result import RecognizerResult
 from functools import partial
 from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
 
@@ -33,6 +35,35 @@ class _gliner_framework(Protocol):
 
     def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         return self.get_gliner_vals(row)
+
+
+class _presidio_framework(Protocol):
+    def get_presidio_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        raise NotImplementedError()
+
+    def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        return self.get_presidio_vals(row)
+
+
+@dataclass(frozen=True)
+class PresidioGetEntities(_presidio_framework):
+
+    @cached_property
+    def presidio_model(self) -> AnalyzerEngine:
+        return AnalyzerEngine()
+
+    @cached_property
+    def presidio_labels(self) -> Iterable[str]:
+        return ["PHONE_NUMBER"]
+
+    def get_presidio_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+        # Get tokens from text
+        doc = self.presidio_model.analyze(
+            text=row["serp_query_text_url"], language='en')  # , entities=self.presidio_labels
+
+        entities = [{"entity": row['serp_query_text_url'][ent.to_dict()['start']:ent.to_dict()['end']], "entity-label": ent.to_dict()["entity_type"]}
+                    for ent in doc if doc and ent.to_dict()["score"] >= 0.7]
+        return entities
 
 
 @dataclass(frozen=True)
@@ -396,10 +427,22 @@ def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return res
 
 
-def filter_urls(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+# def filter_urls(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+#     pattern = compile(
+#         r'[(http://)|\w]*?[\w]*\.[-/\w]*\.\w*[(/{1})]?[#-\./\w]*[(/{1,})]?|#[.\w]*')
+#     return [{"year": datetime.fromtimestamp(row['serp_timestamp']).year, "is-url": bool(findall(pattern, row['serp_query_text_url']))}]
+
+def is_url(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     pattern = compile(
-        r'[(http://)|\w]*?[\w]*\.[-/\w]*\.\w*[(/{1})]?[#-\./\w]*[(/{1,})]?|#[.\w]*')
+        r"(https?://)?[a-z0-9\w-]+\.[a-z\.]+")
     return [{"year": datetime.fromtimestamp(row['serp_timestamp']).year, "is-url": bool(findall(pattern, row['serp_query_text_url']))}]
+
+
+def is_email(batch: DataFrame) -> DataFrame:
+    pattern = compile(r"[a-z0-9\w-]+@[a-z0-9\w-]+\.[a-z\.]+")
+    batch['is-email'] = batch['serp_query_text_url'].apply(
+        lambda x: bool(findall(pattern, x)))
+    return batch
 
 
 # Aggregation functions
@@ -478,8 +521,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='word'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-named-entities":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "extract-pii":
+    elif analysis_name == "extract-gliner-pii":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-presidio-pii":
+        return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
         assert struc_level is not None, "Structural level must be specified"
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
@@ -508,7 +553,9 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='query-nsfw'), 'aggregator': None, 'mapping_func': [NSFWPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     elif analysis_name == "get-temporal-url-proportion":
-        return {'groupby_func': partial(groupby_count, col=['year', 'is-url']), 'aggregator': None, 'mapping_func': [filter_empty_timestamps], 'flat_mapping_func': filter_urls, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': partial(groupby_count, col=['year', 'is-url']), 'aggregator': None, 'mapping_func': [filter_empty_timestamps], 'flat_mapping_func': is_url, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-email-proportion":
+        return {'groupby_func': partial(groupby_count, col=['is-email']), 'aggregator': None, 'mapping_func': [is_email], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-repl-char-proportion":
         return {'groupby_func': partial(groupby_count, col=['is-repl-char', 'year']), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]), get_repl_char], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "aql-get-words-2006":

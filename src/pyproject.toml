@@ -32,6 +32,7 @@ dependencies = [
     "transformers~=4.44",
     "SciencePlots~=2.1",
     "gliner~=0.2",
+    "presidio-analyzer~=2.2.3",
 ]
 
 [build-system]
