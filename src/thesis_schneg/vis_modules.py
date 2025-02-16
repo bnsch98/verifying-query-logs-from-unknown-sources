@@ -8,7 +8,8 @@ from pyarrow.parquet import read_table as pa_read_table
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from numpy import sort as np_sort, linspace
+from numpy import sort as np_sort, linspace, log, divide, multiply, dot, ones
+from numpy.typing import ArrayLike
 
 
 def _get_results_paths(
@@ -187,3 +188,19 @@ def get_xlim(data: DataFrame, vis_params: Dict[str, Any], threshold: float, bar_
                                               > threshold*data[vis_params["dataset-col-y"]].max()].max() + bar_width/2
     x_min = 0 - bar_width/2
     return x_min, x_max
+
+
+def normalize(data: ArrayLike) -> ArrayLike:
+    return data / data.sum()
+
+
+def g_test(test_distr: ArrayLike, exp_distr: ArrayLike, normal: bool = False) -> float:
+    """Calculate the G-test for goodness of fit.
+    """
+    assert len(test_distr) == len(
+        exp_distr), f"Length of test and expected distribution must be equal. Length of test distribution = {len(test_distr)}, length of expected distribution = {len(exp_distr)}\nTest Distribution: {test_distr}\nExpected Distribution: {exp_distr}"
+    if normal:
+        test_distr = normalize(test_distr)
+        exp_distr = normalize(exp_distr)
+    dim = len(test_distr)
+    return 2*dot(ones(dim), multiply(test_distr, log(divide(test_distr, exp_distr))))
