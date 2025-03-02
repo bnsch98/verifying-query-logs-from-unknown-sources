@@ -83,7 +83,7 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
     \item TO DO: quantitative comparison, hypothesis test, chi-quadrat, KS-Test?
     \item clean aql (most common queries) and maybe words per named entity becomes more similar to other query logs
 \end{itemize}
-\begin{figure}
+\begin{figure}[h]
     \centering
     \import{../plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
     \caption{The relative frequencies of query and named entity lengths measured in the number of characters are displayed.}
@@ -148,7 +148,12 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
 % \end{figure} 
 
 
-
+\begin{figure}
+    \centering
+    \import{../plots/Wasserstein-Distances-Lengths}{all.pgf}
+    \caption{Wasserstein distances between the distributions of the query logs.}
+    \label{fig:wasserstein-distances-lengths}
+\end{figure}
 
 
 \section{Distribution-based}
