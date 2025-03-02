@@ -16,8 +16,12 @@ DatasetName: TypeAlias = Literal[
 ]
 
 AnalysisName: TypeAlias = Literal[
+    "clean-query-log",
+    "get-too-short-queries",
     "extract-chars",
     "extract-words",
+    "extract-words-merge",
+    "extract-words-group",
     "extract-named-entities",
     "extract-gliner-pii",
     "extract-presidio-pii",

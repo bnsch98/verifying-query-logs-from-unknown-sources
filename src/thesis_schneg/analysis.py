@@ -3,10 +3,12 @@ from re import compile, findall
 from datetime import datetime
 from random import choices
 from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
-from pandas import DataFrame
+from numpy import array as np_array, sum as np_sum
+from pandas import DataFrame, concat, merge
 from ray import init
 from ray.data import read_parquet, Dataset
 from ray.data.aggregate import AggregateFn
+from ray.data.grouped_data import GroupedData
 from thesis_schneg.model import DatasetName, AnalysisName
 from json import dumps
 from functools import cached_property
@@ -57,10 +59,11 @@ class PresidioGetEntities(_presidio_framework):
 
     def get_presidio_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         # Get tokens from text
+        # , entities=self.presidio_labels
         doc = self.presidio_model.analyze(
-            text=row["serp_query_text_url"], language='en')  # , entities=self.presidio_labels
-
-        entities = [{"entity": row['serp_query_text_url'][ent.to_dict()['start']:ent.to_dict()['end']], "entity-label": ent.to_dict()["entity_type"]}
+            text=row["serp_query_text_url"], language='en')
+        # "entity": row['serp_query_text_url'][ent.to_dict()['start']:ent.to_dict()['end']],
+        entities = [{"entity-label": ent.to_dict()["entity_type"]}
                     for ent in doc if doc and ent.to_dict()["score"] >= 0.7]
         return entities
 
@@ -97,7 +100,8 @@ class SpacyWords(_spacy_framework):
     def get_spacy_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         # Get tokens from text
         doc = self.spacy_model(row["serp_query_text_url"])
-        tokens = [{"word": token.text} for token in doc]
+        tokens = [{"word": token.text}
+                  for token in doc if not token.is_punct]
         return tokens
 
 
@@ -125,12 +129,36 @@ class SpacyQueryLevelStructures(_spacy_framework):
 
     def get_spacy_vals(self, batch: DataFrame) -> DataFrame:
         batch['character-count'] = batch['serp_query_text_url'].apply(len)
-        batch['word-count'] = batch['serp_query_text_url'].apply(
-            lambda x: len(x.split()))
+        spacy_doc = [self.spacy_model(row) for row in list(
+            batch['serp_query_text_url'])]
+
+        # Get word count
+        batch['word-count'] = [len(
+            [token.text for token in doc if not token.is_punct]) for doc in spacy_doc]
+
         # Get entity count
-        predictions = [len([ent for ent in self.spacy_model(query).ents])
-                       for query in list(batch["serp_query_text_url"])]
-        batch['entity-count'] = predictions
+        batch['entity-count'] = [len([ent for ent in doc.ents])
+                                 for doc in spacy_doc]
+
+        return batch
+
+
+@dataclass(frozen=True)
+class SpacyEntityLevelStructures(_spacy_framework):
+
+    @cached_property
+    def spacy_model(self) -> Language:
+        return spacy_load("en_core_web_sm")
+
+    def get_spacy_vals(self, batch: DataFrame) -> DataFrame:
+        batch['character-count'] = batch['entity'].apply(len)
+        spacy_doc = [self.spacy_model(row) for row in list(
+            batch['entity'])]
+
+        # Get word count
+        batch['word-count'] = [len(
+            [token.text for token in doc if not token.is_punct]) for doc in spacy_doc]
+
         return batch
 
 
@@ -277,11 +305,19 @@ def flat_map_dataset(dataset: Dataset,
     return dataset.flat_map(fn=flat_mapping_func, concurrency=concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory=memory_scaler*1000*1000*1000)
 
 
-def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Optional[Dict[str, Any]]:
-    return dataset.aggregate(aggregation_func)
+def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn, concurrency: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    return dataset.aggregate(aggregation_func, concurrency=concurrency)
+
+
+def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memory_scaler: float = 1.0, concurrency: Optional[int] = None) -> Dataset:
+    return dataset.map_groups(map_group_func, concurrency=concurrency, memory=memory_scaler*1000*1000*1000)
 
 
 def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Path], write_concurrency: Optional[int] = 2) -> None:
+    # check if wirte_dir is Path
+    if type(write_dir) is not Path:
+        write_dir = Path(write_dir)
+    # if str(read_dir) == "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output_cleaned/"
     # Specifiy output directory
     if struc_level is not None:
         if sample_files is not None:
@@ -343,7 +379,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         print("Unknown type of output")
 
 
-############################################    Task Specific Functions    ###########################################
+###########################################    Task Specific Functions    ###########################################
 
 # Mapping functions
 def identity(batch: DataFrame) -> DataFrame:
@@ -371,9 +407,9 @@ def get_operator_count(batch: DataFrame) -> DataFrame:
 def get_lengths(batch: DataFrame, structural_level: str) -> DataFrame:
     if structural_level == "words":
         batch['character-count'] = batch['word'].apply(len)
-    elif structural_level == "named-entities":
-        batch['character-count'] = batch['entity'].apply(len)
-        batch['word-count'] = batch['entity'].apply(lambda x: len(x.split()))
+    # elif structural_level == "named-entities":
+    #     batch['character-count'] = batch['entity'].apply(len)
+    #     batch['word-count'] = batch['entity'].apply(lambda x: len(x.split()))
 
     return batch
 
@@ -396,7 +432,12 @@ def filter_empty_timestamps(batch: DataFrame) -> DataFrame:
     return batch[~batch['serp_timestamp'].isnull()]
 
 
+def filter_empty_queries(batch: DataFrame) -> DataFrame:
+    return batch[batch['serp_query_text_url'].apply(len) != 0]
+
 # aol log release: 2006
+
+
 def filter_by_year(batch: DataFrame, year: Iterable[int]) -> DataFrame:
     # filter out empty timestamps
     batch = batch[~batch['serp_timestamp'].isnull()]
@@ -407,6 +448,11 @@ def filter_by_year(batch: DataFrame, year: Iterable[int]) -> DataFrame:
 
 def filter_by_char(batch: DataFrame, char: str) -> DataFrame:
     return batch[~batch['serp_query_text_url'].str.contains(char)]
+
+
+def get_short_queries(batch: DataFrame) -> DataFrame:
+    batch['character-count'] = batch['serp_query_text_url'].apply(len)
+    return batch[batch['character-count'] < 2]
 
 
 def get_repl_char(batch: DataFrame) -> DataFrame:
@@ -491,6 +537,15 @@ aggregation_query_length = AggregateFn(
 )
 
 
+aggregate_word_counts = AggregateFn(
+    init=lambda word_counts: {"word": [], "count()": []},
+    accumulate_row=lambda counts, row: acc_word_counts(counts, row),
+    merge=lambda counts1, counts2: merge_word_counts(counts1, counts2),
+    # finalize=from_pandas,
+    name="word-counts"
+)
+
+
 # Helper functions for aggregation
 def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     aggr_dict["sum"] += row["count()"]
@@ -502,7 +557,66 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
     return {k: int(a1.get(k, 0) + a2.get(k, 0)) for k in set(a1) | set(a2)}
 
 
+# def acc_word_counts(aggr_frame: DataFrame, row: Dict[str, Any]) -> DataFrame:
+#     if row['word'] in list(aggr_frame['word']):
+#         # aggr_frame['count()'][aggr_frame['word'] ==
+#         #                       row['word']] += row['count()']
+#         aggr_frame.loc[aggr_frame['word'] ==
+#                        row['word'], 'count()'] += row['count()']
+#     else:
+#         aggr_frame = concat(
+#             [aggr_frame, DataFrame({"word": [row['word']], "count()": [row['count()']]})])
+#     return aggr_frame
+
+def acc_word_counts(aggr_frame: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
+    if row['word'] in aggr_frame['word']:
+        aggr_frame['count()'][aggr_frame['word'] ==
+                              row['word']] += row['count()']
+    else:
+        aggr_frame['word'].append(row['word'])
+        aggr_frame['count()'].append(row['count()'])
+    return aggr_frame
+
+
+# def merge_word_counts(df1: DataFrame, df2: DataFrame):
+#     # Merge der beiden DataFrames auf die Spalte 'word'
+#     merged_df = merge(df1, df2, on='word', how='outer',
+#                       suffixes=('_df1', '_df2'))
+
+#     # Fehlende Werte mit 0 auffüllen
+#     merged_df.fillna(0, inplace=True)
+
+#     # Summieren der Counts für die Schnittmenge
+#     merged_df['count()'] = merged_df['count()_df1'] + merged_df['count()_df2']
+
+#     # Unnötige Spalten entfernen
+#     merged_df = merged_df[['word', 'count()']]
+
+#     return merged_df
+
+def merge_word_counts(df1: Dict[str, Any], df2: Dict[str, Any]) -> Dict[str, Any]:
+
+    intersec = list(set(df1['word']).intersection(set(df2['word'])))
+
+    if intersec:
+        for word in intersec:
+            df1['count()'][df1['word'] == word] += df2['count()'][df2['word'] == word]
+            del df2['word'][df2['word'] == word]
+            del df2['count()'][df2['word'] == word]
+        df1['word'].extend(df2['word'])
+        df1['count()'].extend(df2['count()'])
+    else:
+        df1['word'].extend(df2['word'])
+        df1['count()'].extend(df2['count()'])
+
+    return df1
+
+
 # Group-by function
+def groupy(dataset: Dataset, col: str) -> GroupedData:
+    return dataset.groupby(key=col)
+
+
 def groupby_count(dataset: Dataset, col: str) -> Dataset:
     return dataset.groupby(key=col).count()
 
@@ -510,29 +624,43 @@ def groupby_count(dataset: Dataset, col: str) -> Dataset:
 def groupby_count_sort(dataset: Dataset, col_group: str, col_sort: str) -> Dataset:
     return dataset.groupby(key=col_group).count().sort(key=col_sort, descending=True)
 
-############################################    Get task-specific modules     #########################################
 
-
+###########################################    Get task-specific modules     #########################################
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
-    if analysis_name == "extract-chars":
-        return {'groupby_func': partial(groupby_count, col='char'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
+    if analysis_name == "clean-query-log":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql, partial(filter_by_char, char='�'), filter_empty_queries], 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "extract-chars":
+        return {'groupby_func': partial(groupby_count_sort, col_group='char', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-words":
-        return {'groupby_func': partial(groupby_count, col='word'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-words-merge":
+        return {'groupby_func': partial(groupy, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
+    elif analysis_name == "extract-words-group":
+        return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "extract-named-entities":
-        return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-gliner-pii":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-presidio-pii":
-        return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(groupby_count_sort, col_group='entity-label', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
-        assert struc_level is not None, "Structural level must be specified"
-        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(get_lengths, structural_level=struc_level)] if struc_level in ["words", "named-entities"] else [SpacyQueryLevelStructures()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "query" else None}
+        assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
+        if struc_level == "queries":
+            map_func = SpacyQueryLevelStructures()
+        elif struc_level == "named-entities":
+            map_func = SpacyEntityLevelStructures()
+        elif struc_level == "words":
+            map_func = partial(get_lengths, structural_level=struc_level)
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [map_func], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "queries" else None}
     elif analysis_name == "get-char-count":
-        return {'groupby_func':  partial(groupby_count, col=['character-count']), 'aggregator': None, 'mapping_func': [get_char_length], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func':  partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': [get_char_length], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "aql-anomaly":
         return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
     elif analysis_name == "filter-aql-outlier":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql], 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "get-too-short-queries":
+        # ['serp_query_text_url', 'character-count']
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_short_queries], 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "character-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "word-count-frequencies":
@@ -540,7 +668,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "entity-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='entity-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "query-frequencies":
-        return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     elif analysis_name == "query-intent":
         return {'groupby_func': partial(groupby_count, col='query-intent'), 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
@@ -586,7 +714,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='operator-count'), 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
 
-############################################    Pipeline    #############################################
+############################################    Pipeline    ###############################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       struc_level: Optional[str] = None,
@@ -634,10 +762,15 @@ def analysis_pipeline(dataset_name: DatasetName,
         ds = module_specifics['groupby_func'](
             dataset=ds)
 
+    # Map groups.
+    if 'map_groups_func' in module_specifics.keys() and module_specifics['map_groups_func'] is not None:
+        ds = map_groups(dataset=ds, map_group_func=module_specifics['map_groups_func'],
+                        concurrency=concurrency, memory_scaler=memory_scaler)
+
     # Apply aggregation function.
     if module_specifics['aggregator'] is not None:
         ds = aggregate_dataset(
-            dataset=ds, aggregation_func=module_specifics['aggregator'])
+            dataset=ds, aggregation_func=module_specifics['aggregator'], concurrency=concurrency)
 
     # Print results for debugging.
     # if type(ds) is Dataset:
@@ -645,6 +778,6 @@ def analysis_pipeline(dataset_name: DatasetName,
     # elif type(ds) is dict:
     #     print(ds)
 
-    # Write results.
+    # # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
                   analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir)

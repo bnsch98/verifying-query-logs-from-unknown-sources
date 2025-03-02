@@ -8,21 +8,30 @@ from pyarrow.parquet import read_table as pa_read_table
 # from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from numpy import sort as np_sort, linspace, log, divide, multiply, dot, ones
+from numpy import sort as np_sort, linspace, log, divide, multiply, sum as np_sum, max as np_max
 from numpy.typing import ArrayLike
+from scipy.stats import chi2
 
 
 def _get_results_paths(
     dataset_name: DatasetName,
     analysis_name: AnalysisName,
+    cleaned_aql: bool = False,
 ) -> Iterable[Path]:
 
     base_path = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"
     )
-    # filter paths by dataset_name and analysis_name
-    result_path = [path for path in base_path.glob(
-        f'{dataset_name}-{analysis_name}-*')]
+    if cleaned_aql and dataset_name == 'aql':
+        # filter paths by dataset_name and analysis_name
+        result_path = [path for path in base_path.glob(
+            f'{dataset_name}-{analysis_name}-special')]
+        print(result_path[0])
+    else:
+        # filter paths by dataset_name and analysis_name
+        result_path = [path for path in base_path.glob(
+            f'{dataset_name}-{analysis_name}-all')]
+
     assert result_path, f"No directories found for dataset = {dataset_name} and analysis = {analysis_name}"
 
     # check if there are multiple directories
@@ -53,7 +62,7 @@ def load_results(
     result_files: Iterable[Path],
     cols: Optional[List[str]] = None,
     test_data: bool = False,
-    filter_cols: Optional[List[Tuple]] = None,
+    filter_rows: Optional[List[Tuple]] = None,
 ) -> DataFrame:
     # check if there are multiple files
     if len(result_files) > 1:
@@ -64,7 +73,7 @@ def load_results(
             # read only the first file
             result = pd_read_parquet(result_files[0])
         else:
-            result = concat(objs=[pa_read_table(file, columns=cols, filters=filter_cols).to_pandas()
+            result = concat(objs=[pa_read_table(file, columns=cols, filters=filter_rows).to_pandas()
                                   for file in result_files], axis=0)
     else:
         # by now only json files are expected as a single file
@@ -97,9 +106,12 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
     if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
-        start = int(data[vis_params["dataset-col-x"]].iloc[0])
-        x = linspace(start=start, stop=start+len(height), num=len(
-            height), dtype=int)
+        try:
+            start = int(data[vis_params["dataset-col-x"]].iloc[0])
+            x = linspace(start=start, stop=start+len(height), num=len(
+                height), dtype=int)
+        except ValueError:
+            x = data[vis_params["dataset-col-x"]].to_numpy()
     else:
         x = data[vis_params["dataset-col-x"]].to_numpy()
     if label is not None:
@@ -202,5 +214,67 @@ def g_test(test_distr: ArrayLike, exp_distr: ArrayLike, normal: bool = False) ->
     if normal:
         test_distr = normalize(test_distr)
         exp_distr = normalize(exp_distr)
-    dim = len(test_distr)
-    return 2*dot(ones(dim), multiply(test_distr, log(divide(test_distr, exp_distr))))
+    return 2*np_sum(multiply(test_distr, log(divide(test_distr, exp_distr))))
+
+
+def ks_test(test_distr1: ArrayLike, test_distr2: ArrayLike, significance_lvl: float) -> Tuple[float, float, bool]:
+    """Calculate the Kolmogorov-Smirnov test for goodness of fit.
+        Distributions must be numpy-array.
+    """
+    assert len(test_distr1) == len(
+        test_distr2), f"Length of test and expected distribution must be equal. Length of test distribution = {len(test_distr1)}, length of expected distribution = {len(test_distr2)}\nTest Distribution: {test_distr1}\nExpected Distribution: {test_distr2}"
+    # compute the constant for the significance level
+    assert significance_lvl in [0.2, 0.15, 0.1, 0.05, 0.01,
+                                0.001], f"Significance level is {significance_lvl} but must be in [0.2,0.15,0.1,0.05,0.01,0.001]"
+    ks_constant = {0.2: 1.07, 0.15: 1.14, 0.1: 1.22,
+                   0.05: 1.36, 0.01: 1.63, 0.001: 1.95}
+    # get total number of counts of each distribution
+    len1 = np_sum(test_distr1)
+    len2 = np_sum(test_distr2)
+
+    # normalize the distributions
+    test_distr1 = normalize(test_distr1)
+    test_distr2 = normalize(test_distr2)
+
+    # get cumulative distribution
+    test_distr1 = test_distr1.cumsum()
+    test_distr2 = test_distr2.cumsum()
+
+    # compute ks statistic
+    test_statistic = max(abs(test_distr1 - test_distr2))
+
+    # compute hypothesis threshold
+    threshold = ks_constant[significance_lvl] * (
+        (len1 + len2) / (len1 * len2))**0.5
+    return test_statistic, threshold, test_statistic <= threshold
+
+
+def chi2_fit(test_distr: ArrayLike, exp_distr: ArrayLike, significance_lvl: float) -> Tuple[float, float, bool]:
+    """Calculate the chi2 test for goodness of fit.
+        Distributions must be numpy-array.
+    """
+    assert len(test_distr) == len(
+        exp_distr), f"Length of test and expected distribution must be equal. Length of test distribution = {len(test_distr)}, length of expected distribution = {len(exp_distr)}\nTest Distribution: {test_distr}\nExpected Distribution: {exp_distr}"
+
+    # compute sample size of test distribution
+    N = np_sum(test_distr)
+
+    # compute the cumulative distribution of the expected distribution
+    rel_exp_distr = exp_distr/exp_distr.sum()
+
+    test_statistic = np_sum(
+        (test_distr - N * rel_exp_distr)**2 / (N * rel_exp_distr))
+    treshold = chi2.isf(significance_lvl, len(test_distr)-1)
+    return test_statistic, treshold, test_statistic <= treshold
+
+
+def get_max_x(data_dict: Dict[str, DataFrame], x_name: str, threshold: float = 0.999) -> float | int:
+    max_x = []
+    print('get x_max...')
+    for dataset_name, data in data_dict.items():
+        print(dataset_name)
+        data = data.sort_values(x_name, ascending=True)
+        data['cum_dist'] = (data['count()'] / data['count()'].sum()).cumsum()
+        data = data.query(f'`cum_dist` < {threshold}')
+        max_x.append(data[x_name].max())
+    return max(max_x)
