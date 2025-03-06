@@ -270,9 +270,7 @@ def chi2_fit(test_distr: ArrayLike, exp_distr: ArrayLike, significance_lvl: floa
 
 def get_max_x(data_dict: Dict[str, DataFrame], x_name: str, threshold: float = 0.999) -> float | int:
     max_x = []
-    print('get x_max...')
     for dataset_name, data in data_dict.items():
-        print(dataset_name)
         data = data.sort_values(x_name, ascending=True)
         data['cum_dist'] = (data['count()'] / data['count()'].sum()).cumsum()
         data = data.query(f'`cum_dist` < {threshold}')

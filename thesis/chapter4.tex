@@ -1,63 +1,38 @@
 
-\chapter{Analysis/Methodology}  
+\chapter{Analysis of Query Logs}  
 
-\section{Descriptive Statistics/ Text-related statistics}
-In this section, we generate a set of descriptive/text-related statistics from the query logs. The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries. We collect a set of distributions from the cleaned AQL and the other involved query logs. Ultimately, we perform hypothesis tests to determine the syntactical differences between the AQL and the other query logs. For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
+\section{Descriptive Statistics}
+In this section, we generate a set of descriptive statistics from the query logs. The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries. We collect a set of distributions from the cleaned AQL and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances to identify syntactical differences between the AQL and the other query logs. For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
 \begin{enumerate}
     \item Queries
     \item Named Entities
     \item Words
     \item Characters
 \end{enumerate} 
-Even though named entities are not considered a syntactic category primarily, we include them in this analysis since they are frequent enough to be regarded a structural element of queries. Their analysis might provide an additional valuable insight to the structure of query logs. For each of the aforementioned categories, we carry out two types of measurements: First, we collect all existing items of the category in a query log and determine the frequency of each item. Secondly, we measure the lengths of all extracted items in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories we gain a thorough set of measurements for each query log. The resulting distributions of the measurements are then compared to each other. Eventually, we perform goodness-of-fit tests to determine if the distributions of the AQL are significantly different to the other query log's distributions. 
+Even though named entities are not considered a syntactic category primarily, we include them in this analysis since they are frequent enough to be regarded a structural element of queries. Also, their analysis might provide an additional valuable insight to the structure of query logs. For each of the aforementioned categories, we carry out two types of measurements: First, we collect all existing items of the category in a query log and determine the frequency of each item. Secondly, we measure the lengths of all extracted items in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories we gain a thorough set of measurements for each query log. The resulting distributions of the measurements are then compared to each other. 
 
-\subsection{Category-Related Frequencies}
-For each query log, we extract all elements of a category and determine the frequency of each element. For instance, we extract all exisiting words from the query log and measure each word's frequency. The frequency distribution of linguistic elements typically obey Zipf's law when ordered in a descending order. Especially the frequency distribution of words is well studied and a popular example for Zipf's law~\citep{piantadosi:2014}. Zipf's law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
+\subsection{Frequencies of Linguistic Elements}
+For each query log, we extract all elements of a category and determine the frequency of each element. For instance, we extract all exisiting words from the query log and measure each word's frequency. The frequency distribution of linguistic elements typically obey Zipf's law when ordered in a descending order. Especially the frequency distribution of words is well studied and a popular example of Zipf's law~\citep{piantadosi:2014}. Zipf's law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
 \begin{equation}
     f \propto \frac{c}{r^{\alpha}}
 \end{equation} 
-The law requires the frequencies to be ordered in a descending order, hence it describes frequencies relative to the \textit{rank} of elements. We test the frequencies of queries, named entities, words and characters for Zipf's law by sorting them in descending order and displaying them in a log-scaled graph. Albeit primarily studied for words, we attempt on retrieving Zipf's law also in the frequencies of queries, named entities and characters since they as well are linguistic categories and probably follow linguistic dynamics. Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. As for named entities, we can state that all distributions follow Zipf's law reasonably well. All graphs show a relatively constant slope in the log-scaled dimensions. 
+We test the frequencies of queries, named entities, words and characters for Zipf's law by sorting them in descending order and displaying them in a log-scaled graph. Albeit primarily studied for words, we attempt to retrieve Zipf's law also in the frequencies of queries, named entities and characters since they as well are linguistic categories and probably follow linguistic dynamics. Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. Note that this and all subsequent plots contain data from the cleaned AQL. As for named entities, we can state that all distributions follow Zipf's law reasonably well. The distributions show a relatively constant slope in the log-scaled dimensions and are generally very similar. For the most part, this is also true for the word frequencies, despite a small deviation. The constant slope is interrupted by a small curvature in the central part of the distribution. This interruption is however not striking and is present in all distributions.  
 \begin{comment}
-    The description of the graphs should be updated after the plots created by the cleaned aql and the modified word extraction method are available.
-\end{comment}
-For the most part this is also true for the word frequencies, despite some small deviations. However, the AQL shows a striking deviation from Zipf's law at the most frequent entities. This deviation is not present in the other query logs. To further investigate this deviation, we have a closer look at the most frequent named entities in the AQL log in Table~\ref{tab:most-frequent-named-entities}.
-\begin{itemize}
-    \item TO DO: describe Table
-\end{itemize} 
-\begin{table}
-    \centering
-    \begin{tabular}{|c|c|c|c|}
-        \hline
-        \textbf{Rank} & \textbf{Named Entity} & \textbf{Frequency} & \textbf{Proportion} \\
-        \hline
-        1 & \textit{entity1} & 1000 & 0.1 \\
-        2 & \textit{entity2} & 900 & 0.09 \\
-        3 & \textit{entity3} & 800 & 0.08 \\
-        4 & \textit{entity4} & 700 & 0.07 \\
-        5 & \textit{entity5} & 600 & 0.06 \\
-        6 & \textit{entity6} & 500 & 0.05 \\
-        7 & \textit{entity7} & 400 & 0.04 \\
-        8 & \textit{entity8} & 300 & 0.03 \\
-        9 & \textit{entity9} & 200 & 0.02 \\
-        10 & \textit{entity10} & 100 & 0.01 \\
-        \hline
-    \end{tabular}
-    \caption{Most frequent named entities in the AQL log.}
-    \label{tab:most-frequent-named-entities}
-\end{table}
+    Verweis auf hypothesen test
+\end{comment} 
+
 \begin{figure}
     \centering
-    \import{../plots/extract-named-entities-and-extract-words-single}{all.pgf}
+    \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
     \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
     \label{fig:zipf-named-entities-words}
-\end{figure} In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters in the query logs are displayed. Regarding queries, we can observe another good fit to Zipf's law. 
+\end{figure} In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters in the query logs are displayed. The query distributions show a good fit to Zipf's law. The distributions are very similar and a constant slope in the log-scaled dimensions is present. The distributions of characters in contrast do not fit Zipf's law. Generally, the distributions of the involved data sets are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is probably due to their monolingual composition. Contrarily, AQL and MS-MARCO are multilingual, hence contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would suggest. This might be the case because alphanumeric characters are significantly more frequent than special characters which would skew the distribution. 
 \begin{comment}
-    The description of the graphs should be updated after the plots created by the cleaned aql and the modified word extraction method are available.
-\end{comment}
-Again, a deviation at the most frequent queries is present in the AQL. But the deviation is not as prominent as it is in the distribution of named entities. The distributions of characters in contrast do not show a good fit to Zipf's law. In general, the distributions of the involved data sets are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is due to their monolingual composition. AQL and MS-MARCO in contrast are multilingual and thus contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would suggest. This might be the case because alphanumeric characters are significantly more frequent than special characters and thus the distribution is skewed.       
+    Verweis auf hypothesen test
+\end{comment}      
 \begin{figure}
     \centering
-    \import{../plots/query-frequencies-and-extract-chars-single}{all.pgf}
+    \import{../plots/updated_plots/query-frequencies-and-extract-chars-single}{all.pgf}
     \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
     \label{fig:zipf-queries-chars}
 \end{figure}
@@ -66,44 +41,67 @@ Again, a deviation at the most frequent queries is present in the AQL. But the d
     \item TO DO: Table with most common named entities?
 \end{itemize}
 \subsection{Length-Related Frequencies}
-Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. 
+Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. The range of query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, though the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.
 \begin{comment}
-    The description of the graphs should be updated after the plots created by the cleaned aql and the modified word extraction method are available.
+    Verweis auf wasserstein distanzen
+    #### stand 04.03.2025
 \end{comment}
-As for queries, the distributions appear to be similar both in shape and regarding the scope of the lengths. The query lengths are beta-binomial-like distributed and the AQL's and AOL's distributions are slightly noisy compared to the rather smooth distributions of MS-MARCO and ORCAS. Regarding the distributions of named entities, we can again observe a common scope of lengths among the involved query logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The distributions of AQL and MS-MARCO have a more beta-binomial-like (gamma-like?) look compared to AOL and ORCAS whose shape does not exactly match a typical standard distribution (maybe a combination of standard distributions? named entities can contain multiple words).
 \begin{itemize}
     \item TO DO: quantitative comparison, hypothesis test, chi-quadrat, KS-Test?
 \end{itemize}  
-In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters or named entities are displayed. We can observe very similar frequencies of named entitiy counts in queries. The distributions are almost equivalent among the involved query logs. As for the word lengths, the distributions are also reasonably similar. Especially MS-MARCO and ORCAS show a very similar distribution. The shapes resemble a beta-binomial (gamma/beta) distribution. While the AQL's distribution follows on from this, the AOL's distribution is clearly different. We can observe an unusual peak of words containing between 10 and 20 characters. This is probably due to an increased amount of website addresses being present in the AOL. The extensions before and after the domain name cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. In Figure~\ref{fig:lengths-words-characters-aol-cleaned} the distribution without website addresses is displayed. It is very similar to the other query logs' distributions of word lengths.
-\begin{itemize}
-    \item TO DO: quantitative comparison, hypothesis test, chi-quadrat, KS-Test?
-\end{itemize} 
-In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of query and named entity lengths measured in words are displayed. Concerning the lengths of named entities, we can observe almost equivalent distributions of AOL and MS-MARCO. The distribution of ORCAS is still similar to the AOL and MS-MARCO while the distribution of the AQL is slightly different. The AQL cntains significantly more named entities comprised of one word than the other logs. In contrast to the other logs, named entities comprised of one word a the most common named entities. The other logs contain named entities consisting of two words the most.  
-\begin{itemize}
-    \item TO DO: quantitative comparison, hypothesis test, chi-quadrat, KS-Test?
-    \item clean aql (most common queries) and maybe words per named entity becomes more similar to other query logs
-\end{itemize}
+In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (i.e. "www" or ".com") cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. 
+\begin{comment}
+    In Figure~\ref{fig:lengths-words-characters-aol-cleaned} the distribution without website addresses is displayed. It is very similar to the other query logs' distributions of word lengths.    
+\end{comment}
+\begin{comment}
+    Verweis auf wasserstein distanzen
+    #### stand 05.03.2025
+\end{comment} 
+In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of query and named entity lengths measured in the number of words are displayed. Concerning the lengths of named entities, we can observe almost equivalent distributions of AOL and MS-MARCO. The distribution of ORCAS is still similar to AOL and MS-MARCO while the distribution of the AQL is slightly different. The AQL contains significantly more named entities comprised of one word than the other logs. In contrast to the other logs, named entities comprised of one word a the most common named entities. A similarity among all logs is that named entities consisting of two words are the most frequent. As of the query lengths measured in words, we can observe more diverse distributions among the different logs. While the number of words is distributed similarily in AOL and AQL, the distributions of ORCAS and MS-MARCO are different. The distribution of ORCAS resembles a poisson distribution and the distribution of MS-MARCO is not clearly assignable to a popular distribution. However, the range of the most frequent number of words is similar among all logs.
+\begin{comment}
+    Verweis auf wasserstein distanzen
+    #### stand 05.03.2025
+\end{comment}
+
 \begin{figure}[h]
     \centering
-    \import{../plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
+    \import{../plots/updated_plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
     \caption{The relative frequencies of query and named entity lengths measured in the number of characters are displayed.}
     \label{fig:lengths-query-characters-named-entity-characters}
 \end{figure} 
     
 \begin{figure}
     \centering
-    \import{../plots/character-count-frequencies-words-and-entity-count-frequencies-queries}{all.pgf}
+    \import{../plots/updated_plots/character-count-frequencies-words-and-entity-count-frequencies-queries}{all.pgf}
     \caption{The relative frequencies of word and query lengths are displayed. In this collection, the word length is measured in number of characteres. The query length is measured in the number of occuring named entities.}
     \label{fig:lengths-words-characters-queries-named-entities}
 \end{figure} 
 
 \begin{figure}
     \centering
-    \import{../plots/word-count-frequencies-queries-and-word-count-frequencies-named-entities}{all.pgf}
+    \import{../plots/updated_plots/word-count-frequencies-queries-and-word-count-frequencies-named-entities}{all.pgf}
     \caption{The relative frequencies of query and named entity lengths are displayed. Both, the query length and the named entity length are measured in number of occuring words.}
     \label{fig:lengths-query-words-named-entity-words}
 \end{figure} 
 
+
+\begin{table}
+    \centering
+    \begin{tabular}{@{}lrrrr@{}} \toprule
+         & AOL & AQL & MS-MARCO & ORCAS \\ \midrule
+        Queries in Characters & 2.96 & 4.51 & 2.58 & 3.62 \\
+        Entities in Characters & 1.18 & 1.74 & 1.42 & 0.95  \\
+        Words in Characters & 3.55 & 3.54 & 3.70 & 2.64 \\
+        Queries in Words & 0.54 & 0.66 & 0.48 & 0.65 \\
+        Entities in Words & 0.09 & 0.17 & 0.10 & 0.15 \\
+        Queries in Entities & 0.08 & 0.09 & 0.07 & 0.07 \\ \bottomrule
+    \end{tabular}
+    \caption{Average Wasserstein distances between the distributions of the query logs. For each analysis, e.g. queries in characters, the Wasserstein distance between the distributions of the query logs is computed. The table contains the mean of each query log's Wasserstein distances to the other query logs for each analysis.}
+    \label{tab:wasserstein-distances}        
+\end{table}
+\begin{comment}
+    vielleicht noch die Zellen mit den jeweils größten Distanzen markieren
+\end{comment}
 % \begin{figure}
 %     \centering
 %     \import{../plots/character-count-frequencies-words}{aol-domains-cleaned.pgf}
@@ -112,12 +110,6 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
 %     \label{fig:lengths-words-characters-aol-cleaned}
 % \end{figure} 
 
-\begin{figure}
-    \centering
-    \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
-    \caption{Zipf's law with cleaned aql}
-    \label{fig:cleaned-zipf-named-entities-word}
-\end{figure} 
 
 % \begin{figure}
 %     \centering
