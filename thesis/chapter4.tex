@@ -36,20 +36,14 @@ We test the frequencies of queries, named entities, words and characters for Zip
     \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
     \label{fig:zipf-queries-chars}
 \end{figure}
-\begin{itemize}
-    \item TO DO: quantitative comparison, hypothesis test?
-    \item TO DO: Table with most common named entities?
-\end{itemize}
+
+\subsubsection{Comparison of the Distributions}
+TO DO
 \subsection{Length-Related Frequencies}
-Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. The range of query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, though the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.
-\begin{comment}
+Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. The range of query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, though the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.\begin{comment}
     Verweis auf wasserstein distanzen
     #### stand 04.03.2025
-\end{comment}
-\begin{itemize}
-    \item TO DO: quantitative comparison, hypothesis test, chi-quadrat, KS-Test?
-\end{itemize}  
-In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (i.e. "www" or ".com") cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. 
+\end{comment}In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (i.e. "www" or ".com") cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. 
 \begin{comment}
     In Figure~\ref{fig:lengths-words-characters-aol-cleaned} the distribution without website addresses is displayed. It is very similar to the other query logs' distributions of word lengths.    
 \end{comment}
@@ -62,7 +56,8 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
     Verweis auf wasserstein distanzen
     #### stand 05.03.2025
 \end{comment}
-
+\subsubsection{Comparison of the Distributions}
+In order to quantify similarities of the aforementioned distributions, we compute the Wasserstein distance between the distributions of the query logs for each analysis. Concerning one specific anaylsis, for each query log we obtain a set of distances that represent the similaries to the other query log's distributions. In Table~\ref{tab:wasserstein-distances} the average Wasserstein distances of each query log are displayed with regard to the conducted analysis. Even though the AQL shows the highest distances to the other query logs in most analyses, the distances are not significantly different. Hence, we can deduct that the AQL fits the other logs in structural or linguisitc terms. In Figure~\ref{fig:wasserstein-distances-lengths} a configuration of the distributions is displayed that visualizes the Wasserstein distances. The configuration was derived from the Wasserstein distances by applying multidimensional scaling to the resulting distance matrix. As the numbers already indicated, clear differences of the distances are not visible. The points are distributed quite evenly and no clear clusters are visible.   
 \begin{figure}[h]
     \centering
     \import{../plots/updated_plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
@@ -88,17 +83,51 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
 \begin{table}
     \centering
     \begin{tabular}{@{}lrrrr@{}} \toprule
-         & AOL & AQL & MS-MARCO & ORCAS \\ \midrule
-        Queries in Characters & 2.96 & 4.51 & 2.58 & 3.62 \\
-        Entities in Characters & 1.18 & 1.74 & 1.42 & 0.95  \\
-        Words in Characters & 3.55 & 3.54 & 3.70 & 2.64 \\
-        Queries in Words & 0.54 & 0.66 & 0.48 & 0.65 \\
-        Entities in Words & 0.09 & 0.17 & 0.10 & 0.15 \\
-        Queries in Entities & 0.08 & 0.09 & 0.07 & 0.07 \\ \bottomrule
+        % &  & Query Length Characters &  &  \\ \midrule
+        \multicolumn{5}{c}{Query Length Characters} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 5.54 & 2.56 & 3.72 \\
+        AQL & 5.54 & 0.00 & 4.75 & 7.75  \\
+        MS-MARCO & 2.56 & 4.75 & 0.00 & 3.00 \\
+        ORCAS & 3.72 & 7.75 & 3.00 & 0.00 \\ \midrule
+        \multicolumn{5}{c}{Entity Length Characters} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 2.12 & 1.79 & 0.80 \\
+        AQL & 2.12 & 0.00 & 2.86 & 1.98  \\
+        MS-MARCO & 1.79 & 2.86 & 0.00 & 1.03 \\
+        ORCAS & 0.80 & 1.98 & 1.03 & 0.00 \\ \midrule
+        \multicolumn{5}{c}{Word Length Characters} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 3.69 & 6.31 & 4.20 \\
+        AQL & 3.69 & 0.00 & 6.29 & 4.17  \\
+        MS-MARCO & 6.31 & 6.29 & 0.00 & 2.20 \\
+        ORCAS & 4.20 & 4.17 & 2.20 & 0.00 \\ \midrule
+        \multicolumn{5}{c}{Query Length Words} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 0.58 & 0.69 & 0.89 \\
+        AQL & 0.58 & 0.00 & 0.81 & 1.25  \\
+        MS-MARCO & 0.69 & 0.81 & 0.00 & 0.44 \\
+        ORCAS & 0.89 & 1.25 & 0.44 & 0.00 \\ \midrule
+        \multicolumn{5}{c}{Entity Length Words} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 0.19 & 0.06 & 0.11 \\
+        AQL & 0.19 & 0.00 & 0.18 & 0.30  \\
+        MS-MARCO & 0.06 & 0.18 & 0.00 & 0.17 \\
+        ORCAS & 0.11 & 0.30 & 0.17 & 0.00 \\ \midrule
+        \multicolumn{5}{c}{Query Length Entities} \\ \midrule
+        & AOL & AQL & MS-MARCO & ORCAS \\ 
+        AOL & 0.00 & 0.18 & 0.12 & 0.03 \\
+        AQL & 0.18 & 0.00 & 0.06 & 0.15  \\
+        MS-MARCO & 0.12 & 0.06 & 0.00 & 0.09 \\
+        ORCAS & 0.03 & 0.15 & 0.09 & 0.00 \\ 
+        \bottomrule
     \end{tabular}
     \caption{Average Wasserstein distances between the distributions of the query logs. For each analysis, e.g. queries in characters, the Wasserstein distance between the distributions of the query logs is computed. The table contains the mean of each query log's Wasserstein distances to the other query logs for each analysis.}
     \label{tab:wasserstein-distances}        
 \end{table}
+
+
+
 \begin{comment}
     vielleicht noch die Zellen mit den jeweils größten Distanzen markieren
 \end{comment}
@@ -143,72 +172,72 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
 \begin{figure}
     \centering
     \import{../plots/Wasserstein-Distances-Lengths}{all.pgf}
-    \caption{Wasserstein distances between the distributions of the query logs.}
+    \caption{Visualization of Wasserstein distances. The distances were computed between the distributions of the query logs for each analysis regarding length-related frequencies. The configuration of the visible points was obtained by applying multidimensional scaling to the Wasserstein distance matrix.}
     \label{fig:wasserstein-distances-lengths}
 \end{figure}
 
 
-\section{Distribution-based}
-In this section, distributions of labels are created from different NLP predictors. The general idea is to compare the different data sets according to their resulting distributions of different domains.  
-\begin{itemize}
-    \item Plausibilitätsstudie für die classifier: 50-100 samples pro label pro classifier: manuell annotieren und dann accuracy bestimmen.
-    \item Intent
-    \begin{itemize}
-        \item Navigational, transactional and informational
-        \begin{itemize}
-            \item mapping (apply ORCAS-I classifier)
-        \end{itemize}
-    \end{itemize}
-    \item Named Entities
-    \begin{itemize}
-        \item Frequency of named entities \begin{itemize}
-            \item flat mapping->group->reduction
-        \end{itemize} 
-        \item Most common named entities
-        \item Categorize named entities according to ... -> apply classifier?
-    \end{itemize}
-    \item Hate speech
-    \begin{itemize}
-        \item mapping (apply hate speech classifier)
-    \end{itemize}
-    \item NSFW
-    \begin{itemize}
-        \item mapping (apply NSFW classifier)
-    \end{itemize}
-    \item Spam
-    \begin{itemize}
-        \item mapping (apply spam classifier)
-    \end{itemize}
-    \item Content
-    \begin{itemize}
+% \section{Distribution-based}
+% In this section, distributions of labels are created from different NLP predictors. The general idea is to compare the different data sets according to their resulting distributions of different domains.  
+% \begin{itemize}
+%     \item Plausibilitätsstudie für die classifier: 50-100 samples pro label pro classifier: manuell annotieren und dann accuracy bestimmen.
+%     \item Intent
+%     \begin{itemize}
+%         \item Navigational, transactional and informational
+%         \begin{itemize}
+%             \item mapping (apply ORCAS-I classifier)
+%         \end{itemize}
+%     \end{itemize}
+%     \item Named Entities
+%     \begin{itemize}
+%         \item Frequency of named entities \begin{itemize}
+%             \item flat mapping->group->reduction
+%         \end{itemize} 
+%         \item Most common named entities
+%         \item Categorize named entities according to ... -> apply classifier?
+%     \end{itemize}
+%     \item Hate speech
+%     \begin{itemize}
+%         \item mapping (apply hate speech classifier)
+%     \end{itemize}
+%     \item NSFW
+%     \begin{itemize}
+%         \item mapping (apply NSFW classifier)
+%     \end{itemize}
+%     \item Spam
+%     \begin{itemize}
+%         \item mapping (apply spam classifier)
+%     \end{itemize}
+%     \item Content
+%     \begin{itemize}
         
-        \item Classify into topic taxonomy 
-        \begin{itemize}
-            \item mapping apply topic classifier
-        \end{itemize}
-    \end{itemize}
+%         \item Classify into topic taxonomy 
+%         \begin{itemize}
+%             \item mapping apply topic classifier
+%         \end{itemize}
+%     \end{itemize}
     
-\end{itemize}
-\section{Temporal-based}
-\begin{itemize}
-    \item Discover Google Trends in Data
-    \item Plot frequency of selected topics over time per data set
-    \item Seasonal topics
+% \end{itemize}
+% \section{Temporal-based}
+% \begin{itemize}
+%     \item Discover Google Trends in Data
+%     \item Plot frequency of selected topics over time per data set
+%     \item Seasonal topics
 
     
-\end{itemize}
-\section{Embedding-based}
-\begin{itemize}
-    \item Extract document vectors from e.g. BERT
-    \begin{itemize}
-        \item Create t-SNE plot with regard to intent, topics,... further categories
-        \item Apply clusterting algorithm and compare resulting clustersX 
-    \end{itemize}
-    \item Topic Modeling
-        \begin{itemize}
-            \item Compare most common topics
-            \item Compare variety of topics
-        \end{itemize}
-\end{itemize}
+% \end{itemize}
+% \section{Embedding-based}
+% \begin{itemize}
+%     \item Extract document vectors from e.g. BERT
+%     \begin{itemize}
+%         \item Create t-SNE plot with regard to intent, topics,... further categories
+%         \item Apply clusterting algorithm and compare resulting clustersX 
+%     \end{itemize}
+%     \item Topic Modeling
+%         \begin{itemize}
+%             \item Compare most common topics
+%             \item Compare variety of topics
+%         \end{itemize}
+% \end{itemize}
 
 

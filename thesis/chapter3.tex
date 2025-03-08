@@ -1,15 +1,15 @@
 
 \chapter{Data Sets}
 
-\section{AQL (datailreich)}
-\subsection{Data Cleaning}
-Some results of analysing the AQL have uncovered outliers and further abnormalities that should be removed to ensure a fair comparison between the query logs. First of all, the analysis of the query length distribution has shown that there are some exceptionally frequent lengths in the distribution. In Figure~\ref{fig:aql-character-count-old} we can see that the query length distribution has a peak at the lengths $14$, $16$ and $24$. Therefore, we take a look at the most frequent queries of these lengths. For each length, we find a particularly frequent query whose frequency outnumbers the second most frequent query by far and likely produces the outlier in the distribution. We remove these uncommonly frequent queries from the data set. Secondly, we noted that a subset of the AQL queries is subject to a decode error and, as a result, consist of replacement characters. We remove these queries from the data set as well. Lastly, we remove all empty queries, i.e., queries with an empty string from the data set.
-\begin{figure}
-    \centering
-    \import{../plots/character-count-frequencies-queries}{aql.pgf}
-    \caption{caption.}
-    \label{fig:aql-character-count-old}
-\end{figure}   
-\section{AOL}
-\section{MS Marco}
-\section{ORCAS}
+% \section{AQL (datailreich)}
+% \subsection{Data Cleaning}
+% Some results of analysing the AQL have uncovered outliers and further abnormalities that should be removed to ensure a fair comparison between the query logs. First of all, the analysis of the query length distribution has shown that there are some exceptionally frequent lengths in the distribution. In Figure~\ref{fig:aql-character-count-old} we can see that the query length distribution has a peak at the lengths $14$, $16$ and $24$. Therefore, we take a look at the most frequent queries of these lengths. For each length, we find a particularly frequent query whose frequency outnumbers the second most frequent query by far and likely produces the outlier in the distribution. We remove these uncommonly frequent queries from the data set. Secondly, we noted that a subset of the AQL queries is subject to a decode error and, as a result, consist of replacement characters. We remove these queries from the data set as well. Lastly, we remove all empty queries, i.e., queries with an empty string from the data set.
+% \begin{figure}
+%     \centering
+%     \import{../plots/character-count-frequencies-queries}{aql.pgf}
+%     \caption{caption.}
+%     \label{fig:aql-character-count-old}
+% \end{figure}   
+% \section{AOL}
+% \section{MS Marco}
+% \section{ORCAS}

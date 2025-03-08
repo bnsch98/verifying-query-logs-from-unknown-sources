@@ -36,6 +36,7 @@ dependencies = [
     "presidio-analyzer~=2.2.3",
     "scipy~=1.15",
     "scikit-learn~=1.6",
+    "pytrends~=4.9",
 ]
 
 [build-system]

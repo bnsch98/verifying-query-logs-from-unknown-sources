@@ -407,15 +407,6 @@ def get_operator_count(batch: DataFrame) -> DataFrame:
 def get_lengths(batch: DataFrame, structural_level: str) -> DataFrame:
     if structural_level == "words":
         batch['character-count'] = batch['word'].apply(len)
-    # elif structural_level == "named-entities":
-    #     batch['character-count'] = batch['entity'].apply(len)
-    #     batch['word-count'] = batch['entity'].apply(lambda x: len(x.split()))
-
-    return batch
-
-
-def get_char_length(batch: DataFrame) -> DataFrame:
-    batch['character-count'] = batch['serp_query_text_url'].apply(len)
     return batch
 
 
@@ -435,7 +426,12 @@ def filter_empty_timestamps(batch: DataFrame) -> DataFrame:
 def filter_empty_queries(batch: DataFrame) -> DataFrame:
     return batch[batch['serp_query_text_url'].apply(len) != 0]
 
-# aol log release: 2006
+
+def get_year(batch: DataFrame) -> DataFrame:
+    batch['serp_timestamp'] = batch['serp_timestamp'].apply(
+        lambda x: datetime.fromtimestamp(x).year)
+    batch.rename(columns={'serp_timestamp': 'year'}, inplace=True)
+    return batch
 
 
 def filter_by_year(batch: DataFrame, year: Iterable[int]) -> DataFrame:
@@ -627,22 +623,29 @@ def groupby_count_sort(dataset: Dataset, col_group: str, col_sort: str) -> Datas
 
 ###########################################    Get task-specific modules     #########################################
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
+
+    # Basic modules: clean data, filters, debug etc.
     if analysis_name == "clean-query-log":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql, partial(filter_by_char, char='�'), filter_empty_queries], 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "debug":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "filter-aql-outlier":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql], 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "get-too-short-queries":
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_short_queries], 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "sort-grouped-data":
+        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+
+    # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
         return {'groupby_func': partial(groupby_count_sort, col_group='char', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-words":
         return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
+    # words of aql were too large to be extracted in one go, hence a merge of the two halfes was necessary
     elif analysis_name == "extract-words-merge":
         return {'groupby_func': partial(groupy, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
-    elif analysis_name == "extract-words-group":
-        return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "extract-named-entities":
         return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "extract-gliner-pii":
-        return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "extract-presidio-pii":
-        return {'groupby_func': partial(groupby_count_sort, col_group='entity-label', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
         assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
         if struc_level == "queries":
@@ -652,15 +655,6 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         elif struc_level == "words":
             map_func = partial(get_lengths, structural_level=struc_level)
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [map_func], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url'] if struc_level == "queries" else None}
-    elif analysis_name == "get-char-count":
-        return {'groupby_func':  partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': [get_char_length], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "aql-anomaly":
-        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
-    elif analysis_name == "filter-aql-outlier":
-        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql], 'flat_mapping_func': None, 'col_filter': None}
-    elif analysis_name == "get-too-short-queries":
-        # ['serp_query_text_url', 'character-count']
-        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_short_queries], 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "character-count-frequencies":
         return {'groupby_func': partial(groupby_count, col='character-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "word-count-frequencies":
@@ -669,7 +663,12 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='entity-count'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "query-frequencies":
         return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-search-operators":
+        return {'groupby_func': partial(groupby_count, col='operator'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "search-operators-count":
+        return {'groupby_func': partial(groupby_count, col='operator-count'), 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
+    # Inference: Predictions on queries, extraction of inference-based features
     elif analysis_name == "query-intent":
         return {'groupby_func': partial(groupby_count, col='query-intent'), 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "query-domain":
@@ -678,7 +677,12 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col='query-quality'), 'aggregator': None, 'mapping_func': [nvidiaQualityClassifier()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "query-nsfw":
         return {'groupby_func': partial(groupby_count, col='query-nsfw'), 'aggregator': None, 'mapping_func': [NSFWPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-gliner-pii":
+        return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "extract-presidio-pii":
+        return {'groupby_func': partial(groupby_count_sort, col_group='entity-label', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
 
+    # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
         return {'groupby_func': partial(groupby_count, col=['year', 'is-url']), 'aggregator': None, 'mapping_func': [filter_empty_timestamps], 'flat_mapping_func': is_url, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-email-proportion":
@@ -687,31 +691,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count, col=['is-repl-char', 'year']), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]), get_repl_char], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "aql-get-words-2006":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[2006, 2005, 2004, 2003, 2002, 2001, 2000]), partial(filter_by_char, char='�')], 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
-    elif analysis_name == "filter-by-year":
+    elif analysis_name == "aql-anomaly":
+        return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [filter_lengths], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'character-count']}
+    elif analysis_name == "filter-by-year-clean-repl-char":
         return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'serp_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[2006]), partial(filter_by_char, char='�')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'serp_url']}
-    elif analysis_name == "zipfs-law-queries":
-        return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "zipfs-law-words":
-        return {'groupby_func': partial(groupby_count, col='word'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "zipfs-law-chars":
-        return {'groupby_func': partial(groupby_count, col='char'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "unique-queries":
-        return {'groupby_func': partial(groupby_count, col='serp_query_text_url'), 'aggregator': unique_queries_agg, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "heaps-law-words":
-        return {'groupby_func': partial(groupby_count, col='word'), 'aggregator': unique_words_agg, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "query-length-chars":
-        return {'groupby_func': partial(groupby_count, col='query-length-chars'), 'aggregator': None, 'mapping_func': [get_length_char], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "query-length-words":
-        return {'groupby_func': partial(groupby_count, col='query-length-words'), 'aggregator': None, 'mapping_func': [get_length_word], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-
-    elif analysis_name == "debug":
-        return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
-    elif analysis_name == "sort-data":
-        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
-    elif analysis_name == "extract-search-operators":
-        return {'groupby_func': partial(groupby_count, col='operator'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_operators, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "search-operators-count":
-        return {'groupby_func': partial(groupby_count, col='operator-count'), 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
 
 ############################################    Pipeline    ###############################################
