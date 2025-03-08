@@ -46,5 +46,6 @@ AnalysisName: TypeAlias = Literal[
     "search-operators-count",
     "debug",
     "sort-grouped-data",
+    "query-chart-by-year",
 
 ]

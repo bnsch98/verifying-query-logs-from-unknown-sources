@@ -682,6 +682,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "extract-presidio-pii":
         return {'groupby_func': partial(groupby_count_sort, col_group='entity-label', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
 
+    # Temporal-based analyses
+    elif analysis_name == "query-chart-by-year":
+        return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
         return {'groupby_func': partial(groupby_count, col=['year', 'is-url']), 'aggregator': None, 'mapping_func': [filter_empty_timestamps], 'flat_mapping_func': is_url, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
