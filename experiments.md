@@ -176,3 +176,11 @@ Herem, all data sets are stored with the suffix "-special" because they are gene
 | entitiy count frequencies queries    | aol       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis entity-count-frequencies --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 6 --batch-size 1024 --struc-level queries --dataset aol` | `2025/02/24 20:07:07`   | `2025/02/24 20:08:33` | 1m 26s  | ✔️     |
 | entitiy count frequencies queries    | ms-marco       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis entity-count-frequencies --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 6 --batch-size 1024 --struc-level queries --dataset ms-marco` | `2025/02/24 20:07:12`   | `2025/02/24 20:08:41` | 1m 29s  | ✔️     |
 | entitiy count frequencies queries    | orcas       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --analysis entity-count-frequencies --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 6 --batch-size 1024 --struc-level queries --dataset orcas` | `2025/02/24 20:07:17`   | `2025/02/24 20:08:42` | 1m 24s  | ✔️     |
+
+
+# Temporal Analysis
+| Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
+|-----------------------|---------- |-------------|------------|----------|----------|---------|
+| query chart by year     |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis query-chart-by-year --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --only-english`    | `2025/03/08 12:09:26` | `2025/03/08 12:56:33` | 47m 6s | ✔️    |
+|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |

@@ -313,43 +313,31 @@ def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memor
     return dataset.map_groups(map_group_func, concurrency=concurrency, memory=memory_scaler*1000*1000*1000)
 
 
-def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Path], write_concurrency: Optional[int] = 2) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Path], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
     # check if wirte_dir is Path
     if type(write_dir) is not Path:
         write_dir = Path(write_dir)
     # if str(read_dir) == "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output_cleaned/"
     # Specifiy output directory
-    if struc_level is not None:
-        if sample_files is not None:
-            write_dir = write_dir.joinpath(
-                f"{dataset_name}-{analysis_name}-{struc_level}-{sample_files}")
-        else:
-            if which_half is not None:
-                write_dir = write_dir.joinpath(
-                    f"{dataset_name}-{analysis_name}-{struc_level}-{which_half}")
-            else:
-                if read_dir is not None:
-                    write_dir = write_dir.joinpath(
-                        f"{dataset_name}-{analysis_name}-{struc_level}-special")
-                else:
-                    write_dir = write_dir.joinpath(
-                        f"{dataset_name}-{analysis_name}-{struc_level}-all")
-    else:
-        if sample_files is not None:
-            write_dir = write_dir.joinpath(
-                f"{dataset_name}-{analysis_name}-{sample_files}")
-        else:
-            if which_half is not None:
-                write_dir = write_dir.joinpath(
-                    f"{dataset_name}-{analysis_name}-{which_half}")
-            else:
-                if read_dir is not None:
-                    write_dir = write_dir.joinpath(
-                        f"{dataset_name}-{analysis_name}-special")
-                else:
-                    write_dir = write_dir.joinpath(
-                        f"{dataset_name}-{analysis_name}-all")
+    output_folder = f"{dataset_name}-{analysis_name}"
 
+    if struc_level is not None:
+        output_folder += f"-{struc_level}"
+    if which_half is not None:
+        output_folder += f"-{which_half}"
+    if sample_files is not None:
+        output_folder += f"-{sample_files}"
+        if read_dir is not None:
+            output_folder += "-special"
+    else:
+        if read_dir is not None:
+            output_folder += "-special"
+        else:
+            output_folder += "-all"
+    if only_english:
+        output_folder += "-english"
+
+    write_dir = write_dir.joinpath(output_folder)
     # Delete old files
     if write_dir.exists():
         [f.unlink() for f in write_dir.glob("*") if f.is_file()]
@@ -444,6 +432,10 @@ def filter_by_year(batch: DataFrame, year: Iterable[int]) -> DataFrame:
 
 def filter_by_char(batch: DataFrame, char: str) -> DataFrame:
     return batch[~batch['serp_query_text_url'].str.contains(char)]
+
+
+def filter_by_col_value(batch: DataFrame, col: str, value: str) -> DataFrame:
+    return batch[batch[col] == value]
 
 
 def get_short_queries(batch: DataFrame) -> DataFrame:
@@ -635,6 +627,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'character-count'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_short_queries], 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "sort-grouped-data":
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "filter-google-queries":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_col_value, col='search_provider_name', value='google')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'search_provider_name']}
 
     # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -685,6 +679,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     # Temporal-based analyses
     elif analysis_name == "query-chart-by-year":
         return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-annual-top-queries":
+        return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
+    elif analysis_name == "total-query-chart-by-year":
+        return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
@@ -701,7 +699,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group=['serp_query_text_url', 'serp_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': [partial(filter_by_year, year=[2006]), partial(filter_by_char, char='�')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'serp_url']}
 
 
-############################################    Pipeline    ###############################################
+############################################    Pipeline    ################################################
 def analysis_pipeline(dataset_name: DatasetName,
                       analysis_name: AnalysisName,
                       struc_level: Optional[str] = None,
@@ -761,10 +759,11 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Print results for debugging.
     # if type(ds) is Dataset:
-    #     print(ds.take(48))
+    #     print(ds.take(50))
+    #     print(ds.columns())
     # elif type(ds) is dict:
     #     print(ds)
 
     # # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
-                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir)
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)

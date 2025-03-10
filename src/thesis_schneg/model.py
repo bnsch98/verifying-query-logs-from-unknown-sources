@@ -47,5 +47,8 @@ AnalysisName: TypeAlias = Literal[
     "debug",
     "sort-grouped-data",
     "query-chart-by-year",
+    "get-annual-top-queries",
+    "total-query-chart-by-year",
+    "filter-google-queries",
 
 ]
