@@ -328,10 +328,16 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
     if sample_files is not None:
         output_folder += f"-{sample_files}"
         if read_dir is not None:
-            output_folder += "-special"
+            if "google" in str(read_dir):
+                output_folder += "-google"
+            else:
+                output_folder += "-special"
     else:
         if read_dir is not None:
-            output_folder += "-special"
+            if "google" in str(read_dir):
+                output_folder += "-google"
+            else:
+                output_folder += "-special"
         else:
             output_folder += "-all"
     if only_english:

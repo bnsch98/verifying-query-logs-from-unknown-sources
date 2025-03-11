@@ -30,7 +30,7 @@ Some results of analysing the AQL have uncovered outliers and further abnormalit
     \item It was found to allow personal identification of some individual people
 \end{itemize}
 \section{MS-MARCO Web Search}
-The MS-MARCO Web Search dataset, published by~\citet{chen:2024}, contains around 10 million queries from 93 different languages. The queries were mined from Microsoft's Bing search engine. According to the publishers, the dataset closely mimics real-world web document and query distribution and was created to serve as a critical data foundation for future research in downstream tasks of information retrieval. The dataset was constructed by filtering the Bing query log from a selected time span for queries that have a click connection to the ClueWeb22 document set. ClueWeb22 is aligned with the document distributions in commercial web search~\citep{overwijk:2022}. Hence, the publishers expect the query distribution of the MS-MARCO Web Search dataset to mimic real world distributions, as well. The query set was further filtered to remove queries that are rarely triggered, contain personally identifiable information, offensive content or adult content. By rarely triggered the authors mean that queries are removed if they were triggered by less than K users, where K is a high number. Moreover, the dataset contains only unique queries. As a result, the query distribution would be slightly different from the real web query distribution but still would closely resemble it. Consequently, the query language distribution also mimics the real-world language distribution of the web. The most frequent language in the dataset is English, followed by Chinese, Japanese, German, French and Spanish.  
+The MS-MARCO Web Search dataset, published by~\citet{chen:2024}, contains around 10 million queries from 93 different languages. The queries were mined from Microsoft's Bing search engine. According to the publishers, the dataset closely mimics real-world web document and query distributions and was created to serve as a critical data foundation for future research in downstream tasks of information retrieval. The dataset was constructed by filtering the Bing query log from a selected time span for queries that have a click connection to the ClueWeb22 document set. ClueWeb22 is a large dataset of web documents and is aligned with the document distributions in commercial web search~\citep{overwijk:2022}. Hence, the publishers expect the query distribution of the MS-MARCO Web Search dataset to mimic real world distributions, as well. The query set was further filtered to remove queries that are rarely triggered, contain personally identifiable information, offensive content or adult content. By rarely triggered the authors mean that queries are removed if they were triggered by less than K users, where K is a high number. Moreover, the dataset contains only unique queries. As a result, the query distribution would be slightly different from the real web query distribution but would still closely resemble it. Consequently, the query language distribution also mimics the real-world language distribution of the web. The most frequent language in the dataset is English, followed by Chinese, Japanese, German, French and Spanish.  
 % \begin{itemize}
 %     \item 10 mio unique queries from 93 languages from Bing search engine
 %     \item a query set that reflects the real web query distribution
@@ -46,23 +46,23 @@ The MS-MARCO Web Search dataset, published by~\citet{chen:2024}, contains around
 %     \item english by far most frequent language, then chinese, japanese, german, french, spanish --> distribution is highly skewed
 % \end{itemize}
 \section{ORCAS}
-The Open Resource for Click Analysis in Search (ORCAS) dataset was provided by~\citet{craswell:2020}.
-\begin{itemize}
-    \item 10 mio unique queries
-    \item Open Resource for Click Analysis in Search (ORCAS).
-    \item queries that have been repeated across many users to meet privacy concerns
-    \item  ORCAS data has clicks for TREC documents only, and only for English-speaking users in the United States
-    \item ORCAS dataset was created through log mining, aggregation and filtering
-    \item we apply some minimal filtering, to eliminate clicks that had very negative post-click signals, such as a short dwell, since this can indicate that the user was disappointed with the result
-    \item aggregated based on a subsample of Bing’s 26-month logs to January 2020
-    \item only keep query-URL pairs where the URL is present in the 3.2 million document TREC DL corpus.
-    \item keeping only queries that were typed by k different users, for a high value of k
-    \item applied filters to remove potentially offensive queries, for example queries related to pornography or hate speech
-    \item The requirement is that the same ranking was seen by k users who all selected the same URL. Because rankings vary from user to user and also vary over time, very few cases reach the k threshold.
-    \item  TREC DL queries were selected in a way that favored natural language questions, so have less variety of first words, and more focus on question words. ORCAS queries were selected based on the TREC DL documents, so still have question words, but also have words in the top-10 that are more rare in TREC DL such as www, the, best and free.
-    \item ORCAS queries were selected based on connection to the TREC
-    corpus, click aggregation, anonymity filtering and other filtering
-    criteria. They were not otherwise selected to be natural language
-    question answering queries. By contrast, the TREC DL queries were selected in the creation of the MS MARCO question answering task
-    \item could be employed to train and evaluate document ranking models or reranking models
-\end{itemize}
+The Open Resource for Click Analysis in Search (ORCAS) dataset was provided by~\citet{craswell:2020}. It is, like MS-MARCO Web Search, based on a subsample of Bing's query logs. In this case, the subsample stems from a 26-month period up to January 2020. Queries of this dataset were aggregated based on a click-connection to the TREC Deep Learning documents. The queries of TREC DL were selected in a way that favored natural language questions. Since ORCAS' queries were selected based on a connection to the TREC DL documents, they still might be biased towards questions but, according to~\citet{craswell:2020}, also have words in the top-10 that are more rare in TREC DL such as www, the, best and free. The queries of ORCAS were filtered for potentially offensive queries, like queries related to hate speech or pornography, and for queries that had very negative post-click signals, such as a short dwell time. Additionally, only english queries which were typed by K different users from the United States for a high value of k were kept in the dataset. The dataset contains around 10 million unique queries and is intended for web mining, query autocompletion and ranking tasks.   
+% \begin{itemize}
+%     \item 10 mio unique queries
+%     \item Open Resource for Click Analysis in Search (ORCAS).
+%     \item queries that have been repeated across many users to meet privacy concerns
+%     \item  ORCAS data has clicks for TREC documents only, and only for English-speaking users in the United States
+%     \item ORCAS dataset was created through log mining, aggregation and filtering
+%     \item we apply some minimal filtering, to eliminate clicks that had very negative post-click signals, such as a short dwell, since this can indicate that the user was disappointed with the result
+%     \item aggregated based on a subsample of Bing’s 26-month logs to January 2020
+%     \item only keep query-URL pairs where the URL is present in the 3.2 million document TREC DL corpus.
+%     \item keeping only queries that were typed by k different users, for a high value of k
+%     \item applied filters to remove potentially offensive queries, for example queries related to pornography or hate speech
+%     \item The requirement is that the same ranking was seen by k users who all selected the same URL. Because rankings vary from user to user and also vary over time, very few cases reach the k threshold.
+%     \item  TREC DL queries were selected in a way that favored natural language questions, so have less variety of first words, and more focus on question words. ORCAS queries were selected based on the TREC DL documents, so still have question words, but also have words in the top-10 that are more rare in TREC DL such as www, the, best and free.
+%     \item ORCAS queries were selected based on connection to the TREC
+%     corpus, click aggregation, anonymity filtering and other filtering
+%     criteria. They were not otherwise selected to be natural language
+%     question answering queries. By contrast, the TREC DL queries were selected in the creation of the MS MARCO question answering task
+%     \item the dataset's use case is web mining, query autocompletion and ranking tasks
+% \end{itemize}
