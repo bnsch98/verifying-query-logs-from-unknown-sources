@@ -64,9 +64,8 @@ def load_results(
     test_data: bool = False,
     filter_rows: Optional[List[Tuple]] = None,
 ) -> DataFrame:
-    # check if there are multiple files
-    if len(result_files) > 1:
-        # by now only parquet files are expected as multiple files
+    # check file extension
+    if result_files[0].suffix == '.parquet':
         assert all(
             file.suffix == ".parquet" for file in result_files), "Non-parquet files found"
         if test_data:
@@ -75,8 +74,9 @@ def load_results(
         else:
             result = concat(objs=[pa_read_table(file, columns=cols, filters=filter_rows).to_pandas()
                                   for file in result_files], axis=0)
-    else:
-        # by now only json files are expected as a single file
+    elif result_files[0].suffix == '.json':
+        assert all(
+            file.suffix == ".json" for file in result_files), "Non-json files found"
         result = read_json(result_files[0])
 
     return result

@@ -330,12 +330,16 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         if read_dir is not None:
             if "google" in str(read_dir):
                 output_folder += "-google"
+            elif "english" in str(read_dir):
+                output_folder += "-english"
             else:
                 output_folder += "-special"
     else:
         if read_dir is not None:
             if "google" in str(read_dir):
                 output_folder += "-google"
+            elif "english" in str(read_dir):
+                output_folder += "-english"
             else:
                 output_folder += "-special"
         else:
@@ -687,8 +691,6 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-annual-top-queries":
         return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
-    elif analysis_name == "total-query-chart-by-year":
-        return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort='count()'), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":

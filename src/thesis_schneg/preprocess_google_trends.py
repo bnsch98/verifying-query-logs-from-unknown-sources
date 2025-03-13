@@ -18,3 +18,7 @@ result = result.sort_values(by=['year', 'score'], ascending=False)
 print(result)
 
 result.to_csv(base_path / "google_trends_total.csv", index=False)
+
+# ignore first two rows and then get the first 25 rows:
+# df = pd.read_csv("test.csv", skiprows=2, nrows=24)
+# print(df)
