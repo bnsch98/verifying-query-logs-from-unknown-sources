@@ -6,7 +6,7 @@ Search engine query logs are an important resource to promote research in inform
     \item \textbf{Descriptive-based:} We collect descriptive statistics from the query logs. This analysis aims at capturing structural charasteristics of the involved query logs. Frequency distributions of the query length, word length, word count, character count, search operator count and other variables are measured. In addition, we examine if the query logs comply with liguistic laws like zipf's law.     
     \item \textbf{Inference-based:} We infer characteristics from queries by applying various language models to them. The involved models either classify the queries on different taxonomies or extract meaningful information. The query logs are investigated with regard to spam, hate speech, not safe for work (NSFW), content, intent and named entities. In case that a model was trained on a different kind of text data than search engine query logs, a plausibility study is carried out to ensure its compatibility with our usecase.  
     \item \textbf{Temporal-based:} We utilize google trends to seek trends in the AQL. Furthermore, frequencies of selected queries are measured over time and compared among different query logs.   
-    \item \textbf{Embedding-based:} We create vector embeddings from queries and investigate similarities between the different query logs. Clustering algorithms are applied to the embeddings and the resulting clusters are compared. 
+    \item \textbf{Embedding-based:} We create vector embeddings from queries and investigate similarities between the different query logs in the latent space. Clustering algorithms are applied to the embeddings and the resulting clusters are compared. 
 
     % \item \textbf{Embedding-based:}
     % \item 

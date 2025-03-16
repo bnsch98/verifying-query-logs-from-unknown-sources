@@ -38,7 +38,7 @@ We test the frequencies of queries, named entities, words and characters for Zip
 \end{figure}
 
 \subsubsection{Comparison of the Distributions}
-TO DO
+TO DO: Problem: Arrays too large for scipy's wasserstein function
 \subsection{Length-Related Frequencies}
 Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. The range of query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, though the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.\begin{comment}
     Verweis auf wasserstein distanzen

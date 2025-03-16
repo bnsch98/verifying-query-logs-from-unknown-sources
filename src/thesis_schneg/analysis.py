@@ -53,13 +53,8 @@ class PresidioGetEntities(_presidio_framework):
     def presidio_model(self) -> AnalyzerEngine:
         return AnalyzerEngine()
 
-    @cached_property
-    def presidio_labels(self) -> Iterable[str]:
-        return ["PHONE_NUMBER"]
-
     def get_presidio_vals(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         # Get tokens from text
-        # , entities=self.presidio_labels
         doc = self.presidio_model.analyze(
             text=row["serp_query_text_url"], language='en')
         # "entity": row['serp_query_text_url'][ent.to_dict()['start']:ent.to_dict()['end']],
