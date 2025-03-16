@@ -49,5 +49,7 @@ AnalysisName: TypeAlias = Literal[
     "query-chart-by-year",
     "get-annual-top-queries",
     "filter-google-queries",
+    "get-temporal-query-frequency",
+    "transform-timestamps",
 
 ]

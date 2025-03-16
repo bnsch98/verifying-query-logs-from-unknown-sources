@@ -454,6 +454,27 @@ def get_repl_char(batch: DataFrame) -> DataFrame:
     return batch
 
 
+def extract_queries(batch: DataFrame, queries: Iterable[str]) -> DataFrame:
+    return batch[batch['serp_query_text_url'].isin(queries)]
+
+
+def transform_timestamp(batch: DataFrame, time_mode: str) -> DataFrame:
+    assert time_mode in [
+        "yearly", "monthly", "weekly"], f"Invalid time mode \"{time_mode}\". Choose from [yearly, monthly, weekly]"
+    # transform timestamp to year, month or week if serp_timestamp is not null
+    # batch = batch[~batch['serp_timestamp'].isnull()]
+    if time_mode == "yearly":  # get year from timestamp
+        batch['time'] = batch['serp_timestamp'].apply(
+            lambda x: datetime.fromtimestamp(x).year)
+    elif time_mode == "monthly":  # get year and month from timestamp
+        batch['time'] = batch['serp_timestamp'].apply(
+            lambda x: datetime.fromtimestamp(x).strftime('%Y-%m'))
+    elif time_mode == "weekly":  # get year and week from timestamp
+        batch['time'] = batch['serp_timestamp'].apply(
+            lambda x: datetime.fromtimestamp(x).strftime('%Y-%W'))
+    return batch
+
+
 # Flat mapping functions
 def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
@@ -634,6 +655,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "filter-google-queries":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_col_value, col='search_provider_name', value='google')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'search_provider_name']}
+    elif analysis_name == "transform-timestamps":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(transform_timestamp, time_mode='weekly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -686,6 +709,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-annual-top-queries":
         return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
+    elif analysis_name == "get-temporal-query-frequency":
+        return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=[]), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
