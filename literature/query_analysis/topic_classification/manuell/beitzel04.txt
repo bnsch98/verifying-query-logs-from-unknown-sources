@@ -1,6 +1,0 @@
-Queries werden in manuell erstellte Kategorien eingeordnet, wenn sie ein match mit der Wörter-Liste einer Kategorie
-ergeben. 
-Für jede Kategorie wurde eine Wörter-Liste erstellt. Dafür wurde eine bestimmte Anzahl queries händisch eingeordnet und 
-deren Wörter/Terme in die Wörter-Liste eingetragen. 
-Es gibt 14 unterschiedliche Kategorien.
- 

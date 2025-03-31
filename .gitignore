@@ -6,3 +6,6 @@
 # ignore .vscode
 .vscode
 /.vscode
+
+# ignore trend data
+/trends

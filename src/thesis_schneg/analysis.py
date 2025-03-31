@@ -1,23 +1,29 @@
-from pathlib import Path
-from re import compile, findall
-from datetime import datetime
-from random import choices
-from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
-from numpy import array as np_array, sum as np_sum
-from pandas import DataFrame, concat, merge
-from ray import init
-from ray.data import read_parquet, Dataset
-from ray.data.aggregate import AggregateFn
-from ray.data.grouped_data import GroupedData
-from thesis_schneg.model import DatasetName, AnalysisName
-from json import dumps
-from functools import cached_property
-from dataclasses import dataclass
-from spacy import load as spacy_load, Language, explain
-from gliner import GLiNER
-from presidio_analyzer import AnalyzerEngine
-from functools import partial
+# from tirex_tracker import fetch_info
+# print(fetch_info())
 from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
+from functools import partial
+from sentence_transformers import SentenceTransformer
+from presidio_analyzer import AnalyzerEngine
+from gliner import GLiNER
+from spacy import load as spacy_load, Language, explain
+from dataclasses import dataclass
+from functools import cached_property
+from json import dumps
+from thesis_schneg.model import DatasetName, AnalysisName
+from ray.data.grouped_data import GroupedData
+from ray.data.aggregate import AggregateFn
+from ray.data import read_parquet, Dataset
+from ray import init
+from pandas import DataFrame, concat, merge
+from numpy import array as np_array, sum as np_sum
+from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
+from random import choices
+from datetime import datetime
+from re import compile, findall
+from pathlib import Path
+# from tirex_tracker import fetch_info
+# print(fetch_info())
+
 
 ############################################    Requirements for basic modules    #####################################
 
@@ -44,6 +50,29 @@ class _presidio_framework(Protocol):
 
     def __call__(self, row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
         return self.get_presidio_vals(row)
+
+
+class Sentence_Predictor(Protocol):
+    def get_embeddings(self, batch: DataFrame) -> DataFrame:
+        raise NotImplementedError()
+
+    def __call__(self, batch: DataFrame) -> DataFrame:
+        return self.get_embeddings(batch)
+
+
+@dataclass(frozen=True)
+class SentenceEmbedder(Sentence_Predictor):
+
+    @cached_property
+    def model(self) -> SentenceTransformer:
+        return SentenceTransformer('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
+
+    def get_embeddings(self, batch: DataFrame) -> DataFrame:
+        embeddings = self.model.encode(
+            list(batch['serp_query_text_url']), convert_to_tensor=True)
+        batch['embeddings'] = [embeddings[i].tolist()
+                               for i in range(len(embeddings))]
+        return batch
 
 
 @dataclass(frozen=True)
@@ -159,7 +188,7 @@ class SpacyEntityLevelStructures(_spacy_framework):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
-    analysis_name: AnalysisName,  # word-count-frequencies
+    analysis_name: AnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -312,37 +341,39 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
     # check if wirte_dir is Path
     if type(write_dir) is not Path:
         write_dir = Path(write_dir)
-    # if str(read_dir) == "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output_cleaned/"
-    # Specifiy output directory
-    output_folder = f"{dataset_name}-{analysis_name}"
 
-    if struc_level is not None:
-        output_folder += f"-{struc_level}"
-    if which_half is not None:
-        output_folder += f"-{which_half}"
-    if sample_files is not None:
-        output_folder += f"-{sample_files}"
-        if read_dir is not None:
-            if "google" in str(read_dir):
-                output_folder += "-google"
-            elif "english" in str(read_dir):
-                output_folder += "-english"
-            else:
-                output_folder += "-special"
-    else:
-        if read_dir is not None:
-            if "google" in str(read_dir):
-                output_folder += "-google"
-            elif "english" in str(read_dir):
-                output_folder += "-english"
-            else:
-                output_folder += "-special"
+    # Specifiy output directory if standard path was parsed. If not, we assume that a specific path was parsed via the CLI and no further specification is necessary.
+    if str(write_dir) == "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis":
+        output_folder = f"{dataset_name}-{analysis_name}"
+
+        if struc_level is not None:
+            output_folder += f"-{struc_level}"
+        if which_half is not None:
+            output_folder += f"-{which_half}"
+        if sample_files is not None:
+            output_folder += f"-{sample_files}"
+            if read_dir is not None:
+                if "google" in str(read_dir):
+                    output_folder += "-google"
+                elif "english" in str(read_dir):
+                    output_folder += "-english"
+                else:
+                    output_folder += "-special"
         else:
-            output_folder += "-all"
-    if only_english:
-        output_folder += "-english"
+            if read_dir is not None:
+                if "google" in str(read_dir):
+                    output_folder += "-google"
+                elif "english" in str(read_dir):
+                    output_folder += "-english"
+                else:
+                    output_folder += "-special"
+            else:
+                output_folder += "-all"
+        if only_english:
+            output_folder += "-english"
 
-    write_dir = write_dir.joinpath(output_folder)
+        write_dir = write_dir.joinpath(output_folder)
+
     # Delete old files
     if write_dir.exists():
         [f.unlink() for f in write_dir.glob("*") if f.is_file()]
@@ -454,6 +485,13 @@ def get_repl_char(batch: DataFrame) -> DataFrame:
     return batch
 
 
+def is_email(batch: DataFrame) -> DataFrame:
+    pattern = compile(r"[a-z0-9\w-]+@[a-z0-9\w-]+\.[a-z\.]+")
+    batch['is-email'] = batch['serp_query_text_url'].apply(
+        lambda x: bool(findall(pattern, x)))
+    return batch
+
+
 def extract_queries(batch: DataFrame, queries: Iterable[str]) -> DataFrame:
     return batch[batch['serp_query_text_url'].isin(queries)]
 
@@ -486,22 +524,10 @@ def _extract_operators(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return res
 
 
-# def filter_urls(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
-#     pattern = compile(
-#         r'[(http://)|\w]*?[\w]*\.[-/\w]*\.\w*[(/{1})]?[#-\./\w]*[(/{1,})]?|#[.\w]*')
-#     return [{"year": datetime.fromtimestamp(row['serp_timestamp']).year, "is-url": bool(findall(pattern, row['serp_query_text_url']))}]
-
 def is_url(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     pattern = compile(
         r"(https?://)?[a-z0-9\w-]+\.[a-z\.]+")
     return [{"year": datetime.fromtimestamp(row['serp_timestamp']).year, "is-url": bool(findall(pattern, row['serp_query_text_url']))}]
-
-
-def is_email(batch: DataFrame) -> DataFrame:
-    pattern = compile(r"[a-z0-9\w-]+@[a-z0-9\w-]+\.[a-z\.]+")
-    batch['is-email'] = batch['serp_query_text_url'].apply(
-        lambda x: bool(findall(pattern, x)))
-    return batch
 
 
 # Aggregation functions
@@ -571,17 +597,6 @@ def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
     return {k: int(a1.get(k, 0) + a2.get(k, 0)) for k in set(a1) | set(a2)}
 
 
-# def acc_word_counts(aggr_frame: DataFrame, row: Dict[str, Any]) -> DataFrame:
-#     if row['word'] in list(aggr_frame['word']):
-#         # aggr_frame['count()'][aggr_frame['word'] ==
-#         #                       row['word']] += row['count()']
-#         aggr_frame.loc[aggr_frame['word'] ==
-#                        row['word'], 'count()'] += row['count()']
-#     else:
-#         aggr_frame = concat(
-#             [aggr_frame, DataFrame({"word": [row['word']], "count()": [row['count()']]})])
-#     return aggr_frame
-
 def acc_word_counts(aggr_frame: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     if row['word'] in aggr_frame['word']:
         aggr_frame['count()'][aggr_frame['word'] ==
@@ -591,22 +606,6 @@ def acc_word_counts(aggr_frame: Dict[str, Any], row: Dict[str, Any]) -> Dict[str
         aggr_frame['count()'].append(row['count()'])
     return aggr_frame
 
-
-# def merge_word_counts(df1: DataFrame, df2: DataFrame):
-#     # Merge der beiden DataFrames auf die Spalte 'word'
-#     merged_df = merge(df1, df2, on='word', how='outer',
-#                       suffixes=('_df1', '_df2'))
-
-#     # Fehlende Werte mit 0 auffüllen
-#     merged_df.fillna(0, inplace=True)
-
-#     # Summieren der Counts für die Schnittmenge
-#     merged_df['count()'] = merged_df['count()_df1'] + merged_df['count()_df2']
-
-#     # Unnötige Spalten entfernen
-#     merged_df = merged_df[['word', 'count()']]
-
-#     return merged_df
 
 def merge_word_counts(df1: Dict[str, Any], df2: Dict[str, Any]) -> Dict[str, Any]:
 
@@ -642,7 +641,7 @@ def groupby_count_sort(dataset: Dataset, col_group: str, col_sort: str) -> Datas
 ###########################################    Get task-specific modules     #########################################
 def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
 
-    # Basic modules: clean data, filters, debug etc.
+    # Basic modules: clean data, simple transformations, filters, debug etc.
     if analysis_name == "clean-query-log":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [filter_aql, partial(filter_by_char, char='�'), filter_empty_queries], 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "debug":
@@ -657,6 +656,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(filter_by_col_value, col='search_provider_name', value='google')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp', 'search_provider_name']}
     elif analysis_name == "transform-timestamps":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(transform_timestamp, time_mode='weekly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-query-frequency":
+        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -690,7 +691,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "search-operators-count":
         return {'groupby_func': partial(groupby_count, col='operator-count'), 'aggregator': None, 'mapping_func': [get_operator_count], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
-    # Inference: Predictions on queries, extraction of inference-based features
+    # Inference and Embeddings: Predictions on queries, extraction of inference-based features, embeddings
     elif analysis_name == "query-intent":
         return {'groupby_func': partial(groupby_count, col='query-intent'), 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "query-domain":
@@ -702,7 +703,11 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "extract-gliner-pii":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-presidio-pii":
-        return {'groupby_func': partial(groupby_count_sort, col_group='entity-label', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "group-presidio-pii":
+        return {'groupby_func': partial(groupby_count, col='entity-label'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "get-embeddings":
+        return {'groupby_func': None, 'aggregator': None, 'mapping_func': [SentenceEmbedder()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
 
     # Temporal-based analyses
     elif analysis_name == "query-chart-by-year":
@@ -710,7 +715,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "get-annual-top-queries":
         return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
     elif analysis_name == "get-temporal-query-frequency":
-        return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=[]), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=['google', 'yahoo', 'weather', 'youtube', 'hotmail', 'facebook', 'gmail', 'news', 'you', 'ebay', 'amazon', 'games', 'free', 'twitter', 'translate', 'mp3', 'maps', 'msn', 'fb', 'mail', 'instagram', 'map', 'face', 'video', 'juegos', 'craigslist', 'facebook login', 'lyrics', 'game', 'traductor', 'you tube', 'as', 'whatsapp', 'videos', 'wikipedia', 'yahoo mail', 'myspace', 'tiempo', 'samsung', 'bbc', 'meteo', 'web', 'music', 'nokia', 'погода', 'clima', 'chat', 'sony', 'download', 'go', 'google translate', 'wiki', 'netflix', 'hot', 'dictionary', 'messenger', 'test', 'whatsapp web', 'satta', 'torrent', 'microsoft', 'radio', 'movies', 'вк', 'hi5', 'java', 'tv', 'jobs', 'mobile', 'halloween', 'iphone', 'linux', 'coronavirus', 'jogos', 'flash', 'world cup', 'apple', 'earth', 'ipl', 'dvd', 'corona', 'cricbuzz', 'web whatsapp', 'hp', 'my', 'wetter', 'nba', 'cheats', 'hotmail.com', 'friv', 'dr', 'fifa', 'trump', 'love', 'christmas', 'black friday', 'olympics', 'covid', 'walmart', 'www']), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
@@ -761,7 +766,11 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         # iterate through list of mapping functions
-        for func in module_specifics['mapping_func']:
+        if type(module_specifics['mapping_func']) is list:
+            for func in module_specifics['mapping_func']:
+                ds = map_dataset(dataset=ds, mapping_func=func,
+                                 concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+        else:
             ds = map_dataset(dataset=ds, mapping_func=func,
                              concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
 

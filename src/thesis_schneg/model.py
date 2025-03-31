@@ -24,6 +24,7 @@ AnalysisName: TypeAlias = Literal[
     "extract-named-entities",
     "extract-gliner-pii",
     "extract-presidio-pii",
+    "group-presidio-pii",
     "get-lengths",
     "aql-anomaly",
     "filter-aql-outlier",
@@ -51,5 +52,6 @@ AnalysisName: TypeAlias = Literal[
     "filter-google-queries",
     "get-temporal-query-frequency",
     "transform-timestamps",
-
+    "get-query-frequency",
+    "get-embeddings",
 ]

@@ -11,9 +11,10 @@ py_modules:
   - thesis_schneg/
 pip:
   - cyclopts~=2.9
-  # - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
-  - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
-  - en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl
+  - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+  # - en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+  - en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
+  # - en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl
   # - xx_ent_wiki_sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.8.0/xx_ent_wiki_sm-3.8.0-py3-none-any.whl
   - fasttext-wheel~=0.9
   # - huggingface-hub~=0.24
@@ -26,11 +27,14 @@ pip:
   - ray[data,default]~=2.33
   # - safetensors~=0.4.5
   # - spacy~=3.7.2 #3.7
-  - spacy>=3.7.2,<3.8.0
-
+  # - spacy>=3.7.2,<3.8.0
+  - spacy~=3.8
+  - sentence-transformers~=3.4
   - torch~=2.4
   - tqdm~=4.64
   - transformers~=4.44
   - gliner~=0.2
   - presidio-analyzer~=2.2
+  - tirex-tracker~=0.2
+  # - numpy~=1.2
 logging_level: debug

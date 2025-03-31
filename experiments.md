@@ -108,10 +108,10 @@
 | get email proportion    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis get-email-proportion --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/02/08 11:03:03` | `2025/02/08 12:06:19` | 1h 3m | ✔️    |
 | get email proportion    |  ms-marco| `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset ms-marco --analysis get-email-proportion --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/02/08 11:03:11` | `2025/02/08 11:09:03` | 5m 51s | ✔️    |
 | get email proportion    |  orcas   | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset orcas --analysis get-email-proportion --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/02/08 11:03:20` | `2025/02/08 11:11:05` | 7m 45s | ✔️    |
-|     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
-|     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
-|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
-|     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
+| get query frequency    |  aol     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aol --analysis get-query-frequency --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `2025/03/24 05:18:17` | `` | 1m 2s | ✔️❌    |
+| get query frequency    |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis get-query-frequency --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `` | `` | 1m 2s | ✔️❌    |
+| get query frequency    |  ms-marco| `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset ms-marco --analysis get-query-frequency --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `` | `` | 1m 2s | ✔️❌    |
+| get query frequency    |  orcas   | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset orcas --analysis get-query-frequency --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024`    | `` | `` | 1m 2s | ✔️❌    |
 |     |  aol     | ``    | `` | `` | 1m 2s | ✔️❌    |
 |     |  aql     | ``    | `` | `` | 1m 2s | ✔️❌    |
 |     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
@@ -182,5 +182,14 @@ Herem, all data sets are stored with the suffix "-special" because they are gene
 | Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
 |-----------------------|---------- |-------------|------------|----------|----------|---------|
 | query chart by year     |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis query-chart-by-year --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --only-english`    | `2025/03/08 12:09:26` | `2025/03/08 12:56:33` | 47m 6s | ✔️    |
-|     |  ms-marco| ``    | `` | `` | 1m 2s | ✔️❌    |
+| get top monthly queries over time    |  aql | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis query-chart-by-year --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --read-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-filter-google-queries-all --write-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-top-monthly-queries-over-time`    | `` | `` | 1m 2s | ✔️❌    |
 |     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
+
+
+# Query Embeddings
+| Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
+|-----------------------|---------- |-------------|------------|----------|----------|---------|
+| get embeddings    | aol       | `` | ``   | `` |  | ✔️❌     |
+| get embeddings    | aql       | `` | ``   | `` |  | ✔️❌     |
+| get embeddings    | ms-marco       | `` | ``   | `` |  | ✔️❌     |
+| get embeddings    | orcas       | `` | ``   | `` |  | ✔️❌     |
