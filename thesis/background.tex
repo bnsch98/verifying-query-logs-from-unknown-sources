@@ -1,7 +1,7 @@
 \chapter{Background}
 In this chapter we review some aspects of the literature that are relevant to this work. In particular, we describe prevalent analyses of search logs that have been conducted in the past and their motivations. This includes simple syntactical analyses of the queries as well as the classification into meaningful taxonomies. We discuss whether these analyses would contribute to the objective of this work. Furthermore, as an additional background to the temporal anaylsis in this work, we critically point out limitations of utilizing data from Google Trends\footnote{\url{https://trends.google.com/trends/}} to investigate temporal patterns in query logs. Eventually, we elaborate on sentence embeddings and their potential usage in this work. 
 
-\section{Traditional Query Log Analysis}
+\section{Traditional Query Log Analysis}\label{sec:traditional_query_log_analysis}
 With the increasing advent of the internet during the late 1990s, search engines became an essential tool for users to navigate the web. This led to a growing interest in understanding the behavior of users when searching the web and hence an interest to study search queries. A lot of publications from this time investigate query logs to understand user behavior and the differences between information retrieval on the web and traditional information retrieval. 
 
 A common analysis among the early works is the examination of query frequencies. \citet{silverstein:1999} consider individual and repeated queries and measure their frequency. They find out that most queries are individual and conclude that the user's information need is quite diverse. In addition, they partition queries into groups that appear 1, 2, 3, or more than 3 times and measure the frequencies of these groups. \citet{spink:2001} also measure frequencies of queries with respect to the occurence in the log. They also find a small number with high frequency and a high number of unique queries. Generally, a lot of works analyze the frequency distribution of queries and discover highly skewed distributions. 
@@ -36,7 +36,7 @@ Based on the previous findings of query classification~\ref{sec:query_classifica
     \item \textbf{Questions in queries:} Identifying questions in queries from rule-based approaches. This analysis provides another insight and additionally is simple to implement. 
 \end{itemize}
 
-\section{Temporal Patterns in Query Logs}
+\section{Temporal Patterns in Query Logs}\label{sec:temporal_patterns}
 The temporal popularity of queries is another phenomenon studied in the literature. Query frequencies change over time and reflect information about general popularity of different topics and trends within society. Some queries even show periodic patterns, such as seasonal trends. \citet{shokouhi:2011} state that seasonal queries are frequent and need to be detected in order to be met appropriately by search engines. According to \citet{shokouhi:2011}, seasonal queries demand the most recent information and not the most clicked which is why they have to be treated differently. They propose a method that determines the seasonality of queries with high accuracy by applying time series analysis on historical frequency distributions. \citet{chien:2005} suppose that temporally correlated queries are semantically related and define a new measure of the temporal correlation of two queries. Their method successfully captures temporally correlated queries and shows that, indeed, temporal correlation is a good indicator of semantic similarity. 
 
 \subsection{Limitations of Google Trends} 
@@ -46,7 +46,7 @@ Though very helpful, the usage of Google Trends data entails some limitations th
 
 In summary, we can state that comparing the popularity of different queries with data from Google Trends is feasible and valuable since we can assess temporal patterns. However, we need to be careful which queries we choose and what time spans we want to consider. Following the findings of \citet{behnen:2020}, a comparison of queries with high search volume and large time spans is reasonable.
       
-\section{Sentence Embeddings}
+\section{Sentence Embeddings}\label{sec:sentence_embeddings}
 With the advent of the Transformer architecture, a significant push of language models was initiated~\citep{zhao:2022}. The transformer architecture allows to train models on large-scale general text data and thus create models with broad language comprehension. These pretrained language models can be used for fine-tuning on downstream tasks, e.g., in information retrieval. 
 
 \citet{reimers:2019} further refined the architecture of such language models to pave the way for rich and efficient sentence embeddings which can be used for large-scale semantic search. Semantic search is the task of retrieving text documents that are semantically similar to a given query. 

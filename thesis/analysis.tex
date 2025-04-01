@@ -1,17 +1,49 @@
 
-\chapter{Analysis of Query Logs}  
+\chapter{Experiments}  
+This chapter covers the analyses that we carry out on the involved query logs and related information regarding the used computational framework and general setup. For each analysis, we again provide a brief motivation and, if necessary, add information to complete the theoretical background. Furthermore, we describe in detail how the analysis is conducted. Eventually, we evaluate each analysis and discuss the obtained results.  
 
-\section{Descriptive Statistics}
-In this section, we generate a set of descriptive statistics from the query logs. The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries. We collect a set of distributions from the cleaned AQL and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances to identify syntactical differences between the AQL and the other query logs. For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
+\section{Computational Framework}
+Since we are processing large data sets (recall that the AQL contains around 356 million queries), it is favorable to employ a distributed computing framework which allows for parallel processing and distributed memory management. Moreover, many pretrained models and ML-related libraries are available in python. Therefore, we choose \textit{Ray}\footnote{\url{https://docs.ray.io/en/latest/index.html}}, an open-source distributed computing framework for python applications, as our environment for implementing and executing the analyses. Ray provides a high-level API that enables parallelizing python code without much effort. The Ray API includes methods whose call starts parallel processing of a parsed function. By this, we can easily parallelize our implemented functions that perform desired transformations on the data. In addition, Ray provides API-calls for parallel reading and writing of data on the distributed system, thus providing a fully parallel pipeline. 
+
+\subsection{Ray API-Calls}
+There are different paradigms to transform data in Ray. In this work, we mainly make use of the API-calls~\verb|map_batches()|,~\verb|flat_map()| and~\verb|groupby()|. 
+\begin{itemize}
+    \item \verb|map_batches()|: This API-call is used to make transformations on each row of the respective data set. That is, for each row we get one result. It takes a user-defined function as an argument and applies it to each row of the data set. The data set is transformed in batches, i.e., on each batch map_batches() is invoked. In addition, we can specifiy the configuration of execution, e.g., the number of parallel workers, the amount of required memory for each worker and the number of CPUs or GPUs for each worker.   
+    \item \verb|flat_map()|: This API-call is mainly used to extract specified elements of the data. It is detached from the constraint of returning one result per row of map_batches and can handle multiple results from each row. It is applied to each row of the data set and returns a new data set with the extracted elements. The resulting data set can be of different size than the original one. As in map_batches(), we can specify the configuration of execution. 
+    \item \verb|groupby()|: This API-call is used to group the data set by a specified column. It returns a new data set with the grouped elements. In addition, we can apply further functions to each group, e.g., we can apply a function to count the number of elements in each group. This API-call does not support specifiying the configuration of execution.    
+\end{itemize}       
+
+\section{Structure-related Statistics}
+In this section, we generate a set of structure-related statistics from the query logs. The analyses in this section are based on the findings of Section~\ref{sec:traditional_query_log_analysis}. Additionally, aspects of the analysis of named entities (see Section~\ref{sec:named_entities}) are included in this section, too.
+
+The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries.  
+We collect a set of distributions from the cleaned AQL and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances. By this, we identify syntactical differences between the AQL and the other query logs. 
+
+For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
 \begin{enumerate}
-    \item Queries
-    \item Named Entities
-    \item Words
-    \item Characters
+    \item \textbf{Queries}
+    \item \textbf{Named Entities}
+    \item \textbf{Words}
+    \item \textbf{Characters}
 \end{enumerate} 
-Even though named entities are not considered a syntactic category primarily, we include them in this analysis since they are frequent enough to be regarded a structural element of queries. Also, their analysis might provide an additional valuable insight to the structure of query logs. For each of the aforementioned categories, we carry out two types of measurements: First, we collect all existing items of the category in a query log and determine the frequency of each item. Secondly, we measure the lengths of all extracted items in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories we gain a thorough set of measurements for each query log. The resulting distributions of the measurements are then compared to each other. We apply the \textit{Wasserstein Distance} to evaluate similarities between the resulting distributions. The Wasserstein distance is a measure of the distance between two probability distributions. Since we are rather interested in comparisons between distances than absolute values, the Wasserstein distance is a suitable choice because it fulfils the axioms to be considered a metric~\citep{panaretos:2019}. Hence, we can deduce conclusions from comparing the obtained numbers of the Wasserstein distances and thereby evaluate the similarities of the distributions. 
+Even though named entities are not considered a syntactic category primarily, we include them in this analysis since they are frequent enough to be regarded a structural element of queries. Also, their analysis might provide an additional valuable insight to the structure of query logs. To add on that, we recall from Section~\ref{sec:named_entities} that up to 70\% of queries contain named entities. 
+
+For each of the aforementioned categories (queries, named entities, words and characters), we carry out two types of measurements: 
+\begin{enumerate}
+    \item \textbf{Frequencies of Linguistic Elements:} We extract all elements of a category from the query log and determine the frequency of each element. For instance, we extract all existing words from the query log and measure each word's frequency. Accordingly, we proceed for all categories.
+    \item \textbf{Length-Related Frequencies:} We measure the lengths of all extracted items from a category in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories, we gain a thorough set of measurements for each query log.
+\end{enumerate}
 
 \subsection{Frequencies of Linguistic Elements}
+To obtain the frequency of liguistic elements, we first extract all elements of a category from the query log and measure each element's frequency. In the following, we present the extraction of words and the subsequent frequency measurement as an example to illustrate how we proceed for all categories. Besides reading and writing the data, this experiment consists of two major steps in the Ray environment:
+\begin{enumerate}
+    \item \textbf{Extraction of Words:} We apply the~\verb|flat_map()| API-call to extract all words from the query log. We parse a tokenizer function to the API-call that splits each query into its words. The tokenizer function is applied to each query of the data set and returns a set of words which are appended to the result set.  
+    \item \textbf{Frequency Measurement:} We apply the~\verb|groupby()| API-call to group the data set by the extracted words. By this, we obtain a group for each extracted word. Thereon, we call a~\verb|count()| in order to count each word's occurence in the query log. In the end, we obtain a data set with the words and their frequencies.
+\end{enumerate}
+In the following table, we note some key parameters of the experiments on the cluster to enhance reproducibility. 
+
+
+\subsubsection{Evaluation of Linguistic Elements}
 For each query log, we extract all elements of a category and determine the frequency of each element. For instance, we extract all exisiting words from the query log and measure each word's frequency. The frequency distribution of linguistic elements typically obey Zipf's law when ordered in a descending order. Especially the frequency distribution of words is well studied and a popular example of Zipf's law~\citep{piantadosi:2014}. Zipf's law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
 \begin{equation}
     f \propto \frac{c}{r^{\alpha}}
@@ -57,6 +89,10 @@ In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of 
     #### stand 05.03.2025
 \end{comment}
 \subsubsection{Comparison of the Distributions}
+
+The resulting distributions of the measurements are then compared to each other. We apply the \textit{Wasserstein Distance} to evaluate similarities between the resulting distributions. The Wasserstein distance is a distance measure between two probability distributions. Since we are rather interested in comparisons between distances than absolute values, the Wasserstein distance is a suitable choice because it fulfils the axioms to be considered a metric~\citep{panaretos:2019}. Hence, we can deduce conclusions from comparing the obtained numbers of the Wasserstein distances and thereby evaluate the similarities of the distributions. 
+
+
 In order to quantify similarities of the aforementioned distributions, we compute the Wasserstein distance between the distributions of the query logs for each analysis. Concerning one specific anaylsis, for each query log we obtain a set of distances that represent the similaries to the other query log's distributions. In Table~\ref{tab:wasserstein-distances} the average Wasserstein distances of each query log are displayed with regard to the conducted analysis. Even though the AQL shows the highest distances to the other query logs in most analyses, the distances are not significantly different. Hence, we can deduct that the AQL fits the other logs in structural or linguisitc terms. In Figure~\ref{fig:wasserstein-distances-lengths} a configuration of the distributions is displayed that visualizes the Wasserstein distances. The configuration was derived from the Wasserstein distances by applying multidimensional scaling to the resulting distance matrix. As the numbers already indicated, clear differences of the distances are not visible. The points are distributed quite evenly and no clear clusters are visible.   
 \begin{figure}[h]
     \centering
