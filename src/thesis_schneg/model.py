@@ -26,6 +26,7 @@ AnalysisName: TypeAlias = Literal[
     "extract-presidio-pii",
     "group-presidio-pii",
     "get-lengths",
+    "sum-rows",
     "aql-anomaly",
     "filter-aql-outlier",
     "get-temporal-url-proportion",
@@ -51,7 +52,9 @@ AnalysisName: TypeAlias = Literal[
     "get-annual-top-queries",
     "filter-google-queries",
     "get-temporal-query-frequency",
+    "get-monthly-google-queries",
     "transform-timestamps",
     "get-query-frequency",
     "get-embeddings",
+    "questions",
 ]

@@ -329,8 +329,8 @@ def flat_map_dataset(dataset: Dataset,
     return dataset.flat_map(fn=flat_mapping_func, concurrency=concurrency, num_cpus=num_cpus, num_gpus=num_gpus, memory=memory_scaler*1000*1000*1000)
 
 
-def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn, concurrency: Optional[int] = None) -> Optional[Dict[str, Any]]:
-    return dataset.aggregate(aggregation_func, concurrency=concurrency)
+def aggregate_dataset(dataset: Dataset, aggregation_func: AggregateFn) -> Optional[Dict[str, Any]]:
+    return dataset.aggregate(aggregation_func)
 
 
 def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memory_scaler: float = 1.0, concurrency: Optional[int] = None) -> Dataset:
@@ -658,6 +658,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': [partial(transform_timestamp, time_mode='weekly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-query-frequency":
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "sum-rows":
+        return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
 
     # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -716,6 +718,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
     elif analysis_name == "get-temporal-query-frequency":
         return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=['google', 'yahoo', 'weather', 'youtube', 'hotmail', 'facebook', 'gmail', 'news', 'you', 'ebay', 'amazon', 'games', 'free', 'twitter', 'translate', 'mp3', 'maps', 'msn', 'fb', 'mail', 'instagram', 'map', 'face', 'video', 'juegos', 'craigslist', 'facebook login', 'lyrics', 'game', 'traductor', 'you tube', 'as', 'whatsapp', 'videos', 'wikipedia', 'yahoo mail', 'myspace', 'tiempo', 'samsung', 'bbc', 'meteo', 'web', 'music', 'nokia', 'погода', 'clima', 'chat', 'sony', 'download', 'go', 'google translate', 'wiki', 'netflix', 'hot', 'dictionary', 'messenger', 'test', 'whatsapp web', 'satta', 'torrent', 'microsoft', 'radio', 'movies', 'вк', 'hi5', 'java', 'tv', 'jobs', 'mobile', 'halloween', 'iphone', 'linux', 'coronavirus', 'jogos', 'flash', 'world cup', 'apple', 'earth', 'ipl', 'dvd', 'corona', 'cricbuzz', 'web whatsapp', 'hp', 'my', 'wetter', 'nba', 'cheats', 'hotmail.com', 'friv', 'dr', 'fifa', 'trump', 'love', 'christmas', 'black friday', 'olympics', 'covid', 'walmart', 'www']), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-monthly-google-queries":
+        return {'groupby_func': partial(groupby_count, col=['time']), 'aggregator': None, 'mapping_func': [partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
 
     # Analyses motivated after inspecting result data
     elif analysis_name == "get-temporal-url-proportion":
@@ -792,7 +796,7 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Apply aggregation function.
     if module_specifics['aggregator'] is not None:
         ds = aggregate_dataset(
-            dataset=ds, aggregation_func=module_specifics['aggregator'], concurrency=concurrency)
+            dataset=ds, aggregation_func=module_specifics['aggregator'])
 
     # Print results for debugging.
     # if type(ds) is Dataset:

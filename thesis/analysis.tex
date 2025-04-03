@@ -1,6 +1,6 @@
 
 \chapter{Experiments}  
-This chapter covers the analyses that we carry out on the involved query logs and related information regarding the used computational framework and general setup. For each analysis, we again provide a brief motivation and, if necessary, add information to complete the theoretical background. Furthermore, we describe in detail how the analysis is conducted. Eventually, we evaluate each analysis and discuss the obtained results.  
+This chapter covers the analyses that we carry out on the involved query logs and related information regarding the used computational framework and general setup. For each analysis, we again provide a brief motivation and, if necessary, add information to complete the theoretical background. Furthermore, we describe in detail how the analysis is conducted. Eventually, we evaluate each analysis and discuss the obtained results. In this section, we provide detailed descriptions on how we carry out the analyses. Though, in order to precisely reprodcue the obtained results, we refer to this GitLab-Repository~\footnote{\url{https://git.webis.de/code-teaching/theses/thesis-schneg}}. The repository contains the source code to run the analyses and instructions on how to set up the environment.
 
 \section{Computational Framework}
 Since we are processing large data sets (recall that the AQL contains around 356 million queries), it is favorable to employ a distributed computing framework which allows for parallel processing and distributed memory management. Moreover, many pretrained models and ML-related libraries are available in python. Therefore, we choose \textit{Ray}\footnote{\url{https://docs.ray.io/en/latest/index.html}}, an open-source distributed computing framework for python applications, as our environment for implementing and executing the analyses. Ray provides a high-level API that enables parallelizing python code without much effort. The Ray API includes methods whose call starts parallel processing of a parsed function. By this, we can easily parallelize our implemented functions that perform desired transformations on the data. In addition, Ray provides API-calls for parallel reading and writing of data on the distributed system, thus providing a fully parallel pipeline. 
@@ -14,10 +14,10 @@ There are different paradigms to transform data in Ray. In this work, we mainly 
 \end{itemize}       
 
 \section{Structure-related Statistics}
-In this section, we generate a set of structure-related statistics from the query logs. The analyses in this section are based on the findings of Section~\ref{sec:traditional_query_log_analysis}. Additionally, aspects of the analysis of named entities (see Section~\ref{sec:named_entities}) are included in this section, too.
+In this section, we generate a set of structure-related statistics from the query logs. The analyses in this section are based on the findings of Section~\ref{sec:traditional_query_log_analysis}. Additionally, aspects of the analysis of \hyperref[sec:named_entities]{named entities} are included in this section, too.
 
 The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries.  
-We collect a set of distributions from the cleaned AQL and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances. By this, we identify syntactical differences between the AQL and the other query logs. 
+We collect a set of distributions from the \hyperref[sec:aql-cleaning]{cleaned AQL} and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances. By this, we identify syntactical differences between the AQL and the other query logs. 
 
 For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
 \begin{enumerate}
@@ -31,24 +31,43 @@ Even though named entities are not considered a syntactic category primarily, we
 For each of the aforementioned categories (queries, named entities, words and characters), we carry out two types of measurements: 
 \begin{enumerate}
     \item \textbf{Frequencies of Linguistic Elements:} We extract all elements of a category from the query log and determine the frequency of each element. For instance, we extract all existing words from the query log and measure each word's frequency. Accordingly, we proceed for all categories.
-    \item \textbf{Length-Related Frequencies:} We measure the lengths of all extracted items from a category in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, i.e., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories, we gain a thorough set of measurements for each query log.
+    \item \textbf{Length-Related Frequencies:} We measure the lengths of all extracted items from a category in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, e.g., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories, we gain a thorough set of measurements for each query log.
 \end{enumerate}
 
 \subsection{Frequencies of Linguistic Elements}
 To obtain the frequency of liguistic elements, we first extract all elements of a category from the query log and measure each element's frequency. In the following, we present the extraction of words and the subsequent frequency measurement as an example to illustrate how we proceed for all categories. Besides reading and writing the data, this experiment consists of two major steps in the Ray environment:
 \begin{enumerate}
-    \item \textbf{Extraction of Words:} We apply the~\verb|flat_map()| API-call to extract all words from the query log. We parse a tokenizer function to the API-call that splits each query into its words. The tokenizer function is applied to each query of the data set and returns a set of words which are appended to the result set.  
+    \item \textbf{Extraction of Words:} We apply the~\verb|flat_map()| API-call to extract all words from the query log. We parse a tokenizer function to the API-call that splits each query into its words. The tokenizer function is applied to each query of the data set and returns a set of words which are appended to the result set. For the tokenization and named entity recognition, we apply spaCy's \texttt{en\_core\_web\_sm}-model. We are aware that this model is optimized on english queries. However, multilingual models lack accuracy which is why we apply the english model.  
     \item \textbf{Frequency Measurement:} We apply the~\verb|groupby()| API-call to group the data set by the extracted words. By this, we obtain a group for each extracted word. Thereon, we call a~\verb|count()| in order to count each word's occurence in the query log. In the end, we obtain a data set with the words and their frequencies.
 \end{enumerate}
-In the following table, we note some key parameters of the experiments on the cluster to enhance reproducibility. 
+In Table~\ref{tab:experiment-parameters-ling-elements}, we note some key parameters of the experiments to enhance reproducibility. We only list the parameters' extreme values, such as the maximum number of used workers. By this, the maximum of required ressources is indicated.
 
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}llc@{}} \toprule
+        Parameter & Value & Used Models \\ \midrule
+        Max. Number of Workers & 32 & \multirow{2}{*}{\textit{spaCy-Tokenizer}} \\    
+        Max. Number of CPUs per Worker & 1 & \\ 
+        Max. Memory per Worker & 12 GB & \multirow{2}{*}{\textit{spaCy-NER}} \\ 
+        Max. Duration & 24h & \\
+        \bottomrule
+    \end{tabular}
+    \caption{The parameter values of this table are the extreme values of the configuration to run the extractions of linguistic elements. Both models, the spaCy-Tokenizer and the spaCy-NER are part of spaCy's \texttt{en\_core\_web\_sm}-model, which was used for this analysis.\protect\footnotemark}
+    \label{tab:experiment-parameters-ling-elements}
+\end{table}
+\footnotetext{\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}
 
 \subsubsection{Evaluation of Linguistic Elements}
-For each query log, we extract all elements of a category and determine the frequency of each element. For instance, we extract all exisiting words from the query log and measure each word's frequency. The frequency distribution of linguistic elements typically obey Zipf's law when ordered in a descending order. Especially the frequency distribution of words is well studied and a popular example of Zipf's law~\citep{piantadosi:2014}. Zipf's law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
+\textbf{TBD: Table most frequent queries, words, named entities}
+As stated in Section~\ref{sec:traditional_query_log_analysis}, a well-studied phenomenon is the frequency distribution of terms in query logs. Several studies compare the ranked frequency distribution of terms to Zipf's Law. Zipf's Law originates from linguistics, and is meaningful, among other things, to describe frequency distributions of words in natural language texts~\citep{piantadosi:2014}. Zipf's law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
 \begin{equation}
     f \propto \frac{c}{r^{\alpha}}
 \end{equation} 
-We test the frequencies of queries, named entities, words and characters for Zipf's law by sorting them in descending order and displaying them in a log-scaled graph. Albeit primarily studied for words, we attempt to retrieve Zipf's law also in the frequencies of queries, named entities and characters since they as well are linguistic categories and probably follow linguistic dynamics. Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. Note that this and all subsequent plots contain data from the cleaned AQL. As for named entities, we can state that all distributions follow Zipf's law reasonably well. The distributions show a relatively constant slope in the log-scaled dimensions and are generally very similar. For the most part, this is also true for the word frequencies, despite a small deviation. The constant slope is interrupted by a small curvature in the central part of the distribution. This interruption is however not striking and is present in all distributions.  
+We investigate the frequencies of all considered categories, namely queries, named entities, words and characters, and test if they comply with Zipf's law. To achieve this, we sort the frequencies in descending order and display them in a log-scaled graph. Albeit primarily studied for words, we attempt to retrieve Zipf's law also in the frequencies of queries, named entities and characters since they as well are linguistic categories and probably follow linguistic dynamics. 
+\subsubsection{Visual Comparison: Named Entities and Words}
+Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. As for named entities, we can state that all distributions follow Zipf's law reasonably well. The distributions show a relatively constant slope in the log-scaled dimensions and are fairly similar. For the most part, this is also true for the word frequencies, despite a small deviation. The constant slope is interrupted by a small curvature in the central part of the distribution. However, this curvature is present in all distributions. From a visual perspective, we can conclude that the distributions of the different data sets are similar. There is no striking outlier indicating clear differences.
+\subsubsection{Numeric Comparison: Named Entities and Words}   
+\textbf{TBD: Wasserstein distances or hypothesis test}
 \begin{comment}
     Verweis auf hypothesen test
 \end{comment} 
@@ -58,9 +77,15 @@ We test the frequencies of queries, named entities, words and characters for Zip
     \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
     \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
     \label{fig:zipf-named-entities-words}
-\end{figure} In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters in the query logs are displayed. The query distributions show a good fit to Zipf's law. The distributions are very similar and a constant slope in the log-scaled dimensions is present. The distributions of characters in contrast do not fit Zipf's law. Generally, the distributions of the involved data sets are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is probably due to their monolingual composition. Contrarily, AQL and MS-MARCO are multilingual, hence contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would suggest. This might be the case because alphanumeric characters are significantly more frequent than special characters which would skew the distribution. 
+\end{figure} 
+\subsubsection{Visual Comparison: Queries and Characters}
+In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters are displayed in a log-scaled graph. The query distributions as well comply with Zipf's law reasonably well. The distributions are similar and a constant slope in the log-scaled dimensions is present. The distributions of characters in contrast do not fit Zipf's law. In general, the distributions of characters are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is probably due to their monolingual composition. Contrarily, AQL and MS-MARCO are multilingual, hence contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would predict. This might be the case because alphanumeric characters are significantly more frequent than special characters which would skew the distribution.
+
+\subsubsection{Numeric Comparison: Queries and Characters}
+\textbf{TBD: Wasserstein distances or hypothesis test}
+Problem: Arrays too large for scipy's wasserstein function
 \begin{comment}
-    Verweis auf hypothesen test
+    Verweis auf hypothesen test, IDEE: plots in diese directory verschieben für debugging?
 \end{comment}      
 \begin{figure}
     \centering
@@ -69,13 +94,106 @@ We test the frequencies of queries, named entities, words and characters for Zip
     \label{fig:zipf-queries-chars}
 \end{figure}
 
-\subsubsection{Comparison of the Distributions}
-TO DO: Problem: Arrays too large for scipy's wasserstein function
+\subsubsection{Top Queries}
+We take a look at the top 20 most frequent queries in the query logs. The most frequent queries are listed in Table~\ref{tab:top-queries}. 
+\begin{table}[h]
+    \centering
+    \scalebox{0.65}{
+    \begin{tabular}{@{}rllllllllllll@{}} \toprule
+        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
+        Rank & Query & Count & Ratio & Query & Count & Ratio & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
+        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        9 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        10 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        11 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        12 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        13 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        14 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        15 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        16 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        17 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        18 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        19 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        20 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        \bottomrule
+    \end{tabular}
+    }
+    \caption{Ranking of the top 20 queries in the respective query logs.}
+    \label{tab:top-queries}
+\end{table}
+
+\subsubsection{Top Words}
+We take a look at the top 20 most frequent words in the query logs. The most frequent words are listed in Table~\ref{tab:top-words}.
+\begin{table}[h]
+    \centering
+    \scalebox{0.65}{
+    \begin{tabular}{@{}rllllllllllll@{}} \toprule
+        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
+        Rank & Word & Count & Ratio & Word & Count & Ratio & Word & Count & Ratio & Word & Count & Ratio \\ \midrule
+        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        9 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        10 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        11 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        12 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        13 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        14 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        15 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        16 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        17 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        18 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        19 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        20 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        \bottomrule
+    \end{tabular}
+    }
+    \caption{Ranking of the top 20 words in the respective query logs.}
+    \label{tab:top-words}
+\end{table}
+
 \subsection{Length-Related Frequencies}
-Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths measured in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. The range of query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, though the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.\begin{comment}
+Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. After the extraction of named entites and words, we now have three sets of categories whose lengths we can measure: queries, named entities and words. To illustrate how we obtain the frequencies of query lengths, named entity lengths and word lengths, we provide a description of how the lengths of queries are measured. Accordingly, we proceed for all categories. The measurement of lengths is carried out in two steps:
+\begin{enumerate}
+    \item \textbf{Computing Lengths:} We apply the~\verb|map_batches()| API-call to compute the lengths of queries. Since we are interested in the count of named entities, words and characters, we parse a function that performs multiple measurements on each query. We again apply spaCy's \texttt{en\_core\_web\_sm}-model to perform the measurements. The function appends for each type of measurement (entity count, word count or character count) a new column to the batch that is processed. Eventaully, a batch with the computed lengths is returned. 
+    \item \textbf{Frequency Measurement:} We apply the~\verb|groupby()| API-call to group the resulting data set by the computed lengths. By this, we obtain a group for each length. Thereon, we call a~\verb|count()| in order to count each length's occurence in the query log. In the end, we obtain a data set with the lengths and their frequencies. 
+\end{enumerate}
+In Table~\ref{tab:experiment-parameters-lengths}, we again note some key parameters of the experiments to enhance reproducibility. Likewise, we only list the parameters' extreme values, indicating the maximum of required ressources.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}llr@{}} \toprule
+        Parameter & Value & Used Models \\ \midrule
+        Max. Number of Workers & 32 & \multirow{2}{*}{\textit{spaCy-Tokenizer}} \\    
+        Max. Number of CPUs per Worker & 1 & \\ 
+        Max. Memory per Worker & 9 GB & \multirow{2}{*}{\textit{spaCy-NER}} \\ 
+        Max. Duration & 22h & \\
+        \bottomrule
+    \end{tabular}
+    \caption{The parameter values of this table are the extreme values of the configuration to run the frequency measurement of lengths. Both models, the spaCy-Tokenizer and the spaCy-NER are part of the spaCy-model \texttt{en\_core\_web\_sm}\protect\footnotemark, which was used for this analysis.}
+    \label{tab:experiment-parameters-lengths}
+\end{table}
+\footnotetext{\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}
+
+
+\subsubsection{Visual Comparison: Queries and Named Entities in Characters}
+In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. Though, the range of occuring query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, whereas the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO's distribution is also unique but unlike ORCAS not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas MS-MARCO's distribution is not exactly assignable to a popular distribution.\begin{comment}
     Verweis auf wasserstein distanzen
     #### stand 04.03.2025
-\end{comment}In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (i.e. "www" or ".com") cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. 
+\end{comment}
+\subsubsection{Visual Comparison: Words in Characters and Queries in Named Entities}
+In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are visually almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (e.g., ``www.'' or ``.com'') cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. In that case, AOL's distribution of word lengths aligns with the other query logs' distributions. 
 \begin{comment}
     In Figure~\ref{fig:lengths-words-characters-aol-cleaned} the distribution without website addresses is displayed. It is very similar to the other query logs' distributions of word lengths.    
 \end{comment}
@@ -83,17 +201,23 @@ Besides considering the frequency of linguistic elements, we also measure the le
     Verweis auf wasserstein distanzen
     #### stand 05.03.2025
 \end{comment} 
+
+\subsubsection{Visual Comparison: Queries in Words and Named Entities in Words}
 In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of query and named entity lengths measured in the number of words are displayed. Concerning the lengths of named entities, we can observe almost equivalent distributions of AOL and MS-MARCO. The distribution of ORCAS is still similar to AOL and MS-MARCO while the distribution of the AQL is slightly different. The AQL contains significantly more named entities comprised of one word than the other logs. In contrast to the other logs, named entities comprised of one word a the most common named entities. A similarity among all logs is that named entities consisting of two words are the most frequent. As of the query lengths measured in words, we can observe more diverse distributions among the different logs. While the number of words is distributed similarily in AOL and AQL, the distributions of ORCAS and MS-MARCO are different. The distribution of ORCAS resembles a poisson distribution and the distribution of MS-MARCO is not clearly assignable to a popular distribution. However, the range of the most frequent number of words is similar among all logs.
 \begin{comment}
     Verweis auf wasserstein distanzen
     #### stand 05.03.2025
 \end{comment}
-\subsubsection{Comparison of the Distributions}
+\subsubsection{Numeric Comparison of Lengths}
+The resulting distributions of the measurements are now compared numerically to each other. We apply the \textit{Wasserstein Distance} to evaluate similarities between the resulting distributions. The Wasserstein distance is applicable a distance measure between two probability distributions. 
+% Given two empirical measures $X$ and $Y$ with samples $x_i$ and $y_i$, the Wasserstein distance is defined as:
+% \begin{equation}
+%     \mathrm{W_{p}(X,Y)}=\left({\frac{1}{n}}\sum _{i=1}^{n}\|x_{(i)}-y_{(i)}\|^{p}\right)^{\frac{1}{p}}
+% \end{equation}
 
-The resulting distributions of the measurements are then compared to each other. We apply the \textit{Wasserstein Distance} to evaluate similarities between the resulting distributions. The Wasserstein distance is a distance measure between two probability distributions. Since we are rather interested in comparisons between distances than absolute values, the Wasserstein distance is a suitable choice because it fulfils the axioms to be considered a metric~\citep{panaretos:2019}. Hence, we can deduce conclusions from comparing the obtained numbers of the Wasserstein distances and thereby evaluate the similarities of the distributions. 
+Since we are rather interested in the comparison of distances than considering absolute values, the Wasserstein distance is a suitable choice because it fulfills the axioms of a metric~\citep{panaretos:2019}. Because of that, we can deduce conclusions from comparing the obtained numbers of the Wasserstein distances and thereby assess the similarities of the distributions. 
 
-
-In order to quantify similarities of the aforementioned distributions, we compute the Wasserstein distance between the distributions of the query logs for each analysis. Concerning one specific anaylsis, for each query log we obtain a set of distances that represent the similaries to the other query log's distributions. In Table~\ref{tab:wasserstein-distances} the average Wasserstein distances of each query log are displayed with regard to the conducted analysis. Even though the AQL shows the highest distances to the other query logs in most analyses, the distances are not significantly different. Hence, we can deduct that the AQL fits the other logs in structural or linguisitc terms. In Figure~\ref{fig:wasserstein-distances-lengths} a configuration of the distributions is displayed that visualizes the Wasserstein distances. The configuration was derived from the Wasserstein distances by applying multidimensional scaling to the resulting distance matrix. As the numbers already indicated, clear differences of the distances are not visible. The points are distributed quite evenly and no clear clusters are visible.   
+Concerning one specific anaylsis, we obtain a set of distances for each query log that represent the similaries to the other query log's distributions. In Table~\ref{tab:wasserstein-distances} the Wasserstein distances of each query log are displayed with regard to the conducted analysis. Even though the AQL shows the highest distances to the other query logs in most analyses, the distances are not significantly different. Hence, we can state that the AQL fits the other logs in structural or linguisitc terms reasonably well. In Figure~\ref{fig:wasserstein-distances-lengths} a configuration of the distributions is displayed that visualizes the Wasserstein distances. Each point corresponds to a query log's distribution and the configuration of the points reflects the Wasserstein distances to each other. The configuration was derived by applying multidimensional scaling to the resulting distance matrix. As the numbers already indicated, the points are distributed quite evenly and no clear clusters are visible.    
 \begin{figure}[h]
     \centering
     \import{../plots/updated_plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
@@ -118,47 +242,30 @@ In order to quantify similarities of the aforementioned distributions, we comput
 
 \begin{table}
     \centering
-    \begin{tabular}{@{}lrrrr@{}} \toprule
+    \scalebox{0.9}{
+    \begin{tabular}{@{}lrrrrrrrr@{}} \toprule
         % &  & Query Length Characters &  &  \\ \midrule
-        \multicolumn{5}{c}{Query Length Characters} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 5.54 & 2.56 & 3.72 \\
-        AQL & 5.54 & 0.00 & 4.75 & 7.75  \\
-        MS-MARCO & 2.56 & 4.75 & 0.00 & 3.00 \\
-        ORCAS & 3.72 & 7.75 & 3.00 & 0.00 \\ \midrule
-        \multicolumn{5}{c}{Entity Length Characters} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 2.12 & 1.79 & 0.80 \\
-        AQL & 2.12 & 0.00 & 2.86 & 1.98  \\
-        MS-MARCO & 1.79 & 2.86 & 0.00 & 1.03 \\
-        ORCAS & 0.80 & 1.98 & 1.03 & 0.00 \\ \midrule
-        \multicolumn{5}{c}{Word Length Characters} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 3.69 & 6.31 & 4.20 \\
-        AQL & 3.69 & 0.00 & 6.29 & 4.17  \\
-        MS-MARCO & 6.31 & 6.29 & 0.00 & 2.20 \\
-        ORCAS & 4.20 & 4.17 & 2.20 & 0.00 \\ \midrule
-        \multicolumn{5}{c}{Query Length Words} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 0.58 & 0.69 & 0.89 \\
-        AQL & 0.58 & 0.00 & 0.81 & 1.25  \\
-        MS-MARCO & 0.69 & 0.81 & 0.00 & 0.44 \\
-        ORCAS & 0.89 & 1.25 & 0.44 & 0.00 \\ \midrule
-        \multicolumn{5}{c}{Entity Length Words} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 0.19 & 0.06 & 0.11 \\
-        AQL & 0.19 & 0.00 & 0.18 & 0.30  \\
-        MS-MARCO & 0.06 & 0.18 & 0.00 & 0.17 \\
-        ORCAS & 0.11 & 0.30 & 0.17 & 0.00 \\ \midrule
-        \multicolumn{5}{c}{Query Length Entities} \\ \midrule
-        & AOL & AQL & MS-MARCO & ORCAS \\ 
-        AOL & 0.00 & 0.18 & 0.12 & 0.03 \\
-        AQL & 0.18 & 0.00 & 0.06 & 0.15  \\
-        MS-MARCO & 0.12 & 0.06 & 0.00 & 0.09 \\
-        ORCAS & 0.03 & 0.15 & 0.09 & 0.00 \\ 
-        \bottomrule
+        & \multicolumn{4}{c}{Query Length Characters} & \multicolumn{4}{c}{Entity Length Characters} \\ \midrule
+        & AOL & AQL & MSM-WS & ORCAS & AOL & AQL & MSM-WS & ORCAS \\ 
+        AOL & - & 5.54 & 2.56 & 3.72  & - & 2.12 & 1.79 & 0.80 \\ 
+        AQL & 5.54 & - & 4.75 & 7.75  & 2.12 & - & 2.86 & 1.98  \\
+        MSM-WS & 2.56 & 4.75 & - & 3.00  & 1.79 & 2.86 & - & 1.03 \\
+        ORCAS & 3.72 & 7.75 & 3.00 & - & 0.80 & 1.98 & 1.03 & - \\ \midrule
+        & \multicolumn{4}{c}{Word Length Characters} & \multicolumn{4}{c}{Query Length Words} \\ \midrule
+        & AOL & AQL & MSM-WS & ORCAS &  AOL & AQL & MSM-WS & ORCAS \\ 
+        AOL & - & 3.69 & 6.31 & 4.20  & - & 0.58 & 0.69 & 0.89 \\
+        AQL & 3.69 & - & 6.29 & 4.17  & 0.58 & - & 0.81 & 1.25  \\
+        MSM-WS & 6.31 & 6.29 & - & 2.20  & 0.69 & 0.81 & - & 0.44 \\
+        ORCAS & 4.20 & 4.17 & 2.20 & -  & 0.89 & 1.25 & 0.44 & - \\ \midrule
+        & \multicolumn{4}{c}{Entity Length Words} & \multicolumn{4}{c}{Query Length Entities} \\ \midrule
+        & AOL & AQL & MSM-WS & ORCAS & AOL & AQL & MSM-WS & ORCAS \\ 
+        AOL & - & 0.19 & 0.06 & 0.11  & - & 0.18 & 0.12 & 0.03 \\
+        AQL & 0.19 & - & 0.18 & 0.30  & 0.18 & - & 0.06 & 0.15  \\
+        MSM-WS & 0.06 & 0.18 & - & 0.17  & 0.12 & 0.06 & - & 0.09 \\
+        ORCAS & 0.11 & 0.30 & 0.17 & -  & 0.03 & 0.15 & 0.09 & - \\ \bottomrule
     \end{tabular}
-    \caption{Average Wasserstein distances between the distributions of the query logs. For each analysis, e.g. queries in characters, the Wasserstein distance between the distributions of the query logs is computed. The table contains the mean of each query log's Wasserstein distances to the other query logs for each analysis.}
+    }
+    \caption{Wasserstein distances between the distributions of the query logs. For each analysis, e.g. queries in characters, the Wasserstein distance between the distributions of the query logs is computed.}
     \label{tab:wasserstein-distances}        
 \end{table}
 
@@ -212,8 +319,69 @@ In order to quantify similarities of the aforementioned distributions, we comput
     \label{fig:wasserstein-distances-lengths}
 \end{figure}
 
+\subsection{Search Operators}
+As, stated in Section~\ref{sec:search_operators}, search operators are a common feature of search engines. They are used to filter the search results or specify specific requirements for the search results. In this section, we analyze the usage of search operators in the query logs. In particular, we determine the ratio of queries, that contain search operators, measure frequencies of the search-operator-count in queries and present the most prominent search operators per query log. In Table~\ref{tab:search-operators} the considered search operators of this analysis are listed.
 
-% \section{Distribution-based}
+% \texttt{[AND, OR, around(), site:, filetype:, intitle:, allinurl:, allintitle:, intext:, allintext:, related:, define:, chache:]}.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}lllll@{}} 
+        \texttt{AND} & \texttt{OR} & \texttt{around()} & \texttt{site:} & \texttt{filetype:} \\
+        \texttt{intitle:} & \texttt{allinurl:} & \texttt{allintitle:} & \texttt{intext:} & \texttt{allintext:} \\
+        \texttt{related:} & \texttt{define:} & \texttt{chache:} & \\
+    \end{tabular}
+    \caption{The consindered search operators of this analysis.}
+    \label{tab:search-operators}
+\end{table} 
+\subsubsection{Search Operator Frequencies}
+First, to obtain the frequencies of the considered search operators in a query log, we apply the~\verb|flat_map()| API-call to extract all search operators from the query log. We parse a function to the API-call that checks for each query if it contains one of the search operators. If so, the search operator is appended to the result set. Thereon, we apply the~\verb|groupby()| API-call to group the data set by the extracted search operators and call a subsequent~\verb|count()| to get the count of each search operator.
+\subsubsection{Evaluation Search Operator Frequencies} 
+In Table~\ref{tab:search-operators-ratios} the total frequencies of search operators and their ratio in the query logs are displayed. 
+% The table shows that the search operators are used very rarely in the query logs. The ratio of queries containing search operators is less than 0.3\% for all query logs. This is a very low number and indicates that search operators are not commonly used by users.
+
+
+\begin{table}[h]
+    \centering
+    \scalebox{0.79}{
+    \begin{tabular}{@{}llllllll@{}} \toprule
+        Query Log & SO-count & SO-ratio & $count=0$ & $count=1$ & $count=2$ & $count=3$ & $count>3$ \\ \midrule
+        AOL & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
+        AQL & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
+        MS-MARCO & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
+        ORCAS & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\ \bottomrule
+    \end{tabular}
+    }
+    \caption{Ratios of queries that contain 0, 1, 2, 3, or more than 3 search operators.}
+    \label{tab:search-operators-ratios}
+\end{table}
+
+\subsubsection{Prominent Search Operators}
+
+\begin{table}[h]
+    \centering
+    \scalebox{0.65}{
+    \begin{tabular}{@{}rllllllllllll@{}} \toprule
+        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
+        Rank & SO & Count & Ratio & SO & Count & Ratio & SO & Count & Ratio & SO & Count & Ratio \\ \midrule
+        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
+        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
+        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ \bottomrule
+    \end{tabular}
+    }
+    \caption{Ranking of the used search operators in the respective query logs.}
+    \label{tab:search-operators-ranking}
+\end{table}
+
+\section{Inference-based Statistics}
+
+\section{Temporal-based Analysis}
+
+\section{Embedding-based Analysis}
 % In this section, distributions of labels are created from different NLP predictors. The general idea is to compare the different data sets according to their resulting distributions of different domains.  
 % \begin{itemize}
 %     \item Plausibilitätsstudie für die classifier: 50-100 samples pro label pro classifier: manuell annotieren und dann accuracy bestimmen.
