@@ -6,17 +6,17 @@ This chapter covers the analyses that we carry out on the involved query logs an
 Since we are processing large data sets (recall that the AQL contains around 356 million queries), it is favorable to employ a distributed computing framework which allows for parallel processing and distributed memory management. Moreover, many pretrained models and ML-related libraries are available in python. Therefore, we choose \textit{Ray}\footnote{\url{https://docs.ray.io/en/latest/index.html}}, an open-source distributed computing framework for python applications, as our environment for implementing and executing the analyses. Ray provides a high-level API that enables parallelizing python code without much effort. The Ray API includes methods whose call starts parallel processing of a parsed function. By this, we can easily parallelize our implemented functions that perform desired transformations on the data. In addition, Ray provides API-calls for parallel reading and writing of data on the distributed system, thus providing a fully parallel pipeline. 
 
 \subsection{Ray API-Calls}
-There are different paradigms to transform data in Ray. In this work, we mainly make use of the API-calls~\verb|map_batches()|,~\verb|flat_map()| and~\verb|groupby()|. 
+There are different paradigms to transform data in Ray. In this work, we mainly make use of Ray's following API-calls: 
 \begin{itemize}
-    \item \verb|map_batches()|: This API-call is used to make transformations on each row of the respective data set. That is, for each row we get one result. It takes a user-defined function as an argument and applies it to each row of the data set. The data set is transformed in batches, i.e., on each batch map_batches() is invoked. In addition, we can specifiy the configuration of execution, e.g., the number of parallel workers, the amount of required memory for each worker and the number of CPUs or GPUs for each worker.   
-    \item \verb|flat_map()|: This API-call is mainly used to extract specified elements of the data. It is detached from the constraint of returning one result per row of map_batches and can handle multiple results from each row. It is applied to each row of the data set and returns a new data set with the extracted elements. The resulting data set can be of different size than the original one. As in map_batches(), we can specify the configuration of execution. 
+    \item \verb|map_batches()|: This API-call is used to perform transformations on the data set. In this case, transformations are carried out on batches of the data set, enabling vectorized transformations from, e.g., numpy operations. Map_batches() takes a user-defined function or a callable class as an argument and applies it to each batch of the data set. The execution is configurable: We can specifiy the the number of parallel workers, the amount of required memory for each worker or the number of CPUs or GPUs for each worker. Map_batches() is Ray's preferable API-call for performing offline batch inference.  
+    \item \verb|flat_map()|: This API-call is mainly used to extract specific elements of the data. It is detached from the constraint of returning at most one result per row and can handle multiple results from each row. The flat_map()-call is applied to each row of the data set and returns a new data set with the extracted elements. The resulting data set can be of different size than the original one. As in map\_batches(), we can specify the configuration of execution. 
     \item \verb|groupby()|: This API-call is used to group the data set by a specified column. It returns a new data set with the grouped elements. In addition, we can apply further functions to each group, e.g., we can apply a function to count the number of elements in each group. This API-call does not support specifiying the configuration of execution.    
 \end{itemize}       
 
 \section{Structure-related Statistics}
 In this section, we generate a set of structure-related statistics from the query logs. The analyses in this section are based on the findings of Section~\ref{sec:traditional_query_log_analysis}. Additionally, aspects of the analysis of \hyperref[sec:named_entities]{named entities} are included in this section, too.
 
-The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical information of the queries.  
+The goal is to perform a comparison of the query logs' linguistic and structural composition, initially neglecting semantical.  
 We collect a set of distributions from the \hyperref[sec:aql-cleaning]{cleaned AQL} and the other involved query logs. Ultimately, we evaluate similarities of the distributions by conducting hypothesis tests or computing distances. By this, we identify syntactical differences between the AQL and the other query logs. 
 
 For this analysis, we look at queries from different syntactic perspectives and carry out measurements in the defined perspectives. We define the following categories as syntactic perspectives:
@@ -44,12 +44,12 @@ In Table~\ref{tab:experiment-parameters-ling-elements}, we note some key paramet
 
 \begin{table}[h]
     \centering
-    \begin{tabular}{@{}llc@{}} \toprule
-        Parameter & Value & Used Models \\ \midrule
-        Max. Number of Workers & 32 & \multirow{2}{*}{\textit{spaCy-Tokenizer}} \\    
-        Max. Number of CPUs per Worker & 1 & \\ 
-        Max. Memory per Worker & 12 GB & \multirow{2}{*}{\textit{spaCy-NER}} \\ 
-        Max. Duration & 24h & \\
+    \begin{tabular}{@{}ll@{}} \toprule
+        \textbf{Max. Number of Workers} & 32 \\    
+        \textbf{Max. Number of CPUs per Worker} & 1 \\ 
+        \textbf{Max. Memory per Worker} & 12 GB \\ 
+        \textbf{Max. Duration} & 24h \\
+        \textbf{Used Models} & \textit{spaCy-Tokenizer}, \textit{spaCy-NER} \\
         \bottomrule
     \end{tabular}
     \caption{The parameter values of this table are the extreme values of the configuration to run the extractions of linguistic elements. Both models, the spaCy-Tokenizer and the spaCy-NER are part of spaCy's \texttt{en\_core\_web\_sm}-model, which was used for this analysis.\protect\footnotemark}
@@ -66,103 +66,51 @@ As stated in Section~\ref{sec:traditional_query_log_analysis}, a well-studied ph
 We investigate the frequencies of all considered categories, namely queries, named entities, words and characters, and test if they comply with Zipf's law. To achieve this, we sort the frequencies in descending order and display them in a log-scaled graph. Albeit primarily studied for words, we attempt to retrieve Zipf's law also in the frequencies of queries, named entities and characters since they as well are linguistic categories and probably follow linguistic dynamics. 
 \subsubsection{Visual Comparison: Named Entities and Words}
 Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. As for named entities, we can state that all distributions follow Zipf's law reasonably well. The distributions show a relatively constant slope in the log-scaled dimensions and are fairly similar. For the most part, this is also true for the word frequencies, despite a small deviation. The constant slope is interrupted by a small curvature in the central part of the distribution. However, this curvature is present in all distributions. From a visual perspective, we can conclude that the distributions of the different data sets are similar. There is no striking outlier indicating clear differences.
-\subsubsection{Numeric Comparison: Named Entities and Words}   
-\textbf{TBD: Wasserstein distances or hypothesis test}
-\begin{comment}
-    Verweis auf hypothesen test
-\end{comment} 
+\subsubsection{TBD: Numeric Comparison: Named Entities and Words}   
+Wasserstein distances or hypothesis test
 
-\begin{figure}
+% \begin{figure}
+%     \centering
+%     \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
+%     \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+%     \label{fig:zipf-named-entities-words}
+% \end{figure} 
+\begin{figure}[h]
     \centering
-    \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
-    \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
-    \label{fig:zipf-named-entities-words}
-\end{figure} 
+    \includegraphics[width=1.0\textwidth]{../plots/updated_plots/extract-named-entities-and-extract-words-single/all.pdf} 
+  \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+  \label{fig:zipf-named-entities-words}
+ \end{figure}
+
+
 \subsubsection{Visual Comparison: Queries and Characters}
 In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters are displayed in a log-scaled graph. The query distributions as well comply with Zipf's law reasonably well. The distributions are similar and a constant slope in the log-scaled dimensions is present. The distributions of characters in contrast do not fit Zipf's law. In general, the distributions of characters are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is probably due to their monolingual composition. Contrarily, AQL and MS-MARCO are multilingual, hence contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would predict. This might be the case because alphanumeric characters are significantly more frequent than special characters which would skew the distribution.
 
-\subsubsection{Numeric Comparison: Queries and Characters}
-\textbf{TBD: Wasserstein distances or hypothesis test}
+\subsubsection{TBD: Numeric Comparison: Queries and Characters}
+TBD: Wasserstein distances or hypothesis test
 Problem: Arrays too large for scipy's wasserstein function
-\begin{comment}
-    Verweis auf hypothesen test, IDEE: plots in diese directory verschieben für debugging?
-\end{comment}      
-\begin{figure}
+     
+% \begin{figure}
+%     \centering
+%     \import{../plots/updated_plots/query-frequencies-and-extract-chars-single}{all.pgf}
+%     \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+%     \label{fig:zipf-queries-chars}
+% \end{figure}
+\begin{figure}[h]
     \centering
-    \import{../plots/updated_plots/query-frequencies-and-extract-chars-single}{all.pgf}
-    \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
-    \label{fig:zipf-queries-chars}
-\end{figure}
+    \includegraphics[width=1.0\textwidth]{../plots/updated_plots/query-frequencies-and-extract-chars-single/all.pdf} 
+  \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+  \label{fig:zipf-queries-chars}
+ \end{figure}
 
-\subsubsection{Top Queries}
+
+\subsubsection{TBD: Top Queries}
 We take a look at the top 20 most frequent queries in the query logs. The most frequent queries are listed in Table~\ref{tab:top-queries}. 
-\begin{table}[h]
-    \centering
-    \scalebox{0.65}{
-    \begin{tabular}{@{}rllllllllllll@{}} \toprule
-        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
-        Rank & Query & Count & Ratio & Query & Count & Ratio & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
-        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        9 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        10 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        11 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        12 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        13 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        14 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        15 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        16 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        17 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        18 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        19 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        20 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        \bottomrule
-    \end{tabular}
-    }
-    \caption{Ranking of the top 20 queries in the respective query logs.}
-    \label{tab:top-queries}
-\end{table}
 
-\subsubsection{Top Words}
+
+\subsubsection{TBD: Top Words}
 We take a look at the top 20 most frequent words in the query logs. The most frequent words are listed in Table~\ref{tab:top-words}.
-\begin{table}[h]
-    \centering
-    \scalebox{0.65}{
-    \begin{tabular}{@{}rllllllllllll@{}} \toprule
-        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
-        Rank & Word & Count & Ratio & Word & Count & Ratio & Word & Count & Ratio & Word & Count & Ratio \\ \midrule
-        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        9 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        10 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        11 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        12 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        13 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        14 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        15 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        16 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        17 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        18 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        19 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        20 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        \bottomrule
-    \end{tabular}
-    }
-    \caption{Ranking of the top 20 words in the respective query logs.}
-    \label{tab:top-words}
-\end{table}
+
 
 \subsection{Length-Related Frequencies}
 Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. After the extraction of named entites and words, we now have three sets of categories whose lengths we can measure: queries, named entities and words. To illustrate how we obtain the frequencies of query lengths, named entity lengths and word lengths, we provide a description of how the lengths of queries are measured. Accordingly, we proceed for all categories. The measurement of lengths is carried out in two steps:
@@ -173,12 +121,12 @@ Besides considering the frequency of linguistic elements, we also measure the le
 In Table~\ref{tab:experiment-parameters-lengths}, we again note some key parameters of the experiments to enhance reproducibility. Likewise, we only list the parameters' extreme values, indicating the maximum of required ressources.
 \begin{table}[h]
     \centering
-    \begin{tabular}{@{}llr@{}} \toprule
-        Parameter & Value & Used Models \\ \midrule
-        Max. Number of Workers & 32 & \multirow{2}{*}{\textit{spaCy-Tokenizer}} \\    
-        Max. Number of CPUs per Worker & 1 & \\ 
-        Max. Memory per Worker & 9 GB & \multirow{2}{*}{\textit{spaCy-NER}} \\ 
-        Max. Duration & 22h & \\
+    \begin{tabular}{@{}ll@{}} \toprule
+        \textbf{Max. Number of Workers} & 32 \\    
+        \textbf{Max. Number of CPUs per Worker} & 1 \\ 
+        \textbf{Max. Memory per Worker} & 9 GB \\ 
+        \textbf{Max. Duration} & 22h \\
+        \textbf{Used Models} & \textit{spaCy-Tokenizer}, \textit{spaCy-NER} \\
         \bottomrule
     \end{tabular}
     \caption{The parameter values of this table are the extreme values of the configuration to run the frequency measurement of lengths. Both models, the spaCy-Tokenizer and the spaCy-NER are part of the spaCy-model \texttt{en\_core\_web\_sm}\protect\footnotemark, which was used for this analysis.}
@@ -245,19 +193,19 @@ Concerning one specific anaylsis, we obtain a set of distances for each query lo
     \scalebox{0.9}{
     \begin{tabular}{@{}lrrrrrrrr@{}} \toprule
         % &  & Query Length Characters &  &  \\ \midrule
-        & \multicolumn{4}{c}{Query Length Characters} & \multicolumn{4}{c}{Entity Length Characters} \\ \midrule
+        & \multicolumn{4}{c}{\textbf{Query Length Characters}} & \multicolumn{4}{c}{\textbf{Entity Length Characters}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MSM-WS & ORCAS & AOL & AQL & MSM-WS & ORCAS \\ 
         AOL & - & 5.54 & 2.56 & 3.72  & - & 2.12 & 1.79 & 0.80 \\ 
         AQL & 5.54 & - & 4.75 & 7.75  & 2.12 & - & 2.86 & 1.98  \\
         MSM-WS & 2.56 & 4.75 & - & 3.00  & 1.79 & 2.86 & - & 1.03 \\
         ORCAS & 3.72 & 7.75 & 3.00 & - & 0.80 & 1.98 & 1.03 & - \\ \midrule
-        & \multicolumn{4}{c}{Word Length Characters} & \multicolumn{4}{c}{Query Length Words} \\ \midrule
+        & \multicolumn{4}{c}{\textbf{Word Length Characters}} & \multicolumn{4}{c}{\textbf{Query Length Words}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MSM-WS & ORCAS &  AOL & AQL & MSM-WS & ORCAS \\ 
         AOL & - & 3.69 & 6.31 & 4.20  & - & 0.58 & 0.69 & 0.89 \\
         AQL & 3.69 & - & 6.29 & 4.17  & 0.58 & - & 0.81 & 1.25  \\
         MSM-WS & 6.31 & 6.29 & - & 2.20  & 0.69 & 0.81 & - & 0.44 \\
         ORCAS & 4.20 & 4.17 & 2.20 & -  & 0.89 & 1.25 & 0.44 & - \\ \midrule
-        & \multicolumn{4}{c}{Entity Length Words} & \multicolumn{4}{c}{Query Length Entities} \\ \midrule
+        & \multicolumn{4}{c}{\textbf{Entity Length Words}} & \multicolumn{4}{c}{\textbf{Query Length Entities}} \\\cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MSM-WS & ORCAS & AOL & AQL & MSM-WS & ORCAS \\ 
         AOL & - & 0.19 & 0.06 & 0.11  & - & 0.18 & 0.12 & 0.03 \\
         AQL & 0.19 & - & 0.18 & 0.30  & 0.18 & - & 0.06 & 0.15  \\
@@ -320,19 +268,26 @@ Concerning one specific anaylsis, we obtain a set of distances for each query lo
 \end{figure}
 
 \subsection{Search Operators}
-As, stated in Section~\ref{sec:search_operators}, search operators are a common feature of search engines. They are used to filter the search results or specify specific requirements for the search results. In this section, we analyze the usage of search operators in the query logs. In particular, we determine the ratio of queries, that contain search operators, measure frequencies of the search-operator-count in queries and present the most prominent search operators per query log. In Table~\ref{tab:search-operators} the considered search operators of this analysis are listed.
+As, stated in Section~\ref{sec:search_operators}, search operators are a common feature of search engines. They are used to filter the search results or specify specific requirements for the search results. In this section, we analyze the usage of search operators in the query logs. In particular, we determine the ratio of queries, that contain search operators, measure frequencies of the search-operator-count in queries and present the most prominent search operators per query log. In the following, the considered search operators of this analysis are listed:
 
-% \texttt{[AND, OR, around(), site:, filetype:, intitle:, allinurl:, allintitle:, intext:, allintext:, related:, define:, chache:]}.
-\begin{table}[h]
-    \centering
-    \begin{tabular}{@{}lllll@{}} 
-        \texttt{AND} & \texttt{OR} & \texttt{around()} & \texttt{site:} & \texttt{filetype:} \\
-        \texttt{intitle:} & \texttt{allinurl:} & \texttt{allintitle:} & \texttt{intext:} & \texttt{allintext:} \\
-        \texttt{related:} & \texttt{define:} & \texttt{chache:} & \\
-    \end{tabular}
-    \caption{The consindered search operators of this analysis.}
-    \label{tab:search-operators}
-\end{table} 
+\begin{multicols}{3}\label{list:search-operators}
+    \begin{itemize}
+        \item \texttt{AND}
+        \item \texttt{OR}
+        \item \texttt{around()}
+        \item \texttt{site:}
+        \item \texttt{filetype:}
+        \item \texttt{intitle:}
+        \item \texttt{allinurl:}
+        \item \texttt{allintitle:}
+        \item \texttt{intext:}
+        \item \texttt{allintext:}
+        \item \texttt{related:}
+        \item \texttt{define:}
+        \item \texttt{chache:}
+    \end{itemize}
+\end{multicols}
+
 \subsubsection{Search Operator Frequencies}
 First, to obtain the frequencies of the considered search operators in a query log, we apply the~\verb|flat_map()| API-call to extract all search operators from the query log. We parse a function to the API-call that checks for each query if it contains one of the search operators. If so, the search operator is appended to the result set. Thereon, we apply the~\verb|groupby()| API-call to group the data set by the extracted search operators and call a subsequent~\verb|count()| to get the count of each search operator.
 \subsubsection{Evaluation Search Operator Frequencies} 
@@ -345,10 +300,10 @@ In Table~\ref{tab:search-operators-ratios} the total frequencies of search opera
     \scalebox{0.79}{
     \begin{tabular}{@{}llllllll@{}} \toprule
         Query Log & SO-count & SO-ratio & $count=0$ & $count=1$ & $count=2$ & $count=3$ & $count>3$ \\ \midrule
-        AOL & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
-        AQL & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
-        MS-MARCO & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\
-        ORCAS & 1,000,000 & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% & 0.28\% \\ \bottomrule
+        AOL & 0 & 0\% & 0\% & 100\% & 0\% & 0\% & 0\% \\
+        AQL & 7,663,010 & 2.21\% & 97.79\% & 1.83\% & 0.31\% & 0.02\% & 0.05\% \\
+        MS-MARCO & 6,727 & 0.07\% & 99.93\% & 0.07\% & 0.00\% & 0.00\% & 0.00\% \\
+        ORCAS & 3,937 & 0.04\% & 99.96\% & 0.04\% & 0.00\% & 0.00\% & 0.00\% \\ \bottomrule
     \end{tabular}
     }
     \caption{Ratios of queries that contain 0, 1, 2, 3, or more than 3 search operators.}
@@ -359,89 +314,168 @@ In Table~\ref{tab:search-operators-ratios} the total frequencies of search opera
 
 \begin{table}[h]
     \centering
-    \scalebox{0.65}{
-    \begin{tabular}{@{}rllllllllllll@{}} \toprule
-        & \multicolumn{3}{c}{AOL} & \multicolumn{3}{c}{AQL} & \multicolumn{3}{c}{MS-MARCO} & \multicolumn{3}{c}{ORCAS} \\ \midrule
+    \scalebox{0.6}{
+    \begin{tabular}{@{}lllllllllllll@{}} \toprule
+        & \multicolumn{3}{c}{\textbf{AOL}} & \multicolumn{3}{c}{\textbf{AQL}} & \multicolumn{3}{c}{\textbf{MS-MARCO}} & \multicolumn{3}{c}{\textbf{ORCAS}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7} \cmidrule(l{2pt}r{2pt}){8-10} \cmidrule(l{2pt}r{2pt}){11-13}
         Rank & SO & Count & Ratio & SO & Count & Ratio & SO & Count & Ratio & SO & Count & Ratio \\ \midrule
-        1 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        2 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\
-        3 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        4 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        5 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        6 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        7 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ 
-        8 & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% & \texttt{site:} & 1,000,000 & 0.28\% \\ \bottomrule
+        1 & \texttt{site:} & 0 & 0\% & \texttt{site:} & 5,507,994 & 1.59\% & \texttt{site:} & 6,564 & 0.07\% & \texttt{site:} & 3,307 & 0.03\% \\
+        2 & \texttt{related:} & 0 & 0\% & \texttt{related:} & 1,471,351 & 0.42\% & \texttt{intitle:} & 80 & 0.00\% & \texttt{define:} & 624 & 0.01\% \\
+        3 & \texttt{OR} & 0 & 0\% & \texttt{OR} & 391,561 & 0.11\% & \texttt{define:} & 24 & 0.00\% & \texttt{intitle:} & 4 & 0.00\% \\ 
+        4 & \texttt{AND} & 0 & 0\% & \texttt{AND} & 188,382 & 0.05\% & \texttt{intext:} & 22 & 0.00\% & \texttt{related:} & 1 & 0.00\% \\ 
+        5 & \texttt{intitle:} & 0 & 0\% & \texttt{intitle:} & 25,635 & 0.01\% & \texttt{filetype:} & 18 & 0.00\% & \texttt{intext:} & 1 & 0.00\% \\ 
+        6 & \texttt{cache:} & 0 & 0\% & \texttt{cache:} & 22,566 & 0.01\% & \texttt{cache:} & 12 & 0.00\% & \texttt{allintext:} & 0 & 0.00\% \\ 
+        7 & \texttt{define:} & 0 & 0\% & \texttt{define:} & 21,676 & 0.01\% & \texttt{allintext:} & 3 & 0.00\% & \texttt{allinurl:} & 0 & 0.00\% \\ 
+        8 & \texttt{filetype:} & 0 & 0\% & \texttt{allinurl:} & 19,451 & 0.01\% & \texttt{allintitle:} & 3 & 0.00\% & \texttt{allintitle:} & 0 & 0.00\% \\ 
+        9 & \texttt{allinurl:} & 0 & 0\% & \texttt{allinurl:} & 5,564 & 0.00\% & \texttt{related:} & 1 & 0.00\% & \texttt{filetype:} & 0 & 0.00\% \\ 
+        10 & \texttt{intext:} & 0 & 0\% & \texttt{intext:} & 4,950 & 0.00\% & \texttt{AND} & 0 & 0.00\% & \texttt{AND} & 0 & 0.00\% \\ 
+        11 & \texttt{allintitle:} & 0 & 0\% & \texttt{allintitle:} & 3,258 & 0.00\% & \texttt{OR} & 0 & 0.00\% & \texttt{OR} & 0 & 0.00\% \\ 
+        12 & \texttt{allintext:} & 0 & 0\% & \texttt{allintext:} & 619 & 0.00\% & \texttt{around():} & 0 & 0.00\% & \texttt{around()} & 0 & 0.00\% \\ 
+        12 & \texttt{around()} & 0 & 0\% & \texttt{around()} & 3 & 0.00\% & \texttt{allinurl:} & 0 & 0.00\% & \texttt{chache:} & 0 & 0.00\% \\ 
+        \bottomrule
     \end{tabular}
     }
-    \caption{Ranking of the used search operators in the respective query logs.}
+    \caption{Ranking of the used search operators (SO) in the respective query logs.}
     \label{tab:search-operators-ranking}
 \end{table}
+% VIELLEICHT NOCH AOL WEGNEHMEN
 
 \section{Inference-based Statistics}
+In this section, we classify queries or components of queries, like named entities, according to selected taxonomies. As described in Section~\ref{sec:query_intent}, the intent behind a query is a meaningful taxonomy according which queries are classified. We also investigate the presence of personally identifiable information (PII) entities in the query logs and their distribution.   
+\subsection{Query Intent}
+As a first step, we classify queries into the categories informational, navigational and transactional. Since the classifier from \citet{alexander:2022} performs fairly accurate, we apply it in this work. The considered classifier achieves an accuracy of $0.90$. Since the classifier of \citet{alexander:2022} was trained on english queries only, we apply it only to the english subset of the multiligual query logs (AQL and MS-MARCO). We produce the labels by passing the model to Ray's preferable API-call~\verb|map_batches()| for offline batch inference. After that, we apply the~\verb|groupby()| API-call to group the data set by the labels and get counts for each label. The classifier is not provided publicly, but was obtained by a personal request to \citet{alexander:2022}. In Table~\ref{tab:experiment-parameters-classification} we note some key parameters of the experiments to enhance reproducibility. We only list the parameters' extreme values, indicating the maximum of required ressources.
+
+\subsection{PII Entity Labels}
+Another aspect that we consider in this work is the prevalence of personally identifiable information (PII) in the query logs. We employ Microsoft's Presidio-Model\footnote{\url{https://github.com/microsoft/presidio}} to regognize PII entities in the query logs and store their labels. The classifier achieves an accuracy of $0.95$????. Again, we produce the labels by applying Ray's preferable API-call~\verb|map_batches()| for offline batch inference. A subsequent \verb|groupby()|-call provides the counts for each label. In Table~\ref{tab:experiment-parameters-classification}, the ressources needed and related information to run the classification are listed. 
+
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}lll@{}} \toprule
+        & \textbf{Intent Labels} & \textbf{PII Labels} \\ \midrule
+        \textbf{Max. Number of Workers} & 32 & 320 \\  
+        \textbf{Max. Number of CPUs per Worker} & 3 & 1 \\ 
+        \textbf{Max. Memory per Worker} & 7 GB & 8GB \\ 
+        \textbf{Max. Duration} & 1d 6h & 12h \\
+        \textbf{Used Models} & \textit{Intent-Classifier} & \textit{Presidio-Model} \\
+        \bottomrule
+    \end{tabular}
+    \caption{The parameter values of this table indicate the most expensive configuration used to produce intent and PII labels}
+    \label{tab:experiment-parameters-classification}
+\end{table}
+
+\subsubsection{Evaluation of Query Intent}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/query-intent/all.pdf} 
+  \caption{The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.}
+  \label{fig:Test}
+ \end{figure}
+ 
+\subsubsection{Evaluation of PII Entities}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/group-presidio-pii/all.pdf} 
+  \caption{The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.}
+  \label{fig:Test}
+ \end{figure}
+
+\subsection{Not Safe For Work Classification}
 
 \section{Temporal-based Analysis}
+In this section, we aim at performing temporal-based comparisons of real-world queries and queries of the AQL. To realize this, we select a set of google queries which we download from the tool ``Google Trends''. We select two sets, one with annual top queries and one with monthly top queries. As for the annual top queries, we simply compare the top queries of Google Trends with the AQL's top queries. For the monthly top queries, we compare temporal patterns of real-world queries and queries of the AQL. We expect monthly top queries to be more volatile that annual top queries which is why we prefer them for a comparison of temporal patterns. We carry out this comparison by computing the temporal correlation of the queries's popularity.
 
+\subsection{Google Trends}
+Before conducting the temporal comparison, we must select a set of queries that we want to utilize for the comparison. In order to meet the constraints of Google Trends (see Section~\ref{sec:google_trends}), we select queries that are popular. Moreover, we consider a sufficiently long time span for the comparison. Google Trends offers to download the top 25 popular queries from a selected time span. We use this option to create two sets of queries for our comparison. 
+First, we consider the annual top queries of google and secondly the monthly top queries of google. For the annual top queries we perform a simple comparison to the AQL's annual top queries. For the monthly top queries, we compute temporal correlations between the AQL and Google Trends. 
+
+\subsection{Annual Top Queries}
+First, we consider annual top queries of google and make comparisons with them. We create a list of the annual top 25 from 2004 until 2022. 2004 is the earliest year for which Google Trends provides data and 2022 is the latest year for which the AQL contains queries. Similarly, we create a list of the annual top 25 queries from the AQL for the same time span. For this, we first filter the AQL for queries that stem from google and afterwards create the annual top 25. As a first comparison, we simply determine the intersection of the two lists with respect to the year. That is, for each year we check if the top 25 queries of Google Trends are also present in the AQL's top 25 queries. We can observe that the intersection is quite small. In fact, only 7 queries out of possible 475 queries are present in both respective top 25 annual queries. The queries are \texttt{facebook} (2 times), \texttt{google} (2 times), \texttt{youtube} (2 times) and \texttt{yahoo}. This indicates that the distribution of google-queries in the AQL is not very similar to the real distribution of google queries.        
+
+
+\subsection{Temporal Correlation}
+Secondly, we consider monthly top queries of google. For this analysis we attempt to assess the similarity of temporal patterns between queries from google and the AQL. We choose monthly top queries because we expect monthly top queries to be more volatile than annual top queries. Since there are lots of duplicates in the monthly top queries, we need to create a ranking of the monthly top queries. By this, we can compare the most popular queries of the monthly top queries. To do this, we first create a list of the monthly top 25 queries from google from 2004 until 2022. For each month, we obtain a list of the top 25 queries. We then create a ranking of theses queries by employing reciprocal rank fusion~\citep{cormack:2009}. Reciprocal rank fusion is a method to combine multiple ranked lists into a single ranking. Given a set $I$ of items to be ranked and a set $R$ of rankings, the RRF-Score is computed by
+\begin{equation}
+    RRF(i \in I) = \sum_{r \in R} \frac{1}{k + r(i)}
+\end{equation}   
+where $k$ is a constant (usually set to 60) and $r(i)$ is the rank of item $i$ in ranking $r$. The method assigns a score to each item in the list based on its positions in the original lists. The score is calculated as the reciprocal of the rank, so that higher-ranked items receive higher scores. The final score for each item is then computed by summing the scores from all lists. We feed all monthly top 25 google-queries from 2004 until 2022 into the RRF-Score function to obtain a final ranking of the top 25 monthly queries. From this, we obtain the following ranking: 
+
+\begin{multicols}{4}\label{list:top-25-monthly-google-queries}
+    \begin{enumerate}
+        \item \texttt{google}
+        \item \texttt{yahoo}
+        \item \texttt{weather}
+        \item \texttt{youtube}
+        \item \texttt{hotmail}
+        \item \texttt{facebook}
+        \item \texttt{gmail}
+        \item \texttt{news}
+        \item \texttt{you}
+        \item \texttt{ebay}
+        \item \texttt{amazon}   
+        \item \texttt{games}
+        \item \texttt{free}
+        \item \texttt{twitter}
+        \item \texttt{translate}
+        \item \texttt{mp3}
+        \item \texttt{maps}
+        \item \texttt{msn}
+        \item \texttt{fb}
+        \item \texttt{mail}
+        \item \texttt{instagram}
+        \item \texttt{map}
+        \item \texttt{face}
+        \item \texttt{video}
+        \item \texttt{juegos}
+    \end{enumerate}
+\end{multicols}
+\subsubsection{Measuring Query Frequencies in the AQL}
+We then search these queries in the AQL and measure their frequency over time. We achieve this by applying the~\verb|map_batches()| API-call to first filter the AQL's queries for the considered top queries and secondly to map the timestamps of the queries into the format \verb|(YYYY-MM)|. Then, we apply the~\verb|groupby()| API-call to group by queries and timestamp. Thereon, we call a~\verb|count()| to get the count of each query per month. The result is a data set with the counts of each query per month. In case a query is not present in the AQL during a specific month between 2004 and 2022, we set the count to 0. Eventually, we get a list of queries with their counts per month. In order to obtain the popularity of a query in a specific month, we divide the counts of each query by the sum of all counts of the present google-queries in the AQL in that month. This gives us a relative frequency of each query in that month which represents its popularity. Since the data of google trends is projected to the scale [0,100], we also scale the relative frequencies of the AQL to the interval [0,100]. After this, we can proceed to compute the temporal correlation of the queries between the AQL and Google Trends.
+\subsubsection{Computing Temporal Correlations} 
+To assess the similarity of the temporal patterns, we compute the temporal correlation of the queries between the AQL and Google Trends. Given two queries $q$ and $p$, their respective frequency functions $X_{i,q}$ and $X_{i,p}$ with $d$ time steps, their mean $\mu_{q}$ and $\mu_{p}$ and their standard deviation $\sigma_{q}$ and $\sigma_{p}$, then, according to \citet{chien:2005}, their temporal correlation is computed by:
+\begin{equation}
+    \rho_{q,p} = \frac{1}{d} \sum_i \left( \frac{X_{i,q} - \mu_{q}}{\sigma_{q}} \right) \cdot \left( \frac{X_{i,p} - \mu_{p}}{\sigma_{p}} \right)
+\end{equation} 
+The correlation coefficient $\rho_{q,p}$ indicates the strength and direction of the linear relationship between the two queries' frequency functions. The value of $\rho_{q,p}$ ranges from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation and 1 indicates a perfect positive correlation. Since the time spans are aligned, we are looking only for positive correlations as an indicator of similarity. We compute the temporal correlation for each query in the AQL with respect to its counterpart in Google Trends. In Table~\ref{tab:temporal-correlation} we display the resultig correlation coefficients. The table shows that most queries have a positive correlation with their counterpart in Google Trends, but the correlation coefficients are mostly very low. In addition, there are also some queries with a negative correlation. To get a visual impression of the similarity, we plot the two time series that refelct the highest correlation. 
+% In Figure~\ref{fig:temporal-correlation} we show the time series of the query \texttt{translate}. As we can see, the popularity within the AQL is much more volatile than the popularity of the query in Google Trends. Considering the overall low correlations of the 25 queries and the fact that this is the query with the highest correlation, we can conclude that the temporal popularity of queries in the AQL is substantially different from the temporal popularity of queries in Google Trends.
+
+
+\begin{table}[h]
+    \begin{tabular}{@{}lrlrlr@{}} \toprule
+        Query & $\rho_{q,p}$ & Query & $\rho_{q,p}$ & Query & $\rho_{q,p}$ \\ \cmidrule(l{2pt}r{2pt}){1-2} \cmidrule(l{2pt}r{2pt}){3-4} \cmidrule(l{2pt}r{2pt}){5-6} 
+        \texttt{google} & 0.22 & \texttt{yahoo} & 0.16 & \texttt{weather} & 0.24 \\  
+        \texttt{youtube} & 0.17 & \texttt{hotmail} & 0.01 & \texttt{facebook} & 0.04 \\
+        \texttt{gmail} & -0.02 & \texttt{news} & 0.01 & \texttt{you} & 0.09 \\
+        \texttt{ebay} & 0.07 & \texttt{amazon} & 0.20 & \texttt{games} & -0.04 \\
+        \texttt{free} & -0.11 & \texttt{twitter} & 0.27 & \texttt{translate} & 0.40 \\
+        \texttt{mp3} & -0.01 & \texttt{maps} & 0.06 & \texttt{msn} & 0.11 \\
+        \texttt{fb} & 0.17 & \texttt{mail} & 0.19 & \texttt{instagram} & 0.28 \\
+        \texttt{map} & -0.06 & \texttt{face} & 0.25 & \texttt{video} & 0.01 \\
+        \texttt{juegos} & 0.09 &  &  &  &  \\ 
+        \bottomrule
+    \end{tabular}
+    \caption{The table displays the resulting correlation coefficients of the temporal popularity. For a given query $q$ in the AQL, the correlation coefficient $\rho_{q,p}$ is computed with respect to its counterpart $p$ in Google Trends. The table shows that most queries have a positive correlation with their counterpart in Google Trends, but the correlation coefficients are mostly very low. In addition, there are also some queries with a negative correlation, indicating that the temporal popularity of queries is substantially different between the AQL and Google Trends.}
+    \label{tab:temporal-correlation}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/time-series-google-trends/all.pdf} 
+  \caption{The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.}
+  \label{fig:time-series}
+ \end{figure}
+    
 \section{Embedding-based Analysis}
-% In this section, distributions of labels are created from different NLP predictors. The general idea is to compare the different data sets according to their resulting distributions of different domains.  
-% \begin{itemize}
-%     \item Plausibilitätsstudie für die classifier: 50-100 samples pro label pro classifier: manuell annotieren und dann accuracy bestimmen.
-%     \item Intent
-%     \begin{itemize}
-%         \item Navigational, transactional and informational
-%         \begin{itemize}
-%             \item mapping (apply ORCAS-I classifier)
-%         \end{itemize}
-%     \end{itemize}
-%     \item Named Entities
-%     \begin{itemize}
-%         \item Frequency of named entities \begin{itemize}
-%             \item flat mapping->group->reduction
-%         \end{itemize} 
-%         \item Most common named entities
-%         \item Categorize named entities according to ... -> apply classifier?
-%     \end{itemize}
-%     \item Hate speech
-%     \begin{itemize}
-%         \item mapping (apply hate speech classifier)
-%     \end{itemize}
-%     \item NSFW
-%     \begin{itemize}
-%         \item mapping (apply NSFW classifier)
-%     \end{itemize}
-%     \item Spam
-%     \begin{itemize}
-%         \item mapping (apply spam classifier)
-%     \end{itemize}
-%     \item Content
-%     \begin{itemize}
-        
-%         \item Classify into topic taxonomy 
-%         \begin{itemize}
-%             \item mapping apply topic classifier
-%         \end{itemize}
-%     \end{itemize}
-    
-% \end{itemize}
-% \section{Temporal-based}
-% \begin{itemize}
-%     \item Discover Google Trends in Data
-%     \item Plot frequency of selected topics over time per data set
-%     \item Seasonal topics
 
-    
-% \end{itemize}
-% \section{Embedding-based}
-% \begin{itemize}
-%     \item Extract document vectors from e.g. BERT
-%     \begin{itemize}
-%         \item Create t-SNE plot with regard to intent, topics,... further categories
-%         \item Apply clusterting algorithm and compare resulting clustersX 
-%     \end{itemize}
-%     \item Topic Modeling
-%         \begin{itemize}
-%             \item Compare most common topics
-%             \item Compare variety of topics
-%         \end{itemize}
-% \end{itemize}
+
+
+
+% {'google': 0.21904851193584732, 'yahoo': 0.15904812650944658, 'weather': 0.23624534461790192, 'youtube': 0.17030650778343326, 'hotmail': 0.006745560399899185, 'facebook': 0.044298329003901335, 'gmail': -0.016379371677375545, 'news': 0.014114180639545795, 'you': 0.08693177691315236, 'ebay': 0.06776898206041422, 'amazon': 0.20019592168041728, 'games': -0.03879771049665855, 'free': -0.10915038913864314, 'twitter': 0.2735821131175976, 'translate': 0.3991971403856061, 'mp3': -0.009645428425897553, 'maps': 0.06408956789931061, 'msn': 0.10896897607438608, 'fb': 0.17292276415645547, 'mail': 0.18771473115814052, 'instagram': 0.28032287589686367, 'map': -0.05665690356281852, 'face': 0.24679975747851507, 'video': 0.006289646087909414, 'juegos': 0.08609699769876895}
+
+
+
+
+
+
+
 
 

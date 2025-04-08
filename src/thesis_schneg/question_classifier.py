@@ -217,11 +217,11 @@ class RuleBasedQuestionClassifier(
 
 
 class _Question_Predictor(Protocol):
-    def is_question(self, batch: DataFrame) -> DataFrame:
+    def get_question(self, batch: DataFrame) -> DataFrame:
         raise NotImplementedError()
 
     def __call__(self, batch: DataFrame) -> DataFrame:
-        return self.is_question(batch)
+        return self.get_question(batch)
 
 
 @dataclass(frozen=True)
@@ -231,7 +231,7 @@ class Question_Predictor(_Question_Predictor):
     def model(self) -> RuleBasedQuestionClassifier:
         return RuleBasedQuestionClassifier()
 
-    def is_question(self, batch: DataFrame) -> DataFrame:
+    def get_question(self, batch: DataFrame) -> DataFrame:
         batch['is-queston'] = [self.model.is_question(query)
                                for query in list(batch['serp_query_text_url'])]
         return batch

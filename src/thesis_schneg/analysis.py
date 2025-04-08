@@ -189,74 +189,89 @@ class SpacyEntityLevelStructures(_spacy_framework):
 def _get_parquet_paths(
     dataset_name: DatasetName,
     analysis_name: AnalysisName,
+    read_dir: Optional[Path] = None,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
     which_half: Optional[str] = None
 ) -> Iterable[Path]:
     base_path: Path
-
-    if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies", "filter-urls", "aql-anomaly"]:
-        assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
-        base_path = Path(
-            f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-get-lengths-{struc_level}-all/"
-        )
-        assert base_path.is_dir(
-        ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
-    else:
-        if struc_level in [None, "queries"]:
-            if dataset_name == "aol":
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
-                )
-            elif dataset_name == "ms-marco":
-                if only_english:
-                    base_path = Path(
-                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
-                    )
-                else:
-                    base_path = Path(
-                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
-                    )
-            elif dataset_name == "orcas":
-                base_path = Path(
-                    "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
-                )
-            elif dataset_name == "aql":
-                if only_english:
-                    base_path = Path(
-                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
-                    )
-                else:
-                    base_path = Path(
-                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
-                    )
-        else:
+    if read_dir is None:
+        if analysis_name in ["character-count-frequencies", "word-count-frequencies", "entity-count-frequencies", "query-count-frequencies", "filter-urls", "aql-anomaly"]:
+            assert struc_level is not None, "Structural level must be specified by \"--struc-level\" [queries, named-entities, words]"
             base_path = Path(
-                f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
+                f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-get-lengths-{struc_level}-all/"
             )
             assert base_path.is_dir(
             ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
+        else:
+            if struc_level in [None, "queries"]:
+                if dataset_name == "aol":
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aol_output/"
+                    )
+                elif dataset_name == "ms-marco":
+                    if only_english:
+                        base_path = Path(
+                            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_ms-marco/"
+                        )
+                    else:
+                        base_path = Path(
+                            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/msmarco_output/"
+                        )
+                elif dataset_name == "orcas":
+                    base_path = Path(
+                        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_output/"
+                    )
+                elif dataset_name == "aql":
+                    if only_english:
+                        base_path = Path(
+                            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/lng_filtered_aql/"
+                        )
+                    else:
+                        base_path = Path(
+                            "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_output/"
+                        )
+            else:
+                base_path = Path(
+                    f"/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/{dataset_name}-extract-{struc_level}-all/"
+                )
+                assert base_path.is_dir(
+                ), f"No directory found for dataset = {dataset_name} and struc_level = {struc_level}"
 
-    input_paths = [path for path in base_path.iterdir()
-                   if path.suffix == ".parquet"]
-    assert len(input_paths) > 0, f"No parquet files found in {base_path}"
+        input_paths = [path for path in base_path.iterdir()
+                       if path.suffix == ".parquet"]
+        assert len(input_paths) > 0, f"No parquet files found in {base_path}"
 
-    assert which_half in [None, "first", "second"], "Invalid half specified"
-    assert not (
-        sample_files is not None and which_half is not None), "Cannot specify both \"sample_files\" and \"which_half\""
+        assert which_half in [None, "first",
+                              "second"], "Invalid half specified"
+        assert not (
+            sample_files is not None and which_half is not None), "Cannot specify both \"sample_files\" and \"which_half\""
 
-    if sample_files is not None and which_half is None:
-        input_paths = choices(
-            population=input_paths,
-            k=min(sample_files, len(input_paths)),
-        )
-    elif sample_files is None and which_half is not None:
-        if which_half == "first":
-            input_paths = input_paths[:len(input_paths)//2]
-        elif which_half == "second":
-            input_paths = input_paths[len(input_paths)//2:]
-    assert input_paths, f"No files found in {base_path.name}"
+        if sample_files is not None and which_half is None:
+            input_paths = choices(
+                population=input_paths,
+                k=min(sample_files, len(input_paths)),
+            )
+        elif sample_files is None and which_half is not None:
+            if which_half == "first":
+                input_paths = input_paths[:len(input_paths)//2]
+            elif which_half == "second":
+                input_paths = input_paths[len(input_paths)//2:]
+        assert input_paths, f"No files found in {base_path.name}"
+    else:
+        if read_dir is str:
+            read_dir = Path(read_dir)
+        assert read_dir.is_dir(), f"Invalid directory {read_dir}"
+        input_paths = [path for path in read_dir.iterdir()
+                       if path.suffix == ".parquet"]
+        assert len(input_paths) > 0, f"No parquet files found in {read_dir}"
+
+        if sample_files is not None:
+            input_paths = choices(
+                population=input_paths,
+                k=min(sample_files, len(input_paths)),
+            )
     return input_paths
 
 
@@ -274,30 +289,23 @@ def load_dataset(dataset_name: DatasetName,
                  ) -> Dataset:
 
     # Load dataset.
-    if read_dir is not None:
-        dataset = read_parquet(
-            paths=read_dir,
-            concurrency=read_concurrency,
-            columns=columns,
-            ray_remote_args={"memory": memory_scaler*1000*1000*1000}
-        )
-    else:
-        dataset = read_parquet(
-            paths=[
-                str(path)
-                for path in _get_parquet_paths(
-                    dataset_name=dataset_name,
-                    analysis_name=analysis_name,
-                    struc_level=struc_level,
-                    sample_files=sample_files,
-                    only_english=only_english,
-                    which_half=which_half
-                )
-            ],
-            concurrency=read_concurrency,
-            columns=columns,
-            ray_remote_args={"memory": memory_scaler*1000*1000*1000}
-        )
+    dataset = read_parquet(
+        paths=[
+            str(path)
+            for path in _get_parquet_paths(
+                dataset_name=dataset_name,
+                analysis_name=analysis_name,
+                read_dir=read_dir,
+                struc_level=struc_level,
+                sample_files=sample_files,
+                only_english=only_english,
+                which_half=which_half
+            )
+        ],
+        concurrency=read_concurrency,
+        columns=columns,
+        ray_remote_args={"memory": memory_scaler*1000*1000*1000}
+    )
     return dataset
 
 
@@ -626,7 +634,7 @@ def merge_word_counts(df1: Dict[str, Any], df2: Dict[str, Any]) -> Dict[str, Any
 
 
 # Group-by function
-def groupy(dataset: Dataset, col: str) -> GroupedData:
+def groupby(dataset: Dataset, col: str) -> GroupedData:
     return dataset.groupby(key=col)
 
 
@@ -660,6 +668,8 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
+    elif analysis_name == "deduplicate-queries":
+        return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
 
     # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -668,7 +678,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
     # words of aql were too large to be extracted in one go, hence a merge of the two halfes was necessary
     elif analysis_name == "extract-words-merge":
-        return {'groupby_func': partial(groupy, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
+        return {'groupby_func': partial(groupby, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
     elif analysis_name == "extract-named-entities":
         return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
@@ -715,7 +725,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "query-chart-by-year":
         return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-annual-top-queries":
-        return {'groupby_func': partial(groupy, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
+        return {'groupby_func': partial(groupby, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
     elif analysis_name == "get-temporal-query-frequency":
         return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=['google', 'yahoo', 'weather', 'youtube', 'hotmail', 'facebook', 'gmail', 'news', 'you', 'ebay', 'amazon', 'games', 'free', 'twitter', 'translate', 'mp3', 'maps', 'msn', 'fb', 'mail', 'instagram', 'map', 'face', 'video', 'juegos', 'craigslist', 'facebook login', 'lyrics', 'game', 'traductor', 'you tube', 'as', 'whatsapp', 'videos', 'wikipedia', 'yahoo mail', 'myspace', 'tiempo', 'samsung', 'bbc', 'meteo', 'web', 'music', 'nokia', 'погода', 'clima', 'chat', 'sony', 'download', 'go', 'google translate', 'wiki', 'netflix', 'hot', 'dictionary', 'messenger', 'test', 'whatsapp web', 'satta', 'torrent', 'microsoft', 'radio', 'movies', 'вк', 'hi5', 'java', 'tv', 'jobs', 'mobile', 'halloween', 'iphone', 'linux', 'coronavirus', 'jogos', 'flash', 'world cup', 'apple', 'earth', 'ipl', 'dvd', 'corona', 'cricbuzz', 'web whatsapp', 'hp', 'my', 'wetter', 'nba', 'cheats', 'hotmail.com', 'friv', 'dr', 'fifa', 'trump', 'love', 'christmas', 'black friday', 'olympics', 'covid', 'walmart', 'www']), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-monthly-google-queries":
@@ -800,11 +810,15 @@ def analysis_pipeline(dataset_name: DatasetName,
 
     # Print results for debugging.
     # if type(ds) is Dataset:
-    #     print(ds.take(50))
+    #     print(ds.take(5))
     #     print(ds.columns())
+    #     print(f"\n\n\n\n\n{ds.count()}\n\n\n\n\n")
     # elif type(ds) is dict:
     #     print(ds)
 
-    # # Write results.
+    # Get sample of results.
+    # ds = ds.take(50)
+
+    # Write results.
     write_dataset(dataset=ds, write_dir=write_dir,
                   analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)

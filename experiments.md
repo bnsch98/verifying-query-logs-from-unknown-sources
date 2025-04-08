@@ -182,7 +182,7 @@ Herem, all data sets are stored with the suffix "-special" because they are gene
 | Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
 |-----------------------|---------- |-------------|------------|----------|----------|---------|
 | query chart by year     |  aql     | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis query-chart-by-year --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --only-english`    | `2025/03/08 12:09:26` | `2025/03/08 12:56:33` | 47m 6s | ✔️    |
-| get top monthly queries over time    |  aql | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis query-chart-by-year --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --read-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-filter-google-queries-all --write-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-top-monthly-queries-over-time`    | `` | `` | 1m 2s | ✔️❌    |
+| get top monthly queries over time    |  aql | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aql --analysis get-temporal-query-frequency --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024 --read-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-filter-google-queries-all --write-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-top-monthly-queries-over-time`    | `` | `` | 1m 2s | ✔️ (executed locally)    |
 |     |  orcas   | ``    | `` | `` | 1m 2s | ✔️❌    |
 
 
@@ -193,3 +193,11 @@ Herem, all data sets are stored with the suffix "-special" because they are gene
 | get embeddings    | aql       | `` | ``   | `` |  | ✔️❌     |
 | get embeddings    | ms-marco       | `` | ``   | `` |  | ✔️❌     |
 | get embeddings    | orcas       | `` | ``   | `` |  | ✔️❌     |
+
+# Presidio
+| Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
+|-----------------------|---------- |-------------|------------|----------|----------|---------|
+| group presidio    | aol       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aol --analysis query-chart-by-year --read-dir /mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analys is_data/analysis/aol-extract-presidio-pii-all/` | ``   | `` |  | ✔️❌     |
+| group presidio    | aql       | `` | ``   | `` |  | ✔️❌     |
+| group presidio    | ms-marco       | `` | ``   | `` |  | ✔️❌     |
+| group presidio    | orcas       | `` | ``   | `` |  | ✔️❌     |

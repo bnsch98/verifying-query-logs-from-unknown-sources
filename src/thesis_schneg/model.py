@@ -57,4 +57,5 @@ AnalysisName: TypeAlias = Literal[
     "get-query-frequency",
     "get-embeddings",
     "questions",
+    "deduplicate-queries",
 ]

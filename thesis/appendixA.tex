@@ -1,4 +1,90 @@
 \appendix
-\chapter{My First Appendix}
-This was just missing.
+\chapter{Query Logs Tables}
+\begin{table}[h]
+    \centering
+    \scalebox{0.7}{
+    \begin{tabular}{@{}llllllr@{}} \toprule
+        & \multicolumn{3}{c}{\textbf{AOL}}  & \multicolumn{3}{c}{\textbf{AQL}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7}
+        Rank & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
+        1 & \texttt{-} & 1,000,375 & 0\% & \texttt{finance} & 0 & 0\% \\
+        2 & \texttt{google} & 332,192 & 0\% & \texttt{\#} & 0 & 0\% \\
+        3 & \texttt{ebay} & 139,207 & 0\% & \texttt{query} & 0 & 0\% \\ 
+        4 & \texttt{yahoo} & 130,538 & 0\% & \texttt{\$} & 0 & 0\% \\ 
+        5 & \texttt{yahoo.com} & 97,518 & 0\% & \texttt{speed force} & 0 & 0\% \\ 
+        6 & \texttt{mapquest} & 88,279 & 0\% & \texttt{place:86f203b1e5dc4397} & 0 & 0\% \\ 
+        7 & \texttt{google.com} & 79,991 & 0\% & \texttt{``Kurdish Referendum''} & 0 & 0\% \\ 
+        8 & \texttt{myspace.com} & 77,211 & 0\% & \texttt{video} & 0 & 0\% \\ 
+        9 & \texttt{myspace} & 74,365 & 0\% & \texttt{Latoya Cantrell} & 0 & 0\% \\ 
+        10 & \texttt{myspace.com} & 43,036 & 0\% & \texttt{http://extras.denverpost.com/media/maps/kml/co...} & 0 & 0\% \\ 
+        11 & \texttt{www.yahoo.com} & 42,597 & 0\% & \texttt{\{srch_str\}} & 0 & 0\% \\ 
+        12 & \texttt{www.google.com} & 39,622 & 0\% & \texttt{la teachers strike} & 0 & 0\% \\ 
+        13 & \texttt{internet} & 30,125 & 0\% & \texttt{rabble.ca} & 0 & 0\% \\ 
+        14 & \texttt{http} & 28,516 & 0\% & \texttt{``Kurdish Referendum''} & 0 & 0\% \\ 
+        15 & \texttt{my space} & 27,887 & 0\% & \texttt{Sarah Stierch} & 0 & 0\% \\ 
+        16 & \texttt{weather} & 27,845 & 0\% & \texttt{Aspects} & 0 & 0\% \\ 
+        17 & \texttt{www.myspace.com} & 27,842 & 0\% & \texttt{\#communitywebs} & 0 & 0\% \\ 
+        18 & \texttt{map quest} & 25,856 & 0\% & \texttt{http://dcist.com/2015/07/metros_1000-series_ra...} & 0 & 0\% \\ 
+        19 & \texttt{ebay.com} & 22,893 & 0\% & \texttt{prom electric} & 0 & 0\% \\ 
+        20 & \texttt{american idol} & 22,652 & 0\% & \texttt{p2045576.m1710} & 0 & 0\% \\ 
+        \bottomrule
+    \end{tabular}
+    }
+    \caption{Ranking of the top 20 queries in the respective query logs. Since MS-MARCO and ORCAS only contain unique queries, we only consider AQL and AOL for this table. We also only display queries with latin characters. Because of this, six queries of the AQL's top 20 are replaced with the next most frequent queries of latin characters.}
+    \label{tab:top-queries}
+\end{table}
 
+\begin{table}[h]
+    \centering
+    \scalebox{0.7}{
+        \begin{tabular}{@{}llllllr@{}} \toprule
+        & \multicolumn{3}{c}{\textbf{AOL}}  & \multicolumn{3}{c}{\textbf{AQL}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7}
+        Rank & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
+        1 & \texttt{of} & 1,126,030 & 1.26\% & \texttt{=} & 29,301,944 & 1.81\% \\
+        2 & \texttt{in} & 946,200 & 1.06\% & \texttt{of} & 12,284,222 & 0.76\% \\
+        3 & \texttt{the} & 839,233 & 0.94\% & \texttt{and} & 11,385,504 & 0.71\% \\ 
+        4 & \texttt{for} & 698,847 & 0.78\% & \texttt{the} & 8,532,900 & 0.53\% \\ 
+        5 & \texttt{and} & 692,798 & 0.78\% & \texttt{site} & 8,466,226 & 0.52\% \\ 
+        6 & \texttt{to} & 471,360 & 0.53\% & \texttt{in} & 6,584,034 & 0.41\% \\ 
+        7 & \texttt{free} & 450,322 & 0.50\% & \texttt{for} & 6,084,390 & 0.38\% \\ 
+        8 & \texttt{a} & 373,919 & 0.42\% & \texttt{-wikipedia} & 5,620,112 & 0.35\% \\ 
+        9 & \texttt{google} & 366,059 & 0.41\% & \texttt{to} & 5,588,686 & 0.35\% \\ 
+        10 & \texttt{'s} & 359,448 & 0.40\% & \texttt{vector} & 4,544,168 & 0.28\% \\ 
+        11 & \texttt{new} & 270,823 & 0.30\% & \texttt{finance} & 4,353,432 & 0.27\% \\ 
+        12 & \texttt{http} & 263,056 & 0.29\% & \texttt{\$} & 4,211,514 & 0.26\% \\ 
+        13 & \texttt{on} & 254,673 & 0.29\% & \texttt{from} & 4,105,194 & 0.25\% \\ 
+        14 & \texttt{pictures} & 236,860 & 0.27\% & \texttt{-site} & 3,983,136 & 0.25\% \\ 
+        15 & \texttt{county} & 232,176 & 0.26\% & \texttt{on} & 3,794,202 & 0.24\% \\ 
+        16 & \texttt{yahoo} & 219,822 & 0.25\% & \texttt{a} & 3,675,640 & 0.23\% \\ 
+        17 & \texttt{how} & 209,175 & 0.23\% & \texttt{kak} & 3,574,962 & 0.22\% \\
+        18 & \texttt{lyrics} & 190,043 & 0.21\% & \texttt{2} & 3,554,028 & 0.22\% \\ 
+        19 & \texttt{my} & 188,189 & 0.21\% & \texttt{de} & 3,349,984 & 0.21\% \\ 
+        20 & \texttt{school} & 183,790 & 0.21\% & \texttt{free} & 3,132,780 & 0.19\% \\ 
+        \midrule\midrule
+        & \multicolumn{3}{c}{\textbf{MS-MARCO}}  & \multicolumn{3}{c}{\textbf{ORCAS}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7}
+        Rank & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
+        1 & \texttt{the} & 245,317 & 0.83\% & \texttt{of} & 567,790 & 1.65\% \\
+        2 & \texttt{de} & 242,823 & 0.82\% & \texttt{to} & 484,322 & 1.41\% \\
+        3 & \texttt{in} & 239,674 & 0.81\% & \texttt{in} & 465,981 & 1.36\% \\ 
+        4 & \texttt{to} & 214,375 & 0.73\% & \texttt{how} & 393,224 & 1.15\% \\ 
+        5 & \texttt{for} & 212,892 & 0.72\% & \texttt{what} & 374,409 & 1.09\% \\ 
+        6 & \texttt{} & 212,760 & 0.72\% & \texttt{is} & 367,364 & 1.07\% \\ 
+        7 & \texttt{of} & 211,873 & 0.72\% & \texttt{for} & 355,161 & 1.03\% \\ 
+        8 & \texttt{a} & 175,659 & 0.59\% & \texttt{the} & 343,583 & 1.00\% \\ 
+        9 & \texttt{and} & 127,821 & 0.43\% & \texttt{a} & 268,469 & 0.78\% \\ 
+        10 & \texttt{is} & 107,218 & 0.36\% & \texttt{and} & 192,209 & 0.56\% \\ 
+        11 & \texttt{how} & 104,567 & 0.35\% & \texttt{on} & 118,872 & 0.35\% \\ 
+        12 & \texttt{on} & 68,471 & 0.23\% & \texttt{online} & 117,947 & 0.34\% \\ 
+        13 & \texttt{2021} & 67,953 & 0.23\% & \texttt{free} & 106,799 & 0.31\% \\ 
+        14 & \texttt{what} & 66,618 & 0.23\% & \texttt{does} & 104,246 & 0.30\% \\ 
+        15 & \texttt{download} & 65,442 & 0.22\% & \texttt{definition} & 102,850 & 0.30\% \\ 
+        16 & \texttt{sale} & 65,000 & 0.22\% & \texttt{best} & 98,291 & 0.29\% \\ 
+        17 & \texttt{online} & 64,211 & 0.22\% & \texttt{do} & 97,787 & 0.28\% \\ 
+        18 & \texttt{en} & 62,309 & 0.21\% & \texttt{login} & 94,548 & 0.27\% \\ 
+        19 & \texttt{free} & 61,086 & 0.21\% & \texttt{'s} & 93,077 & 0.27\% \\ 
+        20 & \texttt{la} & 59,558 & 0.20\% & \texttt{county} & 91,291 & 0.26\% \\ 
+        \bottomrule
+    \end{tabular}
+    }
+    \caption{Ranking of the top 20 words in the respective query logs.}
+    \label{tab:top-words}
+\end{table}
