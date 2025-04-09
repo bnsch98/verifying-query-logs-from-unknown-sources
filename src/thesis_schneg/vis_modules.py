@@ -17,21 +17,26 @@ def _get_results_paths(
     dataset_name: DatasetName,
     analysis_name: AnalysisName,
     cleaned_aql: bool = False,
+    english: bool = False,
 ) -> Iterable[Path]:
 
     base_path = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"
     )
+
+    result_folder = f'{dataset_name}-{analysis_name}'
     if cleaned_aql and dataset_name == 'aql':
         # filter paths by dataset_name and analysis_name
-        result_path = [path for path in base_path.glob(
-            f'{dataset_name}-{analysis_name}-special')]
-        print(result_path[0])
+        result_folder = f'{result_folder}-special'
+        print(result_folder)
     else:
         # filter paths by dataset_name and analysis_name
-        result_path = [path for path in base_path.glob(
-            f'{dataset_name}-{analysis_name}-all')]
-
+        result_folder = f'{result_folder}-all'
+    if english and (dataset_name == 'aql' or dataset_name == 'ms-marco'):
+        result_folder = f'{result_folder}-english'
+    # get all directories in the base path
+    result_path = [path for path in base_path.glob(
+        result_folder)]
     assert result_path, f"No directories found for dataset = {dataset_name} and analysis = {analysis_name}"
 
     # check if there are multiple directories
@@ -118,7 +123,7 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
         ax.bar(x=x, height=height, alpha=0.5,
                label=label, color=color, width=bar_width)
         ax.legend(fancybox=False,
-                  edgecolor="black").get_frame().set_linewidth(0.5)
+                  edgecolor="black", framealpha=0.5).get_frame().set_linewidth(0.5)
     else:
         ax.bar(x=x, height=height,
                alpha=0.5, width=bar_width)

@@ -1,3 +1,5 @@
+# from tirex_tracker import fetch_info
+# print(fetch_info())
 from typing import final
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from typing import Optional
@@ -191,11 +193,16 @@ class RuleBasedQuestionClassifier(
     QuestionClassifier,
     ClosedQuestionClassifier,
 ):
+
     def __init__(self):
+        # import nltk
+        # nltk.download("punkt_tab")
         download_nltk_dependencies(
             "punkt",
             "averaged_perceptron_tagger",
             "universal_tagset",
+            # "punkt_tab",
+            # "averaged_perceptron_tagger_eng",
         )
 
     def is_question(self, question: str) -> bool:
@@ -232,8 +239,9 @@ class Question_Predictor(_Question_Predictor):
         return RuleBasedQuestionClassifier()
 
     def get_question(self, batch: DataFrame) -> DataFrame:
-        batch['is-queston'] = [self.model.is_question(query)
-                               for query in list(batch['serp_query_text_url'])]
+        questions = [self.model.is_question(query)
+                     for query in list(batch['serp_query_text_url'])]
+        batch['is-question'] = questions
         return batch
 
 

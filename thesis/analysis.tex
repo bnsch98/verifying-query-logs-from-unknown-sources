@@ -68,20 +68,13 @@ We investigate the frequencies of all considered categories, namely queries, nam
 Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. As for named entities, we can state that all distributions follow Zipf's law reasonably well. The distributions show a relatively constant slope in the log-scaled dimensions and are fairly similar. For the most part, this is also true for the word frequencies, despite a small deviation. The constant slope is interrupted by a small curvature in the central part of the distribution. However, this curvature is present in all distributions. From a visual perspective, we can conclude that the distributions of the different data sets are similar. There is no striking outlier indicating clear differences.
 \subsubsection{TBD: Numeric Comparison: Named Entities and Words}   
 Wasserstein distances or hypothesis test
-
-% \begin{figure}
-%     \centering
-%     \import{../plots/updated_plots/extract-named-entities-and-extract-words-single}{all.pgf}
-%     \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
-%     \label{fig:zipf-named-entities-words}
-% \end{figure} 
+ 
 \begin{figure}[h]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/updated_plots/extract-named-entities-and-extract-words-single/all.pdf} 
   \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
   \label{fig:zipf-named-entities-words}
  \end{figure}
-
 
 \subsubsection{Visual Comparison: Queries and Characters}
 In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters are displayed in a log-scaled graph. The query distributions as well comply with Zipf's law reasonably well. The distributions are similar and a constant slope in the log-scaled dimensions is present. The distributions of characters in contrast do not fit Zipf's law. In general, the distributions of characters are quite different. It is striking that the AOL and the ORCAS log contain less characters than the AQL and the MS-MARCO log. This is probably due to their monolingual composition. Contrarily, AQL and MS-MARCO are multilingual, hence contain more characters. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would predict. This might be the case because alphanumeric characters are significantly more frequent than special characters which would skew the distribution.
@@ -90,19 +83,12 @@ In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and character
 TBD: Wasserstein distances or hypothesis test
 Problem: Arrays too large for scipy's wasserstein function
      
-% \begin{figure}
-%     \centering
-%     \import{../plots/updated_plots/query-frequencies-and-extract-chars-single}{all.pgf}
-%     \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
-%     \label{fig:zipf-queries-chars}
-% \end{figure}
 \begin{figure}[h]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/updated_plots/query-frequencies-and-extract-chars-single/all.pdf} 
   \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
   \label{fig:zipf-queries-chars}
  \end{figure}
-
 
 \subsubsection{TBD: Top Queries}
 We take a look at the top 20 most frequent queries in the query logs. The most frequent queries are listed in Table~\ref{tab:top-queries}. 
@@ -166,26 +152,27 @@ The resulting distributions of the measurements are now compared numerically to 
 Since we are rather interested in the comparison of distances than considering absolute values, the Wasserstein distance is a suitable choice because it fulfills the axioms of a metric~\citep{panaretos:2019}. Because of that, we can deduce conclusions from comparing the obtained numbers of the Wasserstein distances and thereby assess the similarities of the distributions. 
 
 Concerning one specific anaylsis, we obtain a set of distances for each query log that represent the similaries to the other query log's distributions. In Table~\ref{tab:wasserstein-distances} the Wasserstein distances of each query log are displayed with regard to the conducted analysis. Even though the AQL shows the highest distances to the other query logs in most analyses, the distances are not significantly different. Hence, we can state that the AQL fits the other logs in structural or linguisitc terms reasonably well. In Figure~\ref{fig:wasserstein-distances-lengths} a configuration of the distributions is displayed that visualizes the Wasserstein distances. Each point corresponds to a query log's distribution and the configuration of the points reflects the Wasserstein distances to each other. The configuration was derived by applying multidimensional scaling to the resulting distance matrix. As the numbers already indicated, the points are distributed quite evenly and no clear clusters are visible.    
+
 \begin{figure}[h]
     \centering
-    \import{../plots/updated_plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities}{all.pgf}
-    \caption{The relative frequencies of query and named entity lengths measured in the number of characters are displayed.}
-    \label{fig:lengths-query-characters-named-entity-characters}
-\end{figure} 
-    
-\begin{figure}
-    \centering
-    \import{../plots/updated_plots/character-count-frequencies-words-and-entity-count-frequencies-queries}{all.pgf}
-    \caption{The relative frequencies of word and query lengths are displayed. In this collection, the word length is measured in number of characteres. The query length is measured in the number of occuring named entities.}
-    \label{fig:lengths-words-characters-queries-named-entities}
-\end{figure} 
+    \includegraphics[width=1.0\textwidth]{../plots/updated_plots/character-count-frequencies-queries-and-character-count-frequencies-named-entities/all.pdf} 
+  \caption{The relative frequencies of query and named entity lengths measured in the number of characters are displayed.}
+  \label{fig:lengths-query-characters-named-entity-characters}
+\end{figure}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
-    \import{../plots/updated_plots/word-count-frequencies-queries-and-word-count-frequencies-named-entities}{all.pgf}
-    \caption{The relative frequencies of query and named entity lengths are displayed. Both, the query length and the named entity length are measured in number of occuring words.}
-    \label{fig:lengths-query-words-named-entity-words}
-\end{figure} 
+    \includegraphics[width=1.0\textwidth]{../plots/updated_plots/character-count-frequencies-words-and-entity-count-frequencies-queries/all.pdf} 
+  \caption{The relative frequencies of word and query lengths are displayed. In this collection, the word length is measured in number of characteres. The query length is measured in the number of occuring named entities.}
+  \label{fig:lengths-words-characters-queries-named-entities}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/updated_plots/word-count-frequencies-queries-and-word-count-frequencies-named-entities/all.pdf} 
+  \caption{The relative frequencies of query and named entity lengths are displayed. Both, the query length and the named entity length are measured in number of occuring words.}
+  \label{fig:lengths-query-words-named-entity-words}
+\end{figure}
 
 
 \begin{table}
@@ -345,7 +332,7 @@ In this section, we classify queries or components of queries, like named entiti
 As a first step, we classify queries into the categories informational, navigational and transactional. Since the classifier from \citet{alexander:2022} performs fairly accurate, we apply it in this work. The considered classifier achieves an accuracy of $0.90$. Since the classifier of \citet{alexander:2022} was trained on english queries only, we apply it only to the english subset of the multiligual query logs (AQL and MS-MARCO). We produce the labels by passing the model to Ray's preferable API-call~\verb|map_batches()| for offline batch inference. After that, we apply the~\verb|groupby()| API-call to group the data set by the labels and get counts for each label. The classifier is not provided publicly, but was obtained by a personal request to \citet{alexander:2022}. In Table~\ref{tab:experiment-parameters-classification} we note some key parameters of the experiments to enhance reproducibility. We only list the parameters' extreme values, indicating the maximum of required ressources.
 
 \subsection{PII Entity Labels}
-Another aspect that we consider in this work is the prevalence of personally identifiable information (PII) in the query logs. We employ Microsoft's Presidio-Model\footnote{\url{https://github.com/microsoft/presidio}} to regognize PII entities in the query logs and store their labels. The classifier achieves an accuracy of $0.95$????. Again, we produce the labels by applying Ray's preferable API-call~\verb|map_batches()| for offline batch inference. A subsequent \verb|groupby()|-call provides the counts for each label. In Table~\ref{tab:experiment-parameters-classification}, the ressources needed and related information to run the classification are listed. 
+Another aspect that we consider in this work is the prevalence of personally identifiable information (PII) in the query logs. We employ Microsoft's Presidio-Model\footnote{\url{https://github.com/microsoft/presidio}} to recognize PII entities in the query logs and store their labels. Microsoft provides an evaluation of the model, demonstrating that it achieves a precision of 0.94 and a recall of 0.55. Again, we produce the labels by applying Ray's preferable API-call~\verb|map_batches()| for offline batch inference. A subsequent \verb|groupby()|-call provides the counts for each label. In Table~\ref{tab:experiment-parameters-classification}, the ressources needed and related information to run the classification are listed. 
 
 
 \begin{table}[h]
@@ -364,19 +351,21 @@ Another aspect that we consider in this work is the prevalence of personally ide
 \end{table}
 
 \subsubsection{Evaluation of Query Intent}
-\begin{figure}[h]
+In Figure~\ref{fig:query-intent} the distribution of query intents in the query logs is displayed. The labels were produced by the classifier of \citet{alexander:2022}. The figure shows an equal ranking of the labels. The most frequent label is ``informational'' followed by ``navigational'' and ``transactional''. Apart from the ratio of navigational queries, the distributions are very similar.  
+\begin{figure}[t!]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/query-intent/all.pdf} 
-  \caption{The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.}
-  \label{fig:Test}
+  \caption{The figure displays the distribution of query intents in the query logs. The labels were produced by the classifier of \citet{alexander:2022}. The figure shows an equal ranking of the labels. The most frequent label is ``informational'' followed by ``navigational'' and ``transactional''. Apart from the ratio of navigational queries, the distributions are very similar.}
+  \label{fig:query-intent}
  \end{figure}
  
 \subsubsection{Evaluation of PII Entities}
+In Figure~\ref{fig:pii-entities} the distribution of PII entities in the query logs is displayed. The labels were produced by Microsoft's Presidio-Model. The figure shows that the same four PII labels are the most frequent ones in all query logs: ``Person'', ``Location'', ``NRP'' (a person's Nationality, religious or political group) and ``Datetime''. Among these four labels however, the distribution varies across the query logs.
 \begin{figure}[h]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/group-presidio-pii/all.pdf} 
-  \caption{The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.The updated figure now looks more polished and visually fits into the context of the LaTeX document with higher consistency.}
-  \label{fig:Test}
+  \caption{The figure displays the distribution of PII entities in the query logs. The labels were produced by Microsoft's Presidio-Model. The figure shows that the same four PII labels are the most frequent ones in all query logs: ``Person'', ``Location'', ``NRP'' (a person's Nationality, religious or political group) and ``Datetime''. Among these four labels however, the distribution varies across the query logs.}
+  \label{fig:pii-entities}
  \end{figure}
 
 \subsection{Not Safe For Work Classification}
