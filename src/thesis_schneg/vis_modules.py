@@ -107,7 +107,7 @@ def get_frequency_dict(counts: List[Any], lengths: List[Any]) -> Dict[str, Any]:
     return freq_dict
 
 
-def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, multi: bool = False, bar_width: float = 0.5) -> Tuple[Figure, Axes]:
+def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[str, Any], label: str = None, color: str = None, multi: bool = False, bar_width: float = 0.5, log: bool = False) -> Tuple[Figure, Axes]:
     fig, ax = subplots
     height = data[vis_params["dataset-col-y"]].to_numpy()
     if type(data[vis_params["dataset-col-x"]].iloc[0]) is str:
@@ -134,6 +134,9 @@ def bar_plot(data: DataFrame, subplots: Tuple[Figure, Axes], vis_params: Dict[st
             ax.set_ylabel(vis_params["y-label"])
         if vis_params["title"] is not None:
             ax.set_title(vis_params["title"])
+
+    if log:
+        ax.set_xscale('log')
 
     if vis_params["x-lim"] is not None:
         ax.set_xlim(left=vis_params["x-lim"][0], right=vis_params["x-lim"][1])
@@ -273,11 +276,17 @@ def chi2_fit(test_distr: ArrayLike, exp_distr: ArrayLike, significance_lvl: floa
     return test_statistic, treshold, test_statistic <= treshold
 
 
-def get_max_x(data_dict: Dict[str, DataFrame], x_name: str, threshold: float = 0.999) -> float | int:
+def get_max_x(data_dict: Dict[str, DataFrame], x_name: str, rank_sized: bool = False, threshold: float = 0.999) -> float | int:
     max_x = []
     for dataset_name, data in data_dict.items():
-        data = data.sort_values(x_name, ascending=True)
+        if rank_sized:
+            data = data.sort_values('count()', ascending=False)
+        else:
+            data = data.sort_values(x_name, ascending=True)
         data['cum_dist'] = (data['count()'] / data['count()'].sum()).cumsum()
         data = data.query(f'`cum_dist` < {threshold}')
-        max_x.append(data[x_name].max())
+        if rank_sized:
+            max_x.append(len(data))
+        else:
+            max_x.append(data[x_name].max())
     return max(max_x)

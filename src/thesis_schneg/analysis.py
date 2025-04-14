@@ -777,6 +777,17 @@ def analysis_pipeline(dataset_name: DatasetName,
     ds = load_dataset(dataset_name=dataset_name, struc_level=struc_level, sample_files=sample_files,
                       only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
 
+    # take random sample of dataset
+    if analysis_name == "get-embeddings":
+        if dataset_name == "aol":  # Size: 10 M
+            ds = ds.random_sample(fraction=0.1, seed=42)
+        elif dataset_name == "aql":  # Size: 62,4 M
+            ds = ds.random_sample(fraction=1/62.4, seed=42)
+        elif dataset_name == "ms-marco":  # Size: 10 M
+            ds = ds.random_sample(fraction=0.1, seed=42)
+        elif dataset_name == "orcas":  # Size: 10 M
+            ds = ds.random_sample(fraction=0.1, seed=42)
+
     # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         # iterate through list of mapping functions
@@ -819,6 +830,11 @@ def analysis_pipeline(dataset_name: DatasetName,
     # Get sample of results.
     # ds = ds.take(50)
 
+    # print number of rows
+    print(ds.count())
+    print(ds.columns())
+    print(ds.take(1))
+
     # Write results.
-    write_dataset(dataset=ds, write_dir=write_dir,
-                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
+    # write_dataset(dataset=ds, write_dir=write_dir,
+    #               analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)

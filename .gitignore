@@ -9,3 +9,6 @@
 
 # ignore trend data
 /trends
+
+# ignore logs
+src/logs
