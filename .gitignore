@@ -12,3 +12,8 @@
 
 # ignore logs
 src/logs
+
+# ignore plots
+/plots
+
+/src/schedule.sh

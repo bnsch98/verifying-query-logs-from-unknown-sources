@@ -18,7 +18,7 @@ from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
 from ray import init
 from pandas import DataFrame
-from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
+from typing import Iterable, Callable, Protocol, Union, Any, Dict
 from random import choices
 from pathlib import Path
 

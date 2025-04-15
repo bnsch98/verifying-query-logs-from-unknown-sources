@@ -1,19 +1,13 @@
 from ray import init
 import json
-# from ray.data import range
-# import ray
 import pyarrow as pa
-# from pyarrow.lib import timestamp
 from pyarrow import csv
 import pandas as pd
 from ray.data import read_json, read_parquet, read_csv
-# from ray.data.datasource.partitioning import Partitioning
-# from ray.data.aggregate import Count, AggregateFn
 import os
-# import matplotlib.pyplot as plt
-# Initialize Ray (and connect to cluster).
+import sys
+# this script is used to standardize the datasets for the thesis, namely to align column names and types
 init()
-# init(address = None)
 
 schema = pa.schema(
     [
@@ -167,16 +161,6 @@ class Ray_Dataloader:
         return ds
 
 
-input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol-cleaned/'
-input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
-input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/'  # richtiger Pfad
-
-with open("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_paths.json", 'r') as f:
-    input_paths_aql = json.load(f)
-input_paths_aql.pop(794)  # remove the error path -> empty file
-input_paths_aql.pop(961)  # remove the error path -> empty file
-
-
 # aggregation_row_count = AggregateFn(
 #     init=lambda column: 0,
 #     # Apply this to each row to produce a partial aggregate result
@@ -203,6 +187,24 @@ def int_to_str(batch: pd.DataFrame) -> pd.DataFrame:
 def count_rows(batch: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"row_count": [len(batch)]})
 # print(f"SIZE Dataset: {ds_aql.aggregate(aggregation_row_count)['sum_rows']}")
+
+
+dataset_name = sys.argv[1]
+assert len(sys.argv) >= 2, "Please provide the dataset name as an argument.  Please use \"aql\", \"aol\", \"ms-marco\" or \"orcas\" as dataset name."
+assert dataset_name in ['aql', 'aol', 'ms-marco',
+                        'orcas'], "Dataset name not supported! Please use \"aql\", \"aol\", \"ms-marco\" or \"orcas\" as dataset name."
+
+if dataset_name == 'aql':
+    with open("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/aql_paths.json", 'r') as f:
+        input_paths_aql = json.load(f)
+        input_paths_aql.pop(794)  # remove the error path -> empty file
+        input_paths_aql.pop(961)  # remove the error path -> empty file
+elif dataset_name == 'aol':
+    input_paths_aol = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-aol-cleaned/'
+elif dataset_name == 'ms-marco':
+    input_paths_ms = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/corpus-msmarco/'
+elif dataset_name == 'orcas':
+    input_paths_orcas = '/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas_cleaned/'
 
 
 #   AQL   #####

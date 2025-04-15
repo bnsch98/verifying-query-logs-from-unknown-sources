@@ -1,6 +1,5 @@
 # from tirex_tracker import fetch_info
 # print(fetch_info())
-from thesis_schneg.classification_module import QueryIntentPredictor, nvidiaDomainClassifier, nvidiaQualityClassifier, NSFWPredictor
 from functools import partial
 from sentence_transformers import SentenceTransformer
 from presidio_analyzer import AnalyzerEngine
@@ -8,19 +7,28 @@ from gliner import GLiNER
 from spacy import load as spacy_load, Language, explain
 from dataclasses import dataclass
 from functools import cached_property
-from json import dumps
+from json import dumps, load as json_load
 from thesis_schneg.model import DatasetName, AnalysisName
 from ray.data.grouped_data import GroupedData
 from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
 from ray import init
-from pandas import DataFrame, concat, merge
+from pandas import DataFrame
 from numpy import array as np_array, sum as np_sum
-from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict
+from typing import Iterable, Optional, Callable, Protocol, Union, Any, Dict, Mapping
 from random import choices
 from datetime import datetime
 from re import compile, findall
 from pathlib import Path
+from safetensors.torch import load_model
+from torch import device
+from torch.cuda import is_available as cuda_is_available
+from transformers import (
+    BertTokenizer,
+    BertForSequenceClassification,
+    pipeline,
+    Pipeline,
+)
 # from tirex_tracker import fetch_info
 # print(fetch_info())
 
@@ -58,6 +66,86 @@ class Sentence_Predictor(Protocol):
 
     def __call__(self, batch: DataFrame) -> DataFrame:
         return self.get_embeddings(batch)
+
+
+class _Predictor(Protocol):
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        raise NotImplementedError()
+
+    def __call__(self, batch: DataFrame) -> DataFrame:
+        return self.predict_batch(batch)
+
+    @cached_property
+    def _device(self) -> device:
+        return device("cuda" if cuda_is_available() else "cpu")
+
+
+@dataclass(frozen=True)
+class QueryIntentPredictor(_Predictor):
+    labels_path: Path = Path(
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/model/labels.json"
+    )
+    model_path: Path = Path(
+        "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/BERT_intent_classifier/model/bert-orcas-i-level1-query.safetensors"
+    )
+
+    @cached_property
+    def _id2label(self) -> Mapping[int, str]:
+        # Load labels.
+        with self.labels_path.open("rb") as file:
+            label_dict = json_load(fp=file)
+
+        # Swap label dict keys/values.
+        return {v: k for k, v in label_dict.items()}
+
+    @cached_property
+    def _tokenizer(self) -> BertTokenizer:
+        return BertTokenizer.from_pretrained(
+            pretrained_model_name_or_path="bert-base-uncased",
+            do_lower_case=True,
+        )
+
+    @cached_property
+    def _model(self) -> BertForSequenceClassification:
+        # Load the BERT model.
+        model = BertForSequenceClassification.from_pretrained(
+            pretrained_model_name_or_path="bert-base-uncased",
+            id2label=self._id2label,
+            output_attentions=False,
+            output_hidden_states=False,
+        )
+
+        model.to(self._device)
+
+        # Load state of trained model.
+        load_model(
+            model=model,
+            filename=str(self.model_path),
+            strict=False,
+            device=self._device.type,
+        )
+
+        return model
+
+    @cached_property
+    def _pipeline(self) -> Pipeline:
+        return pipeline(
+            task="text-classification",
+            model=self._model,
+            tokenizer=self._tokenizer,
+            device=self._device,
+            padding=True,
+            truncation=True,
+            top_k=1,
+        )
+
+    def predict_batch(self, batch: DataFrame) -> DataFrame:
+        # Reset call count of classifier pipeline.
+        self._pipeline.call_count = 0
+        predictions = self._pipeline(list(batch["serp_query_text_url"]))
+        batch["query-intent"] = [prediction[0]["label"]
+                                 for prediction in predictions]
+        return batch
 
 
 @dataclass(frozen=True)
@@ -706,12 +794,6 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     # Inference and Embeddings: Predictions on queries, extraction of inference-based features, embeddings
     elif analysis_name == "query-intent":
         return {'groupby_func': partial(groupby_count, col='query-intent'), 'aggregator': None, 'mapping_func': [QueryIntentPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "query-domain":
-        return {'groupby_func': partial(groupby_count, col='query-domain'), 'aggregator': None, 'mapping_func': [nvidiaDomainClassifier()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "query-quality":
-        return {'groupby_func': partial(groupby_count, col='query-quality'), 'aggregator': None, 'mapping_func': [nvidiaQualityClassifier()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "query-nsfw":
-        return {'groupby_func': partial(groupby_count, col='query-nsfw'), 'aggregator': None, 'mapping_func': [NSFWPredictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-gliner-pii":
         return {'groupby_func': partial(groupby_count, col=['entity', 'entity-label']), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': GlinerGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-presidio-pii":
@@ -831,10 +913,10 @@ def analysis_pipeline(dataset_name: DatasetName,
     # ds = ds.take(50)
 
     # print number of rows
-    print(ds.count())
-    print(ds.columns())
-    print(ds.take(1))
+    # print(ds.count())
+    # print(ds.columns())
+    # print(ds.take(1))
 
     # Write results.
-    # write_dataset(dataset=ds, write_dir=write_dir,
-    #               analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
+    write_dataset(dataset=ds, write_dir=write_dir,
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
