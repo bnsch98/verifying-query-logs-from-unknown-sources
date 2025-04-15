@@ -78,6 +78,7 @@
 \usepackage{placeins} % to place figs, tables etc. (added 4/9/2025)
 \usepackage{amsmath} % for math (added 4/10/2025)
 \usepackage{amsfonts} % for math (added 4/13/2025)
+\usepackage{array}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Commenting (by your supervisor)
@@ -101,7 +102,12 @@
 % \begin{sloppypar}
 \begin{frontmatter}
 \begin{abstract}
-This is the \LaTeX{} template for Bachelor and Master theses at Webis. This template contains several hints and conventions on how to structure a thesis, how to cite the work of others, and how to display your results besides plain text. 
+This thesis aims to analyze the Archive Query Log (AQL), a query log of unknown source, and examine if it reflects realistic user behavior or if its query distribution is rather anomalous. To accomplish this, we compare it to other publicly available query logs, which are collected from real-world logs. We consider the AOL Log, the MS-MARCO Web Search Log and the ORCAS Log. The comparison is based on various metrics that aim to capture distinctive characteristics of a query log. 
+
+The analysis in this thesis is composed of three parts: structure-related, inference-based and temporal-based analysis. For each part we measure distributions of the query logs and compare them to each other. The numeric comparison is based on Wasserstein distances, a method to measure similarities of probability distributions. Besides the numeric comparison of distributions we provide concrete insights, displaying tables of top queries, top words and visualizations of temporal patterns.
+
+The results show that the AQL exhibits similar distributions to the other query logs, but the similarity lacks magnitude to conclude that the AQL belongs to the comparison group. Furthermore, temporal pattens of the AQL are substantially different to the temporal patterns present in real-word query logs. 
+
 \end{abstract}
 
 \tableofcontents
@@ -124,9 +130,9 @@ This is the \LaTeX{} template for Bachelor and Master theses at Webis. This temp
 \include{datasets}
 \include{analysis}
 \include{evaluation}
-\include{conclussion}
+% \include{conclussion}
 
-\include{appendixA}
+% \include{appendixA}
 
 % Bibliography
 \bibliographystyle{plainnat} % requires package natbib. An alternative is apalike

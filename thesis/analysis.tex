@@ -28,7 +28,7 @@ Even though named entities are not considered a syntactic category primarily, we
 For each of the aforementioned categories (queries, named entities, words and characters), we carry out two types of measurements: 
 \begin{enumerate}
     \item \textbf{Frequencies of Linguistic Elements:} We extract all elements of a category from the query log and determine the frequency of each element. For instance, we extract all existing words from the query log and measure each word's frequency. We proceed accordingly for all categories.
-    \item \textbf{Length-Related Frequencies:} We measure the lengths of all extracted items from a category in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, e.g., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories, we gain a thorough set of measurements for each query log.
+    \item \textbf{Length-related Frequencies:} We measure the lengths of all extracted items from a category in terms of all possible subcategories. The defined syntactic categories are subject to a hierachical order, e.g., queries can be described as a set of named entities, words or characters. Words, in turn, can not be described as a set of named entities. Accordingly, we measure lengths of queries in terms of named entities, words and characters. Named entities are measured by the count of words or characters. By continuing this procedure for all categories, we gain a thorough set of measurements for each query log.
 \end{enumerate}
 
 \subsection{Frequencies of Linguistic Elements}
@@ -52,7 +52,7 @@ In Table~\ref{tab:experiment-parameters-ling-elements}, we note some key paramet
     \caption{The parameter values of this table are the extreme values of the configuration to run the extractions of linguistic elements. Both models, the spaCy-Tokenizer and the spaCy-NER are part of spaCy's \texttt{en\_core\_web\_sm}-model, which was used for this analysis.\protect\footnotemark}
     \label{tab:experiment-parameters-ling-elements}
 \end{table}
-\footnotetext{\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}
+\footnotetext{{\scriptsize\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}}
 
 \subsubsection{Evaluation of Linguistic Elements}
 As stated in Section~\ref{sec:traditional_query_log_analysis}, a well-studied phenomenon is the frequency distribution of terms in query logs. Several studies conclude that ranked frequency distributions of terms in query logs resemble Zipf's law. Zipf's law originates from linguistics and is meaningful, among other things, to describe frequency distributions of words in natural language texts~\citep{piantadosi:2014}. The law states that the frequency $f$ of an element is inversely proportional to its rank $r$ in the frequency table with some scaling constant $c$ and exponent $\alpha \approx 1$:
@@ -63,92 +63,85 @@ We investigate the frequencies of all considered categories, namely queries, nam
 
 For evaluation we consider the frequencies of the linguistic elements sorted in descending order, i.e., rank-size distributions. Accordingly, we initially only evaluate the relationship of rank and frequency.  
 
-\subsubsection{Visual Comparison: Named Entities and Words}
+\subsubsection{Rank-size Distributions of Named Entities and Words}
 To assess similarities to Zipf's law, we display the frequencies sorted in descending order in a log-log-scaled graph. Figure~\ref{fig:zipf-named-entities-words} shows the ordered frequencies of named entities and words in the query logs. As for named entities, we can state that all distributions fairly resemble Zipf's law. The distributions show a relatively constant slope in the log-scaled dimensions. The slope of the word frequencies, in turn, is not as constant. We can observe a small deviation: The constant slope is interrupted by a small curvature in the central part of the distribution. However, this curvature is present in all distributions. Consequently, from a visual perspective, we can conclude that the distributions of the different data sets are quite similar. No striking outliers which indicate clear differences are visible. Though, the rank-size distribution of named entities is more similar to a Zipfian distribution than the distribution of words. 
 
  
 \begin{figure}[tb]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/updated_plots/extract-named-entities-and-extract-words-single/all.pdf} 
-  \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+  \caption{The relative frequencies of extracted named entities and words are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. A straight line in the log-scaled dimensions indicates similarities to Zipf's law.}
   \label{fig:zipf-named-entities-words}
  \end{figure}
 
 
-\subsubsection{Visual Comparison: Queries and Characters}
+\subsubsection{Rank-size Distributions of Queries and Characters}
 In Figure~\ref{fig:zipf-queries-chars}, the frequencies of queries and characters are displayed in the log-scaled graph. The query distributions as well comply reasonably well with Zipf's law. The distributions are similar and a constant slope is present in the log-scaled dimensions. In turn, the distributions of characters do not resemble Zipf's law. They are actually quite different among the query logs. Though, it is striking that AOL and ORCAS are similar as well as MS-MARCO Web Search and AQL. 
 This is probably due to their language distribution. AQL and MS-MARCO Web Search are multilingual query logs, whereas AOL and ORCAS are English-only query logs. Hence, the character distributions of the English-only query logs are similar and the distributions of the multilingual query logs are also similar. Additionally we can observe a significant difference in the number of characters. The multilingual query logs contain much more characters then the English-only logs which seems logical. Moreover, all query logs commonly show that there is a group of very frequent and rather uniformly distributed characters while the frequencies of less frequent characters are decreasing even more rapidly than Zipf's law would suggest. This might be the case because alphanumeric characters are probably significantly more frequent than special characters, indicating why the distribution is even more skewed.
      
 \begin{figure}[tb]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/updated_plots/query-frequencies-and-extract-chars-single/all.pdf} 
-  \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. Hence the depiction of frequencies and the rank. A good fit to Zipf's law is indicated by a straight line in the log-scaled dimensions.}
+  \caption{The relative frequencies of queries and extracted characters are displayed in a log-scaled graph for each query log. The frequencies were ordered in a descending order to create a ranking. A straight line in the log-scaled dimensions indicates similarities to Zipf's law.}
   \label{fig:zipf-queries-chars}
 \end{figure}
 
-\subsubsection{Numeric Comparison: Linguistic Elements}
-The distributions of linguistic elements are now compared numerically to each other. To evaluate similarities between the resulting distributions, we apply the \hyperref[sec:wasserstein_distances]{Wasserstein distance} with $p=1$. For each analysis, we compute for all pairs of query logs the Wasserstein distance between the distributions of the query logs. In Table~\ref{tab:ws-distances-elements} the obtained Wasserstein distances are displayed with regard to the conducted analysis. To assess if the AQL's distributions are similar or rather anomalous, we first calculate the average Wasserstein distance of the comparison group, i.e., AOL, MS-MARCO Web Search and ORCAS. We denote the average Wasserstein distance of the group excluding the AQL by $W(\overline{AQL})$. Secondly, we determine the average Wasserstein distance between the AQL and the other query logs. For this we consider all possible pairs that contain the AQL and one of the other query logs. We call this average Wasserstein distance $W(AQL)$. If $W(AQL) \leq W(\overline{AQL})$ is true, we can argue that the AQL's distributions are similar enough to be considered a part of the comparison group. If ths is not the case, we can conclude that there are significant differences. For a further evaluation, we could compute the standard deviation of the Wasserstein distances within the comparison group. We denote the standard deviation of the group excluding the AQL by $\sigma_{\overline{AQL}}$. This allows us to put the deviation of the AQL's average Wasserstein distance into perspective and give the deviation a meaningful quantification.   
-
-
+\subsubsection{Numeric Comparison: Linguistic Elements}\label{sec:ling-elements-numeric-comparison}
+The distributions of linguistic elements are now compared numerically to each other. To evaluate similarities between the resulting distributions, we apply the \hyperref[sec:wasserstein_distances]{Wasserstein distance} with $p=1$. For each analysis, we compute the Wasserstein distance between the distributions of all pairs of query logs. In Table~\ref{tab:ws-distances-elements} the obtained Wasserstein distances are displayed with regard to the conducted analysis. To assess if the AQL's distributions are similar or rather anomalous, we first calculate the average Wasserstein distance of the comparison group, i.e., AOL, MS-MARCO Web Search and ORCAS. We denote the average Wasserstein distance of the group excluding the AQL by $W_\mu(\overline{AQL})$. Secondly, we determine the average Wasserstein distance between the AQL and the other query logs. For this we consider all possible pairs that contain the AQL and one of the other query logs. We call this average Wasserstein distance $W_\mu(AQL)$. If $W_\mu(AQL) \leq W_\mu(\overline{AQL})$ is true, we can argue that the AQL's distributions are similar enough to be considered a part of the comparison group. If ths is not the case, we can conclude that there are significant differences. For a further evaluation, we compute the standard deviation of the Wasserstein distances within the comparison group. We denote the standard deviation of distances within the group excluding the AQL by $\sigma_{\overline{AQL}}$. This allows us to put differences of $W_\mu(AQL)$ and $W_\mu(\overline{AQL})$ into the perspective of average deviations within the comparison group. In all three cases, named entities, words and characters, $W_\mu(AQL)$ is smaller than $W_\mu(\overline{AQL})$. This indicates that the AQL's distributions are similar to the comparison group, suggesting an non-anomalous behaviour of rank-size distributions of linguistic elements when compared to ``true'' query logs.
 
 \begin{table}[tb]
     \centering
-    \scalebox{0.9}{
-    \begin{tabular}{@{}lrrrr@{}} \toprule
-        & \multicolumn{4}{c}{\textbf{Named Entities}}  \\ \cmidrule(l{2pt}r{2pt}){2-5} 
-        & AOL & AQL & MS WS & ORCAS  \\ 
-        AOL & - & 91895 & 391408 & 27423  \\ 
-        AQL & 91895 & - & 301466 & 97748    \\
-        MS WS & 391408 & 301466 & - & 397262  \\
-        ORCAS & 27423 & 97748 & 397262 & -  \\ \midrule
-        &  \multicolumn{4}{c}{\textbf{Words}} \\ \cmidrule(l{2pt}r{2pt}){2-5} 
-        & AOL & AQL & MS WS & ORCAS  \\ 
-        AOL & - & 55120 & 216678 & 77063   \\ 
-        AQL & 55120 & - & 161679 & 132184    \\
-        MS WS & 216678 & 161679 & - & 293741   \\
-        ORCAS & 77063 & 132184 & 293741 & -  \\ \midrule
-        &  \multicolumn{4}{c}{\textbf{Characters}} \\ \cmidrule(l{2pt}r{2pt}){2-5}
-        & AOL & AQL & MS WS & ORCAS  \\ 
-        AOL & - & 57 & 92 & 1   \\ 
-        AQL & 57 & - & 44 & 57   \\
-        MS WS & 92 & 44 & - & 92   \\
-        ORCAS & 1 & 57 & 92 & -  \\ 
+    \scalebox{1.0}{
+    \begin{tabular}{@{}lrrrr>{\tiny}l>{\small}r@{}} \toprule
+        & \multicolumn{4}{c}{\textbf{Named Entities}} & \multicolumn{2}{c}{\textbf{WS-Values}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7} 
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 272K\\ 
+        AOL & - & 91895 & 391408 & 27423 & $\mathbf{W_\mu(AQL)}$ & 163K\\ 
+        AQL & 91895 & - & 301466 & 97748 & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & 108K\\
+        MS WS & 391408 & 301466 & - & 397262 & $\mathbf{\sigma_{\overline{AQL}}}$ & 172K\\
+        \\[-0.5em]
+        ORCAS & 27423 & 97748 & 397262 & - & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & 0.63\\ \midrule
+        &  \multicolumn{4}{c}{\textbf{Words}} & \multicolumn{2}{c}{\textbf{WS-Values}}\\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7}
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 195K\\ 
+        AOL & - & 55120 & 216678 & 77063 & $\mathbf{W_\mu(AQL)}$ & 116K\\ 
+        AQL & 55120 & - & 161679 & 132184 & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & 79K\\
+        MS WS & 216678 & 161679 & - & 293741 & $\mathbf{\sigma_{\overline{AQL}}}$ & 90K\\
+        ORCAS & 77063 & 132184 & 293741 & - & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & 0.89\\ \midrule 
+        &  \multicolumn{4}{c}{\textbf{Characters}} & \multicolumn{2}{c}{\textbf{WS-Values}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7}
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 61\\ 
+        AOL & - & 57 & 92 & 1   & $\mathbf{W_\mu(AQL)}$ & 53\\ 
+        AQL & 57 & - & 44 & 57   & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & 8.9\\
+        MS WS & 92 & 44 & - & 92   & $\mathbf{\sigma_{\overline{AQL}}}$ & 43\\
+        ORCAS & 1 & 57 & 92 & -  & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & 0.21\\ 
         \bottomrule
     \end{tabular}
     }
-    \caption{Wasserstein distances of rank-sized distributions of linguistic elements.}
+    \caption{On the left: Wasserstein distances of rank-size distributions of linguistic elements. On the right: various values to evaluate the AQL's similarity to the comparison group, which were motivated in the preceding paragraph (see Section~\ref{sec:ling-elements-numeric-comparison}). The Wasserstein distances are computed with $p=1$.}
     \label{tab:ws-distances-elements}
 \end{table}
 
-\begin{figure}[tb]
-    \centering
-    \includegraphics[width=1.0\textwidth]{../plots/Wasserstein-Distances-elements-2d-contour/all.pdf} 
-  \caption{Wasserstein distances of rank-sized distributions of linguistic elements. The distance matrix induces a configuration of the four distributions in $\mathbb{R}^3$. By applying multidimensional scaling (MDS)~\citep{kruskal:1964}, we obtain the visualized embedding in $\mathbb{R}^2$. The white area corresponds to a point's average distance $d_{\mu}$ to the comparison group that satisfies $d_{\mu} < W(\overline{AQL})$. A point's location in one of the colored areas satisfies $W(\overline{AQL}) + n \ \sigma_{\overline{AQL}} \leq d_{\mu} \leq W(\overline{AQL}) + (n+1) \ \sigma_{\overline{AQL}}$ for $n \in \mathbb{N}_0$.}
-  \label{fig:ws-distances-elements}
-\end{figure}
 
 
 \subsubsection{Top Queries}
 To further evaluate the linguistic elements, we take a look at the top 20 most frequent queries in the query logs. The most frequent queries are listed in Table~\ref{tab:top-queries}. Since MS-MARCO Web Search and ORCAS only contain unique queries, we only have data from the AQL and AOL available to create this table. Moreover, only top queries with latin characters are considered for this table. This is due to the fact that the AQL contains a lot of queries with non-latin characters, e.g., Chinese characters. Since we can not compare these queries with queries from AOL, we replace the six queries of the AQL's top 20 with the next most frequent queries of latin characters. 
 
-It is striking that the top queries of the AOL log are mostly navigational queries, either domain names like ``www.yahoo.com'' or ``www.google.com'' or the mere names of those websites, e.g., ``yahoo'' or ``google''. The AQL's top queries are more diverse and contain a lot of queries that are not navigational. They don't seem very coherent and quite random. A lot of them are even difficult to interpret, such as ``place:86f203b1e5d'', ``\{srch_str\}'' or ``p2045576.m1710''. Some top queries of the AQL even are parts of URLs, e.g., ``http://extras.denverpost.com/media/maps /kml/co...'' or ``http://dcist.com/ 2015/07/metros_-1000-series_ra...''. In summary, the top queries are substantially different and the AQL's top queries don't seem to reflect realistic user behaviour.   
+It is striking that the top queries of the AOL log are mostly navigational queries, either domain names like ``www.yahoo.com'' or ``www.google.com'' or the mere names of those websites, e.g., ``yahoo'' or ``google''. The AQL's top queries are more diverse and contain a lot of queries that are not navigational. They don't seem very coherent and quite random. A lot of them are even difficult to interpret, such as ``place:86f203b1e5d'', ``\{srch_str\}'' or ``p2045576.m1710''. Some top queries of the AQL even are parts of URLs, e.g., ``http://extras.denverpost.com/media/maps /kml/co...''. In summary, the top queries are substantially different and the AQL's top queries don't seem to reflect realistic user behaviour.   
 
 \subsubsection{Top Words}
-Besides the top 20 queries, we additionally take a look at the top 20 most frequent words in the query logs. The most frequent words are listed in Table~\ref{tab:top-words-aol-aql} and Table~\ref{tab:top-words-msmarco-orcas}. To evaluate similarities, we take a look at intersections of the top words. Particularly, we first determine the average intersection of top words within AOL, MS-MARCO Web Search and ORCAS. Considering a group $G$ of $n$ sets of top words $W_i$, the average cardinality of the pairwise intersections is given by: 
+Besides the top 20 queries, we additionally take a look at the top 20 most frequent words in the query logs. The most frequent words are listed in Table~\ref{tab:top-words-aol-aql} and Table~\ref{tab:top-words-msmarco-orcas}. To evaluate similarities, we take a look at intersections of the top words. Particularly, we first determine the average intersection of top words within AOL, MS-MARCO Web Search and ORCAS. Considering a collection $G$ of $n$ sets of top words $W_i$, the average cardinality of the pairwise intersections is given by: 
 \begin{equation}
-    S(G) = \frac{1}{\binom{n}{2}} \sum_{i=1}^{n} \sum_{j=i+1}^{n} \left| W_i \cap W_j \right|
+    S_\mu(G) = \frac{1}{\binom{n}{2}} \sum_{i=1}^{n} \sum_{j=i+1}^{n} \left| W_i \cap W_j \right|
 \end{equation}
-We denote the average cardinality of the group excluding the AQL by $S(\overline{AQL})$. Secondly, we determine the average intersection of top words between the AQL and the other query logs. For this we consider all possible pairs that contain the AQL and one of the other query logs. We call this average cardinality $S(AQL)$. 
+We denote the average cardinality of the group excluding the AQL by $S_\mu(\overline{AQL})$. Secondly, we determine the average intersection of top words between the AQL and the other query logs. For this we consider all possible pairs that contain the AQL and one of the other query logs. We call this average cardinality $S_\mu(AQL)$. 
 We obtain:
 \begin{itemize}
-    \item $S(\overline{AQL}) = 11.66$ 
-    \item $S(AQL) = 9.33$
+    \item $S_\mu(\overline{AQL}) = 11.66$ 
+    \item $S_\mu(AQL) = 9.33$
 \end{itemize}
 To evaluate how similar the two cardinalities are, we compute the deviation present in the group $\overline{AQL}$ and assess if the deviation of the AQL's average cardinality matches the standard deviation of cardinalities within the comparison group $\overline{AQL}$. For the standard deviation of the group $\overline{AQL}$ we obtain:
 \begin{itemize}
     \item $\sigma_{\overline{AQL}} = 1.25$
 \end{itemize}
-Even though the cardinalities of intersections of top words seem to be in the same range, the deviation of the AQL is slightly higher than the standard deviation in the comparison group. Consequently, we can conclude that we observe similarites but, despite this, the AQL's top words are still too different to the comparison group to be considered a part of this group. However, the queries of ORCAS and MS-MARCO Web Search are biased to more quetion-like queries, naturally exhibiting higher similarities. Taking this into account, we could also argue that the AQL's top words are not too different from the other query logs. 
+Even though the cardinalities of intersections of top words seem to be in the same range, the deviation of the AQL is slightly higher than the standard deviation in the comparison group. We could conclude that we observe similarites but, despite this, the AQL's top words are still too different to the comparison group to be considered a part of this group. However, the queries of ORCAS and MS-MARCO Web Search are biased to more quetion-like queries, naturally exhibiting higher similarities. Taking this into account, we could also argue that the AQL's top words are not too different from the other query logs. 
 \FloatBarrier
 \begin{table}[h]
     \centering
@@ -218,7 +211,7 @@ Even though the cardinalities of intersections of top words seem to be in the sa
 
 \begin{table}[tb]
     \centering
-    \scalebox{0.87}{
+    \scalebox{0.86}{
     \begin{tabular}{@{}rp{0.2\linewidth}rrp{0.29\linewidth}rr@{}} \toprule
         & \multicolumn{3}{c}{\textbf{AOL}}  & \multicolumn{3}{c}{\textbf{AQL}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7}
         Rank & Query & Count & Ratio & Query & Count & Ratio \\ \midrule
@@ -249,16 +242,15 @@ Even though the cardinalities of intersections of top words seem to be in the sa
     \label{tab:top-queries}
 \end{table}
 
-
-
 \FloatBarrier
-\subsection{Length-Related Frequencies}
+
+\subsection{Length-related Frequencies}
 Besides considering the frequency of linguistic elements, we also measure the lengths of the elements in terms of different subcategories. We describe the length of an element by the occuring counts of a possible subcategory, e.g., the length of a query by the count of characters the query contains. From the extraction of named entites and words, we have three sets of categories whose lengths we can measure: queries, named entities and words. To illustrate how we obtain the frequencies of query lengths, named entity lengths and word lengths, we provide a description of how the lengths of queries are measured. Accordingly, we proceed for all categories. The measurement of lengths is carried out in two steps:
 \begin{enumerate}
     \item \textbf{Computing Lengths:} We apply the~\verb|map_batches()| API-call to compute the lengths of queries. Since we are interested in the count of named entities, words and characters, we parse a function that performs multiple measurements on each query. We again apply spaCy's \texttt{en\_core\_web\_sm}-model to perform the measurements (e.g., count words or named entities). For each type of measurement (i.e., entity count, word count or character count) the function appends a new column to the batch which contains the corresponding lengths. Eventually, a batch with the computed lengths is returned. 
     \item \textbf{Frequency Measurement:} We apply the~\verb|groupby()| API-call to group the resulting data set by the computed lengths. By this, we obtain a group for each length. Thereon, we call a~\verb|count()| in order to count each length's occurence in the query log. In the end, we obtain a data set with the lengths and their frequencies. 
 \end{enumerate}
-In Table~\ref{tab:experiment-parameters-lengths}, we again note some key parameters of the experiments outline the maximum of required ressources and the applied models.
+In Table~\ref{tab:experiment-parameters-lengths}, we again note some key parameters of the experiments that outline the maximum of required ressources and the applied models.
 \begin{table}[tb]
     \centering
     \begin{tabular}{@{}lr@{}} \toprule
@@ -272,61 +264,63 @@ In Table~\ref{tab:experiment-parameters-lengths}, we again note some key paramet
     \caption{The parameter values of this table are the extreme values of the configuration to run the frequency measurement of lengths. Both models, the spaCy-Tokenizer and the spaCy-NER are part of the spaCy-model \texttt{en\_core\_web\_sm}\protect\footnotemark, which was used for this analysis.}
     \label{tab:experiment-parameters-lengths}
 \end{table}
-\footnotetext{\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}
+\footnotetext{{\scriptsize\url{https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.7.1}}}
 
 
-\subsubsection{Visual Comparison: Queries and Named Entities in Characters}
+\subsubsection{Distribution of Character Counts: Queries and Named Entities}
 In Figure~\ref{fig:lengths-query-characters-named-entity-characters}, the distributions of query and named entity lengths in characters are displayed. As for queries, the distributions appear to be not very close but still similar to each other. Though, the range of occuring query lengths is quite similar among all logs. Regarding the shape, AOL and AQL are similar, whereas the AQL's distribution is more noisy. ORCAS stands out presenting a binomial-like distribution. MS-MARCO Web Search's distribution is also unique but unlike ORCAS' not symmetrical. Regarding the distributions of named entities, we can again observe a common scope of lengths among all logs and similar shapes. Especially ORCAS and AOL are very similar to one another. The AQL's distribution is similar to a poisson distribution whereas distribution of MS-MARCO Web Search is not exactly assignable to a popular distribution.
 
-\subsubsection{Visual Comparison: Words in Characters and Queries in Named Entities}
-In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are visually almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO Web Search and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (e.g., ``www.'' or ``.com'') cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. In that case, AOL's distribution of word lengths aligns with the other query logs' distributions. 
+\subsubsection{Distributions of Characters per Word and Entities per Queries}
+In Figure~\ref{fig:lengths-words-characters-queries-named-entities} the distributions of word and query lengths measured in characters and named entities are displayed. We can observe very similar frequencies of entity counts in queries. The distributions are visually almost equivalent among the involved query logs. As for the word lengths, the distributions are also similar but depict some clear differences, as well. While MS-MARCO Web Search and ORCAS show a very similar distribution, AOL's distribution is clearly different. We can observe an unusual peak of word lengths between 10 and 20 characters. Reviewing AOL's words of this lengths showed that the most frequent words are website addresses in this range. The extensions before and after the website's name (e.g., ``www.'' or ``.com'') cause a shift of frequent words towards longer words. This has been confirmed by filtering out website addresses from the AOL and subsequently measure the word legth distribution. In that case, AOL's distribution of word lengths aligns with the other query logs' distributions. Added to this, the top queries of AOL (see Table~\ref{tab:top-queries}) contain many web sites and domain names, which also confirms the peak in the distribution.
 
-\subsubsection{Visual Comparison: Queries in Words and Named Entities in Words}
+\subsubsection{Distributions of Word Counts: Queries and Named Entities}
 In Figure~\ref{fig:lengths-query-words-named-entity-words} the distributions of query and named entity lengths measured in the number of words are displayed. Concerning the lengths of named entities, we can observe almost equivalent distributions of AOL and MS-MARCO Web Search. The distribution of ORCAS is still similar to AOL and MS-MARCO Web Search while the distribution of the AQL is slightly different. The AQL contains significantly more named entities comprised of one word than the other logs. In contrast to the other logs, named entities comprised of one word a the most common named entities. A similarity among all logs is that named entities consisting of two words are the most frequent. As of the query lengths measured in words, we can observe more diverse distributions among the different logs. While the number of words is distributed similarily in AOL and AQL, the distributions of ORCAS and MS-MARCO are different. The distribution of ORCAS resembles a poisson distribution and the distribution of MS-MARCO Web Search is not clearly assignable to a popular distribution. However, the range of the most frequent number of words is similar among all logs.
 
 \subsubsection{Numeric Comparison of Lengths}
-The resulting distributions of the measurements are now compared numerically to each other. We again apply the 1-Wasserstein distance to evaluate similarities between the resulting distributions. In Table~\ref{tab:ws-distances-lengths} the obtained Wasserstein distances are displayed with regard to the conducted analysis. The table is structured in a similar way as Table~\ref{tab:ws-distances-lengths}. We again compute the average Wasserstein distance within the comparison group, i.e., AOL, MS-MARCO Web Search and ORCAS, denoted by $W(\overline{AQL})$. We refer to the standard deviation of wasserstein distances within that group as $\sigma_{\overline{AQL}}$. Secondly, we determine the average Wasserstein distance between the AQL and the other query logs, denoted by $W(AQL)$. We obtain:  
-\begin{itemize}
-    \item $W(\overline{AQL}) = 2.56$
-    \item $W(AQL) = 4.75$
-\end{itemize}
-In Figure~\ref{tab:ws-distances-lengths} the Wasserstein distances with computed $\sigma$-neighbourhoods are visualized in a 2D-plot. For all analyses, we can observe that the AQL's average Wasserstein distance to the comparison group (AOL, MS-MARCO Web Search and ORCAS) is higher than the average Wasserstein distance within the comparison group. This indicates that the AQL's distributions are not similar enough to be regarded a part of the comparison group. However, for the most analyses the distances of the AQL's distributions are still within the first three $\sigma$-neighbourhoods of the average distance within the comparison group.  
+The resulting distributions of the measurements are now compared numerically to each other. We again apply the 1-Wasserstein distance to evaluate similarities between the resulting distributions. In Table~\ref{tab:ws-distances-lengths} the obtained Wasserstein distances are displayed with regard to the conducted analysis. The table is structured in a similar way as Table~\ref{tab:ws-distances-lengths}. We again compute the average Wasserstein distance within the comparison group, i.e., AOL, MS-MARCO Web Search and ORCAS, denoted by $W_\mu(\overline{AQL})$. We refer to the standard deviation of wasserstein distances within that group as $\sigma_{\overline{AQL}}$. Additionally, we determine the average Wasserstein distance between the AQL and the other query logs, denoted by $W_\mu(AQL)$. It is striking that we obtain $W_\mu(AQL) > W_\mu(\overline{AQL})$ for all length-related measurements. The closest distribution of the AQL to the comparison group is the distribution of characters per word. In this case, we measure a deviation from the AQL to the comparison group of $0.3~\sigma_{\overline{AQL}}$. The most dissimilar distribution in turn is the query length measured in characters. The deviation of this distribution is $6.1~\sigma_{\overline{AQL}}$. Since we measure substantial deviations of the AQL's distributions we conclude that the AQL is rather anomalous to the comparison group for length-related measurements of linguistic elements. 
 
-
-
-\begin{figure}[tb]
-    \centering
-    \includegraphics[width=1.0\textwidth]{../plots/Wasserstein-Distances-lengths-2d-contour/all.pdf} 
-  \caption{Wasserstein distances of distributions of lengths. The distance matrix induces a configuration of the four distributions in $\mathbb{R}^3$. By applying multidimensional scaling (MDS)~\citep{kruskal:1964}, we obtain the visualized embedding in $\mathbb{R}^2$. The white area corresponds to a point's average distance $d_{\mu}$ to the comparison group that satisfies $d_{\mu} < W(\overline{AQL})$. A point's location in one of the colored areas satisfies $W(\overline{AQL}) + n \ \sigma_{\overline{AQL}} \leq d_{\mu} \leq W(\overline{AQL}) + (n+1) \ \sigma_{\overline{AQL}}$ for $n \in \mathbb{N}_0$.}
-  \label{fig:ws-distances-lengths}
-\end{figure}
 
 \begin{table}[tb]
     \centering
-    \scalebox{0.9}{
-    \begin{tabular}{@{}lrrrrrrrr@{}} \toprule
+    \scalebox{0.92}{
+    \begin{tabular}{l@{\hspace*{0.4em}}r@{\hspace*{0.4em}}r@{\hspace*{0.3em}}r@{\hspace*{0.4em}}r@{\hspace*{0.4em}}r@{\hspace*{0.4em}}r@{\hspace*{0.4em}}r@{\hspace*{0.4em}}r} \toprule
         % &  & Query Length Characters &  &  \\ \midrule
-        & \multicolumn{4}{c}{\textbf{Query Length Characters}} & \multicolumn{4}{c}{\textbf{Entity Length Characters}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
+        \multicolumn{5}{c}{\textbf{Characters per Query}} & \multicolumn{4}{c}{\textbf{Characters per Entity}} \\ \cmidrule(l{2pt}r{2pt}){1-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MS WS & ORCAS & AOL & AQL & MS WS & ORCAS \\ 
         AOL & - & 5.54 & 2.56 & 3.72  & - & 2.12 & 1.79 & 0.80 \\ 
         AQL & 5.54 & - & 4.75 & 7.75  & 2.12 & - & 2.86 & 1.98  \\
         MS WS & 2.56 & 4.75 & - & 3.00  & 1.79 & 2.86 & - & 1.03 \\
-        ORCAS & 3.72 & 7.75 & 3.00 & - & 0.80 & 1.98 & 1.03 & - \\ \midrule
-        & \multicolumn{4}{c}{\textbf{Word Length Characters}} & \multicolumn{4}{c}{\textbf{Query Length Words}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
+        ORCAS & 3.72 & 7.75 & 3.00 & - & 0.80 & 1.98 & 1.03 & - \\ \midrule[0.1pt]
+        \multicolumn{2}{>{\tiny}l}{$\mathbf{W_\mu(AQL)}$} & 6.0 &  {\tiny$\mathbf{W_\mu(\overline{AQL})}$} & 3.1 & \multicolumn{1}{l}{{\tiny$\mathbf{W_\mu(AQL)}$}} & 2.3 & {\tiny $\mathbf{W_\mu(\overline{AQL})}$} & 1.2 \\
+        \multicolumn{2}{>{\tiny}c}{$\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -2.9 &  \multicolumn{1}{l}{{\tiny$\mathbf{\sigma_{\overline{AQL}}}$}} & 0.5 & {\tiny $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -1.1 & \multicolumn{1}{l}{{\tiny $\mathbf{\sigma_{\overline{AQL}}}$}} & 0.4 \\
+        \\[-0.7em]
+        \multicolumn{2}{c}{{\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$}} & -6.1 & & & {\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$} & -2.6 &&\\ 
+        \midrule
+        \multicolumn{5}{c}{\textbf{Characters per Word}} & \multicolumn{4}{c}{\textbf{Words per Query}} \\ \cmidrule(l{2pt}r{2pt}){1-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MS WS & ORCAS &  AOL & AQL & MS WS & ORCAS \\ 
         AOL & - & 3.69 & 6.31 & 4.20  & - & 0.58 & 0.69 & 0.89 \\
         AQL & 3.69 & - & 6.29 & 4.17  & 0.58 & - & 0.81 & 1.25  \\
         MS WS & 6.31 & 6.29 & - & 2.20  & 0.69 & 0.81 & - & 0.44 \\
-        ORCAS & 4.20 & 4.17 & 2.20 & -  & 0.89 & 1.25 & 0.44 & - \\ \midrule
-        & \multicolumn{4}{c}{\textbf{Entity Length Words}} & \multicolumn{4}{c}{\textbf{Query Length Entities}} \\\cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-9}
+        ORCAS & 4.20 & 4.17 & 2.20 & -  & 0.89 & 1.25 & 0.44 & - \\ \midrule[0.1pt]
+        \multicolumn{2}{>{\tiny}l}{$\mathbf{W_\mu(AQL)}$} & 4.7 &  {\tiny$\mathbf{W_\mu(\overline{AQL})}$} & 4.2 & \multicolumn{1}{l}{{\tiny$\mathbf{W_\mu(AQL)}$}} & 0.9 & {\tiny $\mathbf{W_\mu(\overline{AQL})}$} & 0.7 \\
+        \multicolumn{2}{>{\tiny}c}{$\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -0.5 &  \multicolumn{1}{l}{{\tiny$\mathbf{\sigma_{\overline{AQL}}}$}} & 1.7 & {\tiny $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -0.2 & \multicolumn{1}{l}{{\tiny $\mathbf{\sigma_{\overline{AQL}}}$}} & 0.2 \\
+        \\[-0.7em]
+        \multicolumn{2}{l}{{\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$}} & -0.3 & & & {\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$} & -1.1 &&\\ 
+        \midrule
+        \multicolumn{5}{c}{\textbf{Words per Entity}} & \multicolumn{4}{c}{\textbf{Entities per Query}} \\\cmidrule(l{2pt}r{2pt}){1-5} \cmidrule(l{2pt}r{2pt}){6-9}
         & AOL & AQL & MS WS & ORCAS & AOL & AQL & MS WS & ORCAS \\ 
         AOL & - & 0.19 & 0.06 & 0.11  & - & 0.18 & 0.12 & 0.03 \\
         AQL & 0.19 & - & 0.18 & 0.30  & 0.18 & - & 0.06 & 0.15  \\
         MS WS & 0.06 & 0.18 & - & 0.17  & 0.12 & 0.06 & - & 0.09 \\
-        ORCAS & 0.11 & 0.30 & 0.17 & -  & 0.03 & 0.15 & 0.09 & - \\ \bottomrule
+        ORCAS & 0.11 & 0.30 & 0.17 & -  & 0.03 & 0.15 & 0.09 & - \\ \midrule[0.1pt]
+        \multicolumn{2}{>{\tiny}l}{$\mathbf{W_\mu(AQL)}$} & 0.2 &  {\tiny$\mathbf{W_\mu(\overline{AQL})}$} & 0.1 & \multicolumn{1}{l}{{\tiny$\mathbf{W_\mu(AQL)}$}} & 0.13 & {\tiny $\mathbf{W_\mu(\overline{AQL})}$} & 0.08 \\
+        \multicolumn{2}{>{\tiny}c}{$\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -0.1 &  \multicolumn{1}{l}{{\tiny$\mathbf{\sigma_{\overline{AQL}}}$}} & 0.04 & {\tiny $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$} & -0.05 & \multicolumn{1}{l}{{\tiny $\mathbf{\sigma_{\overline{AQL}}}$}} & 0.04 \\
+        \\[-0.7em]
+        \multicolumn{2}{c}{{\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$}} & -2.5 & & & {\tiny $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$} & -1.3 &&\\ 
+        \bottomrule
     \end{tabular}
     }
-    \caption{Wasserstein distances between the distributions of the query logs. For each analysis, e.g. queries in characters, the Wasserstein distance between the distributions of the query logs is computed.}
+    \caption{Wasserstein distances between the distributions of the query logs. For each analysis, e.g. characters per query, distances of all pairs of query logs are computed. Besides the distances, the table contains values that are relevant for assessing the simlarity of the AQL to the comparison group.}
     \label{tab:ws-distances-lengths}        
 \end{table}
 
@@ -379,17 +373,17 @@ As stated in Section~\ref{sec:search_operators}, search operators are a common f
 \subsubsection{Search Operator Frequencies}
 First, to obtain the frequencies of the considered search operators in a query log, we apply the~\verb|flat_map()| API-call to extract all search operators from the query log. We parse a function to the API-call that checks for each query if it contains one of the search operators. If so, the search operator is appended to the result set. The function simply checks for the presence of a search operator's string. Thereon, we apply the~\verb|groupby()| API-call to group the data set by the extracted search operators and call a subsequent~\verb|count()| to get the count of each search operator. Similarly we proceed to get the frequencies of search operator counts in queries. We apply the~\verb|map_batches()| API-call to compute the search operator counts of each query. The count is again obtained by a string matching. Then we apply the~\verb|groupby()| API-call to group the data set by the computed search operator counts and call a subsequent~\verb|count()| to get the frequency of each search operator count. 
 \subsubsection{Evaluation Search Operators} 
-In Table~\ref{tab:search-operators-ratios} the total frequencies of search operators and their ratio in the query logs are displayed. Unfortunately, we couldn't detect any search operators in the AOL log. Since MS-MARCO Web Search and ORCAS only contain unique queries that were filtered by a certain minimum popularity threshold, only very few search operators were detected in these logs. This makes a comparison of the AQL to the other logs difficult and less meaningful. In Table~\ref{tab:search-operators-ranking} a ranking of the considered search operators for each query log is displayed. Again, this comparison lacks meaningfulness since the search operators are not used frequently in the comparison group. Though, the search operator ``site:'' is the most frequent search operator in all query logs. Apart from this commonality, no other meaningful results are visible
+In Table~\ref{tab:search-operators-ratios} the total frequencies of search operators, the search operator ratio and the fraction of queries with different numbers of search operators are displayed. Unfortunately, we couldn't detect any search operators in the AOL log. Since MS-MARCO Web Search and ORCAS only contain unique queries that were filtered by a certain minimum popularity threshold, only very few search operators were detected in these logs. This makes a comparison of the AQL to the other logs difficult and less meaningful. In Table~\ref{tab:search-operators-ranking} a ranking of the considered search operators for each query log is displayed. Again, this comparison lacks meaningfulness since the search operators are not used frequently in the comparison group. Though, the search operator ``site:'' is the most frequent search operator in all query logs. Apart from this commonality, no other meaningful results are visible.
 
 \begin{table}[tb]
     \centering
-    \scalebox{0.79}{
+    \scalebox{0.84}{
     \begin{tabular}{@{}lrrrrrrr@{}} \toprule
-        Query Log & SO-count & SO-ratio & $count=0$ & $count=1$ & $count=2$ & $count=3$ & $count>3$ \\ \midrule
-        AOL & 0 & 0\% & 100\% & 0\% & 0\% & 0\% & 0\% \\
-        AQL & 7,663,010 & 2.21\% & 97.79\% & 1.83\% & 0.31\% & 0.02\% & 0.05\% \\
-        MS-MARCO WS & 6,727 & 0.07\% & 99.93\% & 0.07\% & 0.00\% & 0.00\% & 0.00\% \\
-        ORCAS & 3,937 & 0.04\% & 99.96\% & 0.04\% & 0.00\% & 0.00\% & 0.00\% \\ \bottomrule
+        \textbf{Query Log} & \textbf{SO-count} & \textbf{SO-ratio} & $\mathbf{count=0}$ & $\mathbf{count=1}$ & $\mathbf{count=2}$ & $\mathbf{count>2}$ \\ \midrule
+        AOL & 0 & 0\% & 100\% & 0\% & 0\% & 0\% \\
+        AQL & 7,663,010 & 2.21\% & 97.79\% & 1.83\% & 0.31\% & 0.07\% \\
+        MS WS & 6,727 & 0.07\% & 99.93\% & 0.07\% & < 0.00\% & < 0.00\% \\
+        ORCAS & 3,937 & 0.04\% & 99.96\% & 0.04\% & < 0.00\% & < 0.00\% \\ \bottomrule
     \end{tabular}
     }
     \caption{Ratios of queries that contain 0, 1, 2, 3, or more than 3 search operators.}
@@ -399,8 +393,8 @@ In Table~\ref{tab:search-operators-ratios} the total frequencies of search opera
 
 \begin{table}[tb]
     \centering
-    \scalebox{0.7}{
-    \begin{tabular}{@{}rlrrlrrlrr@{}} \toprule
+    \scalebox{0.815}{
+    \begin{tabular}{@{}rl@{\hspace*{-0.8em}}rrl@{\hspace*{-0.6em}}rrl@{\hspace*{-0.8em}}rr@{}} \toprule
         & \multicolumn{3}{c}{\textbf{AQL}} & \multicolumn{3}{c}{\textbf{MS-MARCO WS}} & \multicolumn{3}{c}{\textbf{ORCAS}} \\ \cmidrule(l{2pt}r{2pt}){2-4} \cmidrule(l{2pt}r{2pt}){5-7} \cmidrule(l{2pt}r{2pt}){8-10} 
         Rank & SO & Count & Ratio & SO & Count & Ratio & SO & Count & Ratio \\ \midrule
         1 & \texttt{site:} & 5,507,994 & 1.59\% & \texttt{site:} & 6,564 & 0.07\% & \texttt{site:} & 3,307 & 0.03\% \\
@@ -436,7 +430,7 @@ In Figure~\ref{fig:query-intent} the query intent distributions of the query log
 \begin{figure}[tb]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/query-intent/all.pdf} 
-  \caption{The figure displays the distribution of query intents in the query logs. The labels were produced by the classifier of \citet{alexander:2022}. The figure shows an equal ranking of the labels. The most frequent label is ``informational'' followed by ``navigational'' and ``transactional''. Apart from the ratio of navigational queries, the distributions are very similar.}
+  \caption{Distribution of query intents in the query logs. The labels were produced by the classifier of \citet{alexander:2022}. }
   \label{fig:query-intent}
  \end{figure}
 
@@ -486,30 +480,95 @@ In Figure~\ref{fig:question-detection} the ratio of questions in each query log 
 \end{figure}
 
 \FloatBarrier
-\subsection{Evaluation of Inference-based Distributions}
+\subsection*{Numeric Comparison: Inference-based Distributions}
+We compute Wasserstein distances for all pairs of distributions of the different characteristics. Again, we consider the average distance of the AQL to AOL, MS-MARCO Web Search and ORCAS and the average Wasserstein distance within AOL, MS-MARCO Web Search and ORCAS (see Section~\ref{sec:ling-elements-numeric-comparison} for a detailed motivation). Regarding query intent and questions, we note that $W_\mu(AQL) < W_\mu(\overline{AQL})$ which indicates that the AQL is similar to the comparison group. In turn, considering the distribution of PII labels, we note that $W_\mu(AQL) > W_\mu(\overline{AQL})$ which indicates that the AQL is less similar to the comparison group. However, the deviation is equal to $0.75 \sigma_{\overline{AQL}}$ which is not very significant. In summary, we can state that the AQL is reasonably similar for the two insights ``query intent'' and ``questions'' but less similar for the insight ``PII labels''. 
+\begin{table}[tb]
+    \centering
+    \scalebox{1.0}{
+    \begin{tabular}{@{}lrrrr>{\tiny}l>{\small}r@{}} \toprule
+        & \multicolumn{4}{c}{\textbf{Query Intent}} & \multicolumn{2}{c}{\textbf{WS-Values}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7} 
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 0.18\\ 
+        AOL & - & 0.17 & 0.26 & 0.20 & $\mathbf{W_\mu(AQL)}$ & 0.10\\ 
+        AQL & 0.17 & - & 0.10 & 0.04 & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & 0.08\\
+        MS WS & 0.26 & 0.10 & - & 0.07 & $\mathbf{\sigma_{\overline{AQL}}}$ & 0.08\\
+        \\[-0.5em]
+        ORCAS & 0.20 & 0.04 & 0.07 & - & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & 1.00\\ \midrule
+        &  \multicolumn{4}{c}{\textbf{PII Labels}} & \multicolumn{2}{c}{\textbf{WS-Values}}\\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7}
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 0.16\\ 
+        AOL & - & 0.22 & 0.17 & 0.09 & $\mathbf{W_\mu(AQL)}$ & 0.21\\ 
+        AQL & 0.22 & - & 0.17 & 0.22 & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & -0.04\\
+        MS WS & 0.17 & 0.17 & - & 0.23 & $\mathbf{\sigma_{\overline{AQL}}}$ & 0.06\\
+        ORCAS & 0.09 & 0.22 & 0.23 & - & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & -0.75\\ \midrule 
+        &  \multicolumn{4}{c}{\textbf{Questions}} & \multicolumn{2}{c}{\textbf{WS-Values}} \\ \cmidrule(l{2pt}r{2pt}){2-5} \cmidrule(l{2pt}r{2pt}){6-7}
+        & AOL & AQL & MS WS & ORCAS & $\mathbf{W_\mu(\overline{AQL})}$ & 0.05\\ 
+        AOL & - & 0.5e-2 & 2.9e-2 & 7.5e-2   & $\mathbf{W_\mu(AQL)}$ & 0.03\\ 
+        AQL & 0.5e-2 & - & 2.4e-2 & 6.9e-2   & $\mathbf{W_\mu(\overline{AQL}) - W_\mu(AQL)}$ & 0.02\\
+        MS WS & 2.9e-2 & 2.4e-2 & - & 4.6e-2   & $\mathbf{\sigma_{\overline{AQL}}}$ & 0.02\\
+        ORCAS & 7.5e-2 & 6.9e-2 & 4.6e-2 & -  & $\mathbf{\frac{W_\mu(\overline{AQL}) - W_\mu(AQL)}{\sigma_{\overline{AQL}}}}$ & 0.90\\ 
+        \bottomrule
+    \end{tabular}
+    }
+    \caption{On the left: Wasserstein distances of inference-based distributions. On the right: various values to evaluate the AQL's similarity to the comparison group, which were motivated in Section~\ref{sec:ling-elements-numeric-comparison}. The Wasserstein distances are computed with $p=1$.}
+    \label{tab:ws-distances-inference}
+\end{table}
 
 
-
+\subsection{Case Study: Probabilistic Approach}
+So far we have calculated mean and standard deviation of Wasserstein distances to assess whether the AQL is similar or anomalous to the comparison group of AOL, MS-MARCO Web Search and ORCAS. Following this logic, one could estimate a probability distribution from the Wasserstein distances and use it to model the ``true'' distribution for a considered characteristic. From the pairwise calculation of Wasserstein distances, we obtain a distance matrix $D \in \mathbb{R}^{4\times4}$. Since the Wasserstein distance is a metric, a configuration of the distributions in three dimensions is naturally induced. We denote the space of this embedding the Wasserstein space $\mathcal{W}$. Provided that $\mathcal{W}$ is a Euclidean space in our use cases, mean and standard deviation can be calculated straightforward. Given that the ground truth $W$ is normally distributed in the Wasserstein space, 
+\[
+  W \sim \mathcal{N}(\mu,\,\sigma^{2})
+\]  
+one could predict the probability of a distribution belonging to the ground truth by the distance to the mean of the ground truth. An estimation of the ground truth mean and standard deviation is obtained by the mean $W_\mu(\overline{AQL})$ and standard deviation $\sigma_{\overline{AQL}}$ of distances within the comparison group. According to this, the probability of a new sample belonging to ground truth can be estimated by its deviation from the ground truth mean. For simplification, we express the deviation of the AQL from the mean of the comparison group $W_\mu(\overline{AQL})$ in the number of sigma deviations $\sigma_{\overline{AQL}}$ which is also called z-score. The probabilities of samples with a certain z-score are straightforward:
+\begin{align*}
+    P(|X-\mu| \geq \sigma) &= 0.32 \\
+    P(|X-\mu| \geq 2\sigma) &= 0.04 \\
+    P(|X-\mu| \geq 3\sigma) &= 0.003 \\
+\end{align*}From Table~\ref{tab:ws-distances-elements}, Table~\ref{tab:ws-distances-lengths} and Table~\ref{tab:ws-distances-inference} we can now obtain the calculated z-scores for the AQL. For simplification we round the z-scores to integers. For a z-score of 0 we assign a probability of 100\% and a z-score that is higher than 4 we assign 0\%. The resulting probabilites are displayed in Table~\ref{tab:ws-distances-z-scores}. Averaging these probabilites would give us a probability of 58.66\% that the AQL belongs to the comparison group. However, this approach is simplified and requires the satisfaction of many assumptions. In Figure~\ref{fig:ws-distances-comb} and~\ref{fig:ws-distances-elements} a visualization of the probabilistic approach is displayed. The original configuration in 3D was embedded into 2D by applying multidimensional scaling (MDS)~\citep{kruskal:1964}.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}lrrrr@{}} \toprule
+        \textbf{Lengths} & 100\% & 100\% & 100\%  \\ 
+        \textbf{Elements} & 0\% & 4\% & 100\%  \\
+        \textbf{Elements} & 32\% & 4\% & 32\%  \\
+        \textbf{Inference-based} & 100\% & 32\% & 100\% \\ 
+        \bottomrule
+    \end{tabular}
+    \caption{Z-scores of the AQL to the comparison group of AOL, MS-MARCO Web Search and ORCAS for the different characteristics of the query logs}
+    \label{tab:ws-distances-z-scores}
+\end{table}  
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/Wasserstein-Distances-elements-2d-contour/all.pdf} 
+  \caption{Wasserstein distances of rank-size distributions of linguistic elements. The distance matrix induces a configuration of the four distributions in $\mathbb{R}^3$. By applying multidimensional scaling (MDS)~\citep{kruskal:1964}, we obtain the visualized embedding in $\mathbb{R}^2$. The white area corresponds to a point's average distance $d_{\mu}$ to the comparison group that satisfies $d_{\mu} < W_\mu(\overline{AQL})$. A point's location in one of the colored areas satisfies $W_\mu(\overline{AQL}) + n \cdot \sigma_{\overline{AQL}} \leq d_{\mu} \leq W_\mu(\overline{AQL}) + (n+1) \cdot \sigma_{\overline{AQL}}$ for $n \in \mathbb{N}_0$.}
+  \label{fig:ws-distances-elements}
+\end{figure}
 
 
 \begin{figure}[tb]
-    \centering
-    \includegraphics[width=1.0\textwidth]{../plots/Wasserstein-Distances-inference-2d-contour/all.pdf} 
-  \caption{The figure displays the ratio of questions in the query logs. The labels were produced by a rule-based classifier provided by \citet{reimer:2023a}.}
-  \label{fig:ws-distances-inference}
+    \begin{center}
+        
+    \includegraphics[width=0.98\textwidth]{../plots/Wasserstein-Distances-inference-2d-contour-no-legend/all.pdf} 
+    % \vspace{1cm}
+    \includegraphics[width=1.0\textwidth]{../plots/Wasserstein-Distances-lengths-2d-contour/all.pdf} 
+  \caption{Wasserstein distances of distributions of lengths. The distance matrix induces a configuration of the four distributions in $\mathbb{R}^3$. By applying multidimensional scaling (MDS)~\citep{kruskal:1964}, we obtain the visualized embedding in $\mathbb{R}^2$. The white area corresponds to a point's average distance $d_{\mu}$ to the comparison group that satisfies $d_{\mu} < W_\mu(\overline{AQL})$. A point's location in one of the colored areas satisfies $W_\mu(\overline{AQL}) + n \cdot \sigma_{\overline{AQL}} \leq d_{\mu} \leq W_\mu(\overline{AQL}) + (n+1) \cdot \sigma_{\overline{AQL}}$ for $n \in \mathbb{N}_0$.}
+  \label{fig:ws-distances-comb}
+    \end{center}
 \end{figure}
 
-% \FloatBarrier
+
+
+
+\FloatBarrier
 
 \section{Temporal-based Analysis}
 In this section, we aim at performing temporal-based comparisons of real-world queries and queries of the AQL. To realize this, we select a set of Google queries which we download from the tool ``Google Trends''. We select two sets, one with annual top queries and one with monthly top queries. As for the annual top queries, we simply compare the top queries of Google Trends with the AQL's top queries. For the monthly top queries, we compare temporal patterns of real-world queries and queries of the AQL. We expect monthly top queries to be more volatile that annual top queries which is why we prefer them for a comparison of temporal patterns. We carry out this comparison by computing the temporal correlation of the queries's popularity.
 
-\subsection{Google Trends}
+\subsubsection*{Google Trends}
 Before conducting the temporal comparison, we must select a set of queries that we want to utilize for the comparison. In order to meet the constraints of Google Trends (see Section~\ref{sec:google_trends}), we select queries that are popular. Moreover, we consider a sufficiently long time span for the comparison. Google Trends offers to download the top 25 popular queries from a selected time span. We use this option to create two sets of queries for our comparison. 
 First, we consider the annual top queries of Google and secondly the monthly top queries of Google. For the annual top queries we perform a simple comparison to the AQL's annual top queries. For the monthly top queries, we compute temporal correlations between the AQL and Google Trends. 
 
 \subsection{Annual Top Queries}
-First, we consider annual top queries of Google and make comparisons with them. We create a list of the annual top 25 from 2004 until 2022. 2004 is the earliest year for which Google Trends provides data and 2022 is the latest year for which the AQL contains queries. Similarly, we create a list of the annual top 25 queries from the AQL for the same time span. For this, we first filter the AQL for queries that stem from Google and afterwards create the annual top 25. As a first comparison, we simply determine the intersection of the two lists with respect to the year. That is, for each year we check if the top 25 queries of Google Trends are also present in the AQL's top 25 queries. We can observe that the intersection is quite small. In fact, only 7 queries out of possible 475 queries are present in both respective top 25 annual queries. The queries are \texttt{facebook} (2 times), \texttt{google} (2 times), \texttt{youtube} (2 times) and \texttt{yahoo}. This indicates that the distribution of Google queries in the AQL is not very similar to the real distribution of Google queries.        
+First, we consider annual top queries of Google and use them for comparisons. We create a list of the annual top 25 from 2004 until 2022. 2004 is the earliest year for which Google Trends provides data and 2022 is the latest year for which the AQL contains queries. Similarly, we create a list of the annual top 25 queries from the AQL for the same time span. For this, we first filter the AQL for queries that stem from Google and afterwards create the annual top 25. As a first comparison, we simply determine the intersection of the two lists with respect to the year. That is, for each year we check if the top 25 queries of Google Trends are also present in the AQL's top 25 queries. We can observe that the intersection is quite small. In fact, only 7 queries out of possible 475 queries are present in both respective top 25 annual queries. The queries are \texttt{facebook} (2 times), \texttt{google} (2 times), \texttt{youtube} (2 times) and \texttt{yahoo}. This indicates that the distribution of Google queries in the AQL is not very similar to the real distribution of Google queries.        
 
 
 \subsection{Temporal Correlation}
@@ -581,7 +640,7 @@ The correlation coefficient $\rho_{q,p}$ indicates the strength and direction of
 \begin{figure}[tb]
     \centering
     \includegraphics[width=1.0\textwidth]{../plots/time-series-google-trends/all.pdf} 
-  \caption{The figure shows temporal popularity of the queries ``translate'', ``instagram'', ``twitter'' and ``face'' in the AQL and Google. We consider these 4 queries because they have the highest correlation coefficients, showcasing that even time series of the highest correlated queries are quite different.}
+  \caption{The figure shows temporal popularity of the queries ``translate'', ``instagram'', ``twitter'' and ``face'' in the AQL and Google. We consider these 4 queries because they have the highest correlation coefficients, showcasing that even the highest correlated time series are quite different.}
   \label{fig:time-series}
  \end{figure}
     
@@ -591,7 +650,7 @@ The correlation coefficient $\rho_{q,p}$ indicates the strength and direction of
 % To be positioned
 
 
-\section{Embedding-based Analysis}
+% \section{Embedding-based Analysis}
 
 
 
