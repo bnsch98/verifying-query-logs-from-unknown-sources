@@ -1,39 +1,3 @@
-
-
-# # Pfad zur ursprünglichen CSV-Datei
-# input_file_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/orcas-doctrain-queries.tsv"
-# # Pfad zur bereinigten CSV-Datei
-# cleaned_file_path = "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/orcas/orcas-doctrain-queries-cleaned.csv"
-# # Schritt 1: Datei bereinigen
-
-
-# def clean_line(line):
-#     # Trenne die Zeile in zwei Teile: ID und String
-#     parts = line.split("\t")
-#     if len(parts) == 2:
-#         id_part = parts[0].strip()
-#         string_part = parts[1].strip()
-#     else:
-#         parts = line.split(" ", 1)
-#         id_part = parts[0].strip()
-#         string_part = parts[1].strip()
-
-#     # Ersetze das Trennzeichen durch ein Komma und gebe die bereinigte Zeile zurück
-#     return f"{id_part},{string_part}\n"
-
-
-# cnt = 0
-# with open(input_file_path, 'r') as file1, open(cleaned_file_path, 'w') as file2:
-
-#     for line in file1:
-#         cnt += 1
-#         cleaned_line = clean_line(line)
-#         file2.write(cleaned_line)
-
-#         if (cnt > 300000):
-#             print(f"written_file{cnt}")
-
-
 import traceback
 
 

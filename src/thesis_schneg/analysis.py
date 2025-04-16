@@ -759,7 +759,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "deduplicate-queries":
         return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
 
-    # Descriptive analysis: Get frequencies of linguistic elements and frequencies of their lengths
+    # Syntactical analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
         return {'groupby_func': partial(groupby_count_sort, col_group='char', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': _extract_chars, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "extract-words":
