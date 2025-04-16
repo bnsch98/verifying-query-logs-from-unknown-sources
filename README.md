@@ -102,7 +102,7 @@ ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_s
 | `<analysis-type>`                                         | Description                                                                                                                    |
 |-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | `query-intent`                                            | Classify queries with regard to their intent acoording to [Alexander, Kusa, de Vries](https://dl.acm.org/doi/10.1145/3477495.3531737).| 
-| `get-embeddings`                                  | Get sentence embeddings from [Multilingual Sentence Transformer for Symmetric Search](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2).                                                                                              |
+| `get-embeddings`                                  | Get sentence embeddings from [Multilingual Sentence Transformer for Symmetric Semantic Search](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2).                                                                                              |
 | `group-presidio-pii`                                           | Group Data according to PII Entity Labels .
 
 #### Temporal-based Analysis
