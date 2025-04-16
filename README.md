@@ -61,8 +61,8 @@ ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_s
 | Identifier     | `<command>`                            | `<command-value>`                   | Description                                                                             |
 |----------------|---------------------------------------------|------------------------------------|-----------------------------------------------------------------------------------------| 
 |Analysis mode. Most Analyses are invoked by this command.  |`--analysis`                                 |[`<analysis-type>`](#analysis-modes)|Specify a desired analysis. Get an overview from the provided table. Find the script containing the analysis [here](src/thesis_schneg/analysis.py).|
-|Analysis mode: Questions   |`--questions`                                |`questions`                         |Carry out question classification|
-|Analysis mode: Presidio PII Extraction   |`--presidio_analysis`                        |`extract-presidio-pii`              |Carry out PII Entity Extraction|
+|Analysis mode: Questions   |`--questions`                                |`questions`                         |Carry out question classification. |
+|Analysis mode: Presidio PII Extraction.   |`--presidio_analysis`                        |`extract-presidio-pii`              |Carry out PII Entity Extraction. |
 |Dataset         |`--dataset`                                  |`aql`,`aol`,`ms-marco`,`orcas`      |Specify the data set to be analyzed |
 |Concurrency     |`--concurrency`                              |`<int>`                             |Set the concurrency to transform data.|
 |Read concurrency|`--read-concurrency`                         |`<int>`                             |Set the concurrency to read data. |
@@ -74,8 +74,8 @@ ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_s
 |Num GPUs        |`--num-gpus`                                 |`<float>`                           |Number of GPUs per node. |
 |Struc Level     |`--struc-level`                              |`queries`, `named-entities`, `words`|Only relevant for the anaysis "`get-lengths`". Provides the structural level on which the lengths should be determined. E.g. for named entities we can measure the length in words or in characters. |
 |Write Directory |`--write-dir`                                |`<path>`                            |Specify where to write the results.   |
-|Write Directory |`--read-dir`                                 |`<path>`                            |Specify path to read data.   |
-| Consider english subsets |`--only-english`                   | `None`                            | Option to consider only english subsets for an analysis   |
+|Read Directory |`--read-dir`                                 |`<path>`                            |Specify path to read data.   |
+| Consider english subsets |`--only-english`                   | `None`                            | Option to consider only english subsets for an analysis.   |
 
 
 
@@ -103,12 +103,12 @@ ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_s
 |-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | `query-intent`                                            | Classify queries with regard to their intent acoording to [Alexander, Kusa, de Vries](https://dl.acm.org/doi/10.1145/3477495.3531737).| 
 | `get-embeddings`                                  | Get sentence embeddings from [Multilingual Sentence Transformer for Symmetric Semantic Search](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2).                                                                                              |
-| `group-presidio-pii`                                           | Group Data according to PII Entity Labels .
+| `group-presidio-pii`                                           | Group Data according to PII Entity Labels.
 
 #### Temporal-based Analysis
 | `<analysis-type>`                                         | Description                                                                                                                    |
 |-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | `query-chart-by-year`                                  | Group and count queries so obtain the frequency per year.                                                                                              |
 | `get-annual-top-queries`                                           | Extract top 25 queries per year.                                                                                                       | 
-| `get-temporal-query-frequency`                                           | Retrieve frequency of top monthly google queries in the AQL. Google queries from the AQL are stored in `/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/`                                                                                                 |
-| `get-monthly-google-queries`                                | Get monthly frequencies of google queries in the AQL. Google queries from the AQL are stored in `/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-filter-google-queries-all` | 
+| `get-temporal-query-frequency`                                           | Retrieve frequency of top monthly google queries in the AQL. Google queries from the AQL are stored in `/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/`.                                                                                                 |
+| `get-monthly-google-queries`                                | Get monthly frequencies of google queries in the AQL. Google queries from the AQL are stored in `/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis/aql-filter-google-queries-all`. | 
