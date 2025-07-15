@@ -277,7 +277,7 @@ class SpacyEntityLevelStructures(_spacy_framework):
 def _get_parquet_paths(
     dataset_name: DatasetName,
     analysis_name: AnalysisName,
-    read_dir: Optional[Path] = None,
+    read_dir: Optional[Iterable[str]] = None,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -348,11 +348,16 @@ def _get_parquet_paths(
                 input_paths = input_paths[len(input_paths)//2:]
         assert input_paths, f"No files found in {base_path.name}"
     else:
-        if read_dir is str:
-            read_dir = Path(read_dir)
-        assert read_dir.is_dir(), f"Invalid directory {read_dir}"
-        input_paths = [path for path in read_dir.iterdir()
-                       if path.suffix == ".parquet"]
+        input_paths = []
+        for path in read_dir:
+            print(f"Reading from {path}")
+            if isinstance(path, str):
+                path = Path(path)
+            else:
+                print(f"Path is {type(path)}")
+            assert path.is_dir(), f"Invalid directory {path}"
+            input_paths = input_paths + [dir for dir in path.iterdir()
+                                         if dir.suffix == ".parquet"]
         assert len(input_paths) > 0, f"No parquet files found in {read_dir}"
 
         if sample_files is not None:
@@ -373,7 +378,7 @@ def load_dataset(dataset_name: DatasetName,
                  columns: Optional[Iterable[str]] = None,
                  memory_scaler: float = 1.0,
                  which_half: Optional[str] = None,
-                 read_dir: Optional[Path] = None
+                 read_dir: Optional[Iterable[str]] = None
                  ) -> Dataset:
 
     # Load dataset.
@@ -433,7 +438,7 @@ def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memor
     return dataset.map_groups(map_group_func, concurrency=concurrency, memory=memory_scaler*1000*1000*1000)
 
 
-def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Path], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Iterable[str]], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
     # check if wirte_dir is Path
     if type(write_dir) is not Path:
         write_dir = Path(write_dir)
@@ -500,7 +505,6 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
 
 
 ###########################################    Task Specific Functions    ###########################################
-
 # Mapping functions
 def identity(batch: DataFrame) -> DataFrame:
     return batch
@@ -844,7 +848,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
                       write_dir: Path = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
     write_concurrency: Optional[int] = 2,
-    read_dir: Optional[Path] = None
+    read_dir: Optional[Iterable[str]] = None
 ) -> None:
     assert struc_level in [None, "words",
                            "named-entities", "queries"], "Invalid structural level"
@@ -858,12 +862,15 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     # Load dataset.
     ds = load_dataset(dataset_name=dataset[0], struc_level=struc_level, sample_files=sample_files,
                       only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
-    if len(dataset) > 1:
+    if len(dataset) > 1 and read_dir is None:
         # Load next dataset.
-        next = load_dataset(dataset_name=dataset[1], struc_level=struc_level,
-                            sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
-        # Union datasets.
-        ds = ds.union(next)
+        dataset.pop(0)  # remove first element
+        for dataset_name in dataset:
+            # Load next dataset.
+            next = load_dataset(dataset_name=dataset_name, struc_level=struc_level,
+                                sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
+            # Union datasets.
+            ds = ds.union(next)
     # take random sample of dataset for get-embeddings analysis
     if analysis_name == "get-embeddings" and len(dataset) == 1:
         if dataset[0] == "aol":  # Size: 10 M
@@ -924,10 +931,10 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
 
     # Write results.
     # Determine dataset name for writing.
-    # if len(dataset) > 1:
-    #     dataset_name = dataset[0]
-    #     dataset.pop(0)  # remove first element
-    #     for name in dataset:
-    #         dataset_name = f"{dataset_name}-{name}"
-    # write_dataset(dataset=ds, write_dir=write_dir,
-    #               analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
+    if len(dataset) > 1:
+        dataset_name = dataset[0]
+        dataset.pop(0)  # remove first element
+        for name in dataset:
+            dataset_name = f"{dataset_name}-{name}"
+    write_dataset(dataset=ds, write_dir=write_dir,
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)

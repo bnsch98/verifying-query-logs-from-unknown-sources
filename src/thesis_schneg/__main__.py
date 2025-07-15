@@ -27,7 +27,7 @@ def analyser(
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
-    read_dir: Optional[Directory] = None
+    read_dir: Optional[Iterable[str]] = None
 ) -> None:
     from thesis_schneg.analysis import analysis_pipeline as _analysis_pipeline
 
@@ -67,7 +67,7 @@ def presidio_analysis(
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
-    read_dir: Optional[Directory] = None
+    read_dir: Optional[Iterable[str]] = None
 ) -> None:
     from thesis_schneg.presidio_analyse import analysis_pipeline as _presidio_analysis_pipeline
 
@@ -107,7 +107,7 @@ def questions(
     write_concurrency: Optional[int] = 2,
     write_dir: Directory = Path(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
-    read_dir: Optional[Directory] = None
+    read_dir: Optional[Iterable[str]] = None
 ) -> None:
     from thesis_schneg.question_classifier import analysis_pipeline as question_pipeline
 
