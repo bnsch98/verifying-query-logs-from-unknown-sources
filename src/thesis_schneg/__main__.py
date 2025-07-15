@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable
 from pathlib import Path
 from cyclopts import App
 from cyclopts.types import Directory
@@ -12,7 +12,7 @@ app = App()
 
 @app.command
 def analyser(
-    dataset: DatasetName,
+    dataset: Iterable[DatasetName],
     analysis: AnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
@@ -32,7 +32,7 @@ def analyser(
     from thesis_schneg.analysis import analysis_pipeline as _analysis_pipeline
 
     _analysis_pipeline(
-        dataset_name=dataset,
+        dataset=dataset,
         analysis_name=analysis,
         struc_level=struc_level,
         sample_files=sample_files,
@@ -52,7 +52,7 @@ def analyser(
 
 @app.command
 def presidio_analysis(
-    dataset: DatasetName,
+    dataset: Iterable[DatasetName],
     analysis: AnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
@@ -72,7 +72,7 @@ def presidio_analysis(
     from thesis_schneg.presidio_analyse import analysis_pipeline as _presidio_analysis_pipeline
 
     _presidio_analysis_pipeline(
-        dataset_name=dataset,
+        dataset=dataset,
         analysis_name=analysis,
         struc_level=struc_level,
         sample_files=sample_files,
@@ -92,7 +92,7 @@ def presidio_analysis(
 
 @app.command
 def questions(
-    dataset: DatasetName,
+    dataset: Iterable[DatasetName],
     analysis: AnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
@@ -112,7 +112,7 @@ def questions(
     from thesis_schneg.question_classifier import analysis_pipeline as question_pipeline
 
     question_pipeline(
-        dataset_name=dataset,
+        dataset=dataset,
         analysis_name=analysis,
         struc_level=struc_level,
         sample_files=sample_files,
@@ -128,6 +128,40 @@ def questions(
         write_concurrency=write_concurrency,
         read_dir=read_dir,
     )
+
+
+# solely for testing purposes, not part of the main functionality
+@app.command
+def test_cli(
+    arg1: Optional[Iterable[str]] = None,
+    arg2: Optional[str] = None,
+    arg3: Iterable[DatasetName] = None,
+) -> None:
+
+    print(f"arg1: {arg1}")
+    print(f"type arg1: {type(arg1)}")
+    print(f"arg2: {arg2}")
+    print(f"type arg2: {type(arg2)}")
+    print(f"arg3: {arg3}")
+    print(f"type arg3: {type(arg3)}")
+
+    if arg1:
+        for item in arg1:
+            print(f"Item from arg1: {item}")
+    else:
+        print("No items in arg1")
+    if arg2:
+        print(f"Value of arg2: {arg2}")
+    else:
+        print("No value for arg2")
+    if arg3:
+        print(f"Value of arg3: {arg3}")
+        if isinstance(arg3, Iterable):
+            print(f"arg3 is an iterable with {len(arg3)} items")
+            for item in arg3:
+                print(f"Item from arg3: {item}")
+    else:
+        print("No items in arg3")
 
 
 if __name__ == "__main__":

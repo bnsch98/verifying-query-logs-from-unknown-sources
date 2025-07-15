@@ -829,7 +829,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
 
 ############################################    Pipeline    ################################################
-def analysis_pipeline(dataset_name: DatasetName,
+def analysis_pipeline(dataset: Iterable[DatasetName],
                       analysis_name: AnalysisName,
                       struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
@@ -856,18 +856,23 @@ def analysis_pipeline(dataset_name: DatasetName,
         analysis_name=analysis_name, struc_level=struc_level)
 
     # Load dataset.
-    ds = load_dataset(dataset_name=dataset_name, struc_level=struc_level, sample_files=sample_files,
+    ds = load_dataset(dataset_name=dataset[0], struc_level=struc_level, sample_files=sample_files,
                       only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
-
-    # take random sample of dataset
-    if analysis_name == "get-embeddings":
-        if dataset_name == "aol":  # Size: 10 M
+    if len(dataset) > 1:
+        # Load next dataset.
+        next = load_dataset(dataset_name=dataset[1], struc_level=struc_level,
+                            sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
+        # Union datasets.
+        ds = ds.union(next)
+    # take random sample of dataset for get-embeddings analysis
+    if analysis_name == "get-embeddings" and len(dataset) == 1:
+        if dataset[0] == "aol":  # Size: 10 M
             ds = ds.random_sample(fraction=0.1, seed=42)
-        elif dataset_name == "aql":  # Size: 62,4 M
+        elif dataset[0] == "aql":  # Size: 62,4 M
             ds = ds.random_sample(fraction=1/62.4, seed=42)
-        elif dataset_name == "ms-marco":  # Size: 10 M
+        elif dataset[0] == "ms-marco":  # Size: 10 M
             ds = ds.random_sample(fraction=0.1, seed=42)
-        elif dataset_name == "orcas":  # Size: 10 M
+        elif dataset[0] == "orcas":  # Size: 10 M
             ds = ds.random_sample(fraction=0.1, seed=42)
 
     # Apply mapping function.
@@ -918,5 +923,11 @@ def analysis_pipeline(dataset_name: DatasetName,
     # print(ds.take(1))
 
     # Write results.
-    write_dataset(dataset=ds, write_dir=write_dir,
-                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
+    # Determine dataset name for writing.
+    # if len(dataset) > 1:
+    #     dataset_name = dataset[0]
+    #     dataset.pop(0)  # remove first element
+    #     for name in dataset:
+    #         dataset_name = f"{dataset_name}-{name}"
+    # write_dataset(dataset=ds, write_dir=write_dir,
+    #               analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
