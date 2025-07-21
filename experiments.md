@@ -201,3 +201,15 @@ Herem, all data sets are stored with the suffix "-special" because they are gene
 | group presidio    | aql       | `` | ``   | `` |  | ✔️❌     |
 | group presidio    | ms-marco       | `` | ``   | `` |  | ✔️❌     |
 | group presidio    | orcas       | `` | ``   | `` |  | ✔️❌     |
+
+# Post-Thesis Analysis
+| Experiment Type       | Data Set  | CLI Command | Start Time | End Time | Duration | Success |
+|-----------------------|---------- |-------------|------------|----------|----------|---------|
+| deduplicate lowercase queries    | aol       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset aol --analysis deduplicate-lowercase-queries --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024` | ``   | `` |  | ✔️❌     |
+| deduplicate lowercase queries    | aql       | `RAY_ADDRESS="" python3 -m thesis_schneg analyser --dataset aql --analysis deduplicate-lowercase-queries` | `2025/07/16 18:58:00`   | `` |  | ✔️❌     |
+| deduplicate lowercase queries    | ms-marco       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset ms-marco --analysis deduplicate-lowercase-queries --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024` | ``   | `` |  | ✔️❌     |
+| deduplicate lowercase queries    | orcas       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser --dataset orcas --analysis deduplicate-lowercase-queries --read-concurrency 100 --concurrency 32 --write-concurrency 100 --memory-scaler 8 --batch-size 1024` | ``   | `` |  | ✔️❌     |
+|    | aql       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser ` | ``   | `` |  | ✔️❌     |
+|    | aol       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser ` | ``   | `` |  | ✔️❌     |
+|    | ms-marco       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser ` | ``   | `` |  | ✔️❌     |
+|    | orcas       | `ray job submit --runtime-env ray-runtime-env.yml --no-wait -- python -m thesis_schneg analyser ` | ``   | `` |  | ✔️❌     |

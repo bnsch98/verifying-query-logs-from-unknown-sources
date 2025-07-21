@@ -38,7 +38,7 @@ dependencies = [
     "scipy~=1.15",
     "scikit-learn~=1.6",
     "pytrends~=4.9",
-    "sentence-transformers~=3.4",
+    "sentence-transformers",
     "tirex-tracker~=0.2",
     "numpy~=1.2",
     "seaborn~=0.12",
@@ -89,7 +89,7 @@ exclude_dirs = [
 skips = ["**/test_*.py"]
 
 [tool.pytest.ini_options]
-log_cli = "True"
+log_cli = true
 filterwarnings = [
     'ignore:FUNCTIONS is deprecated and will be removed in future versions:DeprecationWarning',
 ]

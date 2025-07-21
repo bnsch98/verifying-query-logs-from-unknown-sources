@@ -55,4 +55,8 @@ AnalysisName: TypeAlias = Literal[
     "get-embeddings",
     "questions",
     "deduplicate-queries",
+    "deduplicate-lowercase-queries",
+    "get-query-overlap",
+    "deduplicate-queries-per-year",
+    "deduplicate-lowercase-queries-per-year",
 ]

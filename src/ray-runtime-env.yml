@@ -29,12 +29,16 @@ pip:
   # - spacy~=3.7.2 #3.7
   - spacy>=3.7.2,<3.8.0
   # - spacy~=3.8
-  - sentence-transformers~=3.4
-  - torch~=2.4
+  - sentence-transformers
+  # - torch~=2.4
+  - torch
   - tqdm~=4.64
-  - transformers~=4.44
+  # - transformers~=4.44
+  - transformers
   - gliner~=0.2
   - presidio-analyzer~=2.2
   - tirex-tracker~=0.2
   # - numpy~=1.2
 logging_level: debug
+env_vars:
+  RAY_TASK_MAX_RETRIES: "10"

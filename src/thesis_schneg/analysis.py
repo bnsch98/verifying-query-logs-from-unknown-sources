@@ -613,6 +613,11 @@ def transform_timestamp(batch: DataFrame, time_mode: str) -> DataFrame:
     return batch
 
 
+def set_lowercase(batch: DataFrame) -> DataFrame:
+    batch['serp_query_text_url'] = batch['serp_query_text_url'].str.lower()
+    return batch
+
+
 # Flat mapping functions
 def _extract_chars(row: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
     return [{"char": char} for char in row['serp_query_text_url'].replace(" ", "")]
@@ -762,6 +767,14 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "deduplicate-queries":
         return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "deduplicate-queries-per-year":
+        return {'groupby_func': partial(groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "deduplicate-lowercase-queries":
+        return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': [set_lowercase], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "deduplicate-lowercase-queries-per-year":
+        return {'groupby_func': partial(groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [set_lowercase, get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+    elif analysis_name == "get-query-overlap":
+        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
 
     # Syntactical analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -931,8 +944,8 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
 
     # Write results.
     # Determine dataset name for writing.
+    dataset_name = dataset[0]
     if len(dataset) > 1:
-        dataset_name = dataset[0]
         dataset.pop(0)  # remove first element
         for name in dataset:
             dataset_name = f"{dataset_name}-{name}"
