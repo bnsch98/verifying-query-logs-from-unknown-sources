@@ -10,7 +10,7 @@ from functools import cached_property
 from json import dumps, load as json_load
 from thesis_schneg.model import DatasetName, AnalysisName
 from ray.data.grouped_data import GroupedData
-from ray.data.aggregate import AggregateFn
+from ray.data.aggregate import AggregateFn, AggregateFnV2
 from ray.data import read_parquet, Dataset
 from ray import init
 from pandas import DataFrame
@@ -29,6 +29,7 @@ from transformers import (
     pipeline,
     Pipeline,
 )
+from datasketch import HyperLogLog
 # from tirex_tracker import fetch_info
 # print(fetch_info())
 
@@ -690,12 +691,45 @@ aggregate_word_counts = AggregateFn(
     name="word-counts"
 )
 
+hyperloglog_agg_block = AggregateFn(
+    init=lambda _: HyperLogLog(),
+    accumulate_block=lambda hll, rows: acc_hyperloglog_block(hll, rows),
+    merge=lambda hll1, hll2: merge_hyperloglog(hll1, hll2),
+    finalize=lambda hll: hll.count(),
+    name="hyperloglog-agg"
+)
+
+
+hyperloglog_agg_row = AggregateFn(
+    init=lambda _: HyperLogLog(),
+    accumulate_row=lambda hll, row: acc_hyperloglog_row(hll, row),
+    merge=lambda hll1, hll2: merge_hyperloglog(hll1, hll2),
+    finalize=lambda hll: hll.count(),
+    name="hyperloglog-agg"
+)
+
 
 # Helper functions for aggregation
 def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     aggr_dict["sum"] += row["count()"]
     aggr_dict["unique"] += 1
     return aggr_dict
+
+
+def acc_hyperloglog_block(aggr_dict: HyperLogLog, rows: Iterable[Dict[str, Any]]) -> HyperLogLog:
+    for row in rows:
+        aggr_dict.update(row["serp_query_text_url"].encode('utf8'))
+    return aggr_dict
+
+
+def acc_hyperloglog_row(hll: HyperLogLog, row: Dict[str, Any]) -> HyperLogLog:
+    hll.update(row["serp_query_text_url"].encode('utf8'))
+    return hll
+
+
+def merge_hyperloglog(hll1: HyperLogLog, hll2: HyperLogLog) -> HyperLogLog:
+    hll1.merge(hll2)
+    return hll1
 
 
 def sum_dict(a1: Dict[str, Any], a2: Dict[str, Any]) -> Dict[str, Any]:
@@ -731,7 +765,7 @@ def merge_word_counts(df1: Dict[str, Any], df2: Dict[str, Any]) -> Dict[str, Any
 
 
 # Group-by function
-def groupby(dataset: Dataset, col: str) -> GroupedData:
+def _groupby(dataset: Dataset, col: str) -> GroupedData:
     return dataset.groupby(key=col)
 
 
@@ -766,13 +800,15 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
     elif analysis_name == "deduplicate-queries":
-        return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(_groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "count-deduplicated-queries":
+        return {'groupby_func': None, 'aggregator': hyperloglog_agg_row, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "deduplicate-queries-per-year":
-        return {'groupby_func': partial(groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': partial(_groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "deduplicate-lowercase-queries":
-        return {'groupby_func': partial(groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': [set_lowercase], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
+        return {'groupby_func': partial(_groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': [set_lowercase], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "deduplicate-lowercase-queries-per-year":
-        return {'groupby_func': partial(groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [set_lowercase, get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
+        return {'groupby_func': partial(_groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [set_lowercase, get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-query-overlap":
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
 
@@ -783,7 +819,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group='word', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyWords(), 'col_filter': ['serp_query_text_url']}
     # words of aql were too large to be extracted in one go, hence a merge of the two halfes was necessary
     elif analysis_name == "extract-words-merge":
-        return {'groupby_func': partial(groupby, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
+        return {'groupby_func': partial(_groupby, col="word"), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None, 'map_groups_func': lambda g: {"word": [str(g["word"][0])], "count()": np_array([np_sum(g["count()"])])}}
     elif analysis_name == "extract-named-entities":
         return {'groupby_func': partial(groupby_count_sort, col_group=['entity', 'entity-label'], col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': SpacyGetEntities(), 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "get-lengths":
@@ -824,7 +860,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
     elif analysis_name == "query-chart-by-year":
         return {'groupby_func': partial(groupby_count_sort, col_group=['year', 'serp_query_text_url'], col_sort=['year', 'count()']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-annual-top-queries":
-        return {'groupby_func': partial(groupby, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
+        return {'groupby_func': partial(_groupby, col='year'),  'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: g.sort_values(by='count()', ascending=False).head(25), 'col_filter': None}
     elif analysis_name == "get-temporal-query-frequency":
         return {'groupby_func': partial(groupby_count, col=['time', 'serp_query_text_url']), 'aggregator': None, 'mapping_func': [partial(extract_queries, queries=['google', 'yahoo', 'weather', 'youtube', 'hotmail', 'facebook', 'gmail', 'news', 'you', 'ebay', 'amazon', 'games', 'free', 'twitter', 'translate', 'mp3', 'maps', 'msn', 'fb', 'mail', 'instagram', 'map', 'face', 'video', 'juegos', 'craigslist', 'facebook login', 'lyrics', 'game', 'traductor', 'you tube', 'as', 'whatsapp', 'videos', 'wikipedia', 'yahoo mail', 'myspace', 'tiempo', 'samsung', 'bbc', 'meteo', 'web', 'music', 'nokia', 'погода', 'clima', 'chat', 'sony', 'download', 'go', 'google translate', 'wiki', 'netflix', 'hot', 'dictionary', 'messenger', 'test', 'whatsapp web', 'satta', 'torrent', 'microsoft', 'radio', 'movies', 'вк', 'hi5', 'java', 'tv', 'jobs', 'mobile', 'halloween', 'iphone', 'linux', 'coronavirus', 'jogos', 'flash', 'world cup', 'apple', 'earth', 'ipl', 'dvd', 'corona', 'cricbuzz', 'web whatsapp', 'hp', 'my', 'wetter', 'nba', 'cheats', 'hotmail.com', 'friv', 'dr', 'fifa', 'trump', 'love', 'christmas', 'black friday', 'olympics', 'covid', 'walmart', 'www']), partial(transform_timestamp, time_mode='monthly')], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
     elif analysis_name == "get-monthly-google-queries":
@@ -928,14 +964,13 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
 
     # Print results for debugging.
     # if type(ds) is Dataset:
-    #     print(ds.take(5))
-    #     print(ds.columns())
-    #     print(f"\n\n\n\n\n{ds.count()}\n\n\n\n\n")
+    #     print(f"\n\n\n\n\n{ds.count()}\n\n\n\n\n{ds.take(5)}")
     # elif type(ds) is dict:
-    #     print(ds)
+    #     print(f"\n\n\n\n\n{ds}\n\n\n\n\n")
 
     # Get sample of results.
     # ds = ds.take(50)
+    # print(ds.take(5))
 
     # print number of rows
     # print(ds.count())

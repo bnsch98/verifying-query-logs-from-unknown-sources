@@ -59,4 +59,5 @@ AnalysisName: TypeAlias = Literal[
     "get-query-overlap",
     "deduplicate-queries-per-year",
     "deduplicate-lowercase-queries-per-year",
+    "count-deduplicated-queries",
 ]

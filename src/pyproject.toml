@@ -23,7 +23,7 @@ dependencies = [
     "pytest~=8.0",
     "pytest-cov~=5.0",
     "python-dotenv~=1.0",
-    "ray[data,default]~=2.33",
+    "ray[data,default]~=2.4",
     "ruff~=0.7.0",
     "safetensors~=0.4.5",
     "spacy~=3.7",
@@ -42,6 +42,7 @@ dependencies = [
     "tirex-tracker~=0.2",
     "numpy~=1.2",
     "seaborn~=0.12",
+    "datasketch~=1.6",
 ]
 
 [build-system]

@@ -24,7 +24,7 @@ pip:
   - pandas~=2.0
   - pyarrow~=16.1
   - python-dotenv~=1.0
-  - ray[data,default]~=2.33
+  - ray[data,default]~=2.4
   # - safetensors~=0.4.5
   # - spacy~=3.7.2 #3.7
   - spacy>=3.7.2,<3.8.0
@@ -39,6 +39,7 @@ pip:
   - presidio-analyzer~=2.2
   - tirex-tracker~=0.2
   # - numpy~=1.2
+  - datasketch~=1.6
 logging_level: debug
 env_vars:
   RAY_TASK_MAX_RETRIES: "10"
