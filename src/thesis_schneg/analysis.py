@@ -10,7 +10,7 @@ from functools import cached_property
 from json import dumps, load as json_load
 from thesis_schneg.model import DatasetName, AnalysisName
 from ray.data.grouped_data import GroupedData
-from ray.data.aggregate import AggregateFn, AggregateFnV2
+from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
 from ray import init
 from pandas import DataFrame
@@ -485,7 +485,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
         # Distinguish between nested dict and flat dict. We rule out deeper nesting.
-        if type(dataset[analysis_name]) is dict:
+        if analysis_name in dataset.keys() and type(dataset[analysis_name]) is dict:
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset[analysis_name]))
@@ -691,14 +691,6 @@ aggregate_word_counts = AggregateFn(
     name="word-counts"
 )
 
-hyperloglog_agg_block = AggregateFn(
-    init=lambda _: HyperLogLog(),
-    accumulate_block=lambda hll, rows: acc_hyperloglog_block(hll, rows),
-    merge=lambda hll1, hll2: merge_hyperloglog(hll1, hll2),
-    finalize=lambda hll: hll.count(),
-    name="hyperloglog-agg"
-)
-
 
 hyperloglog_agg_row = AggregateFn(
     init=lambda _: HyperLogLog(),
@@ -713,12 +705,6 @@ hyperloglog_agg_row = AggregateFn(
 def acc_row(aggr_dict: Dict[str, Any], row: Dict[str, Any]) -> Dict[str, Any]:
     aggr_dict["sum"] += row["count()"]
     aggr_dict["unique"] += 1
-    return aggr_dict
-
-
-def acc_hyperloglog_block(aggr_dict: HyperLogLog, rows: Iterable[Dict[str, Any]]) -> HyperLogLog:
-    for row in rows:
-        aggr_dict.update(row["serp_query_text_url"].encode('utf8'))
     return aggr_dict
 
 
@@ -799,18 +785,10 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
         return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "sum-rows":
         return {'groupby_func': None, 'aggregator': sum_rows, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': None}
-    elif analysis_name == "deduplicate-queries":
-        return {'groupby_func': partial(_groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
     elif analysis_name == "count-deduplicated-queries":
         return {'groupby_func': None, 'aggregator': hyperloglog_agg_row, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "deduplicate-queries-per-year":
-        return {'groupby_func': partial(_groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
-    elif analysis_name == "deduplicate-lowercase-queries":
-        return {'groupby_func': partial(_groupby, col='serp_query_text_url'), 'aggregator': None, 'mapping_func': [set_lowercase], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]]}, 'col_filter': ['serp_query_text_url']}
-    elif analysis_name == "deduplicate-lowercase-queries-per-year":
-        return {'groupby_func': partial(_groupby, col=['serp_query_text_url', 'year']), 'aggregator': None, 'mapping_func': [set_lowercase, get_year], 'flat_mapping_func': None, 'map_groups_func': lambda g: {"serp_query_text_url": [g['serp_query_text_url'][0]], "year": [g['year'][0]]}, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
-    elif analysis_name == "get-query-overlap":
-        return {'groupby_func': partial(groupby_count_sort, col_group='serp_query_text_url', col_sort='count()'), 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
+    elif analysis_name == "count-deduplicated-lowercase-queries":
+        return {'groupby_func': None, 'aggregator': hyperloglog_agg_row, 'mapping_func': [set_lowercase], 'flat_mapping_func': None, 'map_groups_func': None, 'col_filter': ['serp_query_text_url']}
 
     # Syntactical analysis: Get frequencies of linguistic elements and frequencies of their lengths
     elif analysis_name == "extract-chars":
@@ -984,5 +962,15 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
         dataset.pop(0)  # remove first element
         for name in dataset:
             dataset_name = f"{dataset_name}-{name}"
+    if type(ds) is dict:
+        # If dataset is a dict, add information about the analysis and used data sets.
+        if analysis_name is not None:
+            ds['analysis_name'] = analysis_name
+        if dataset is not None:
+            ds['dataset'] = dataset_name
+        if sample_files is not None:
+            ds['sample_files'] = sample_files
+        else:
+            ds['sample_files'] = 'all'
     write_dataset(dataset=ds, write_dir=write_dir,
                   analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english)
