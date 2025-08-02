@@ -262,7 +262,7 @@ def set_lowercase(batch: DataFrame) -> DataFrame:
 
 # Aggregation functions
 hyperloglog_agg_row = AggregateFn(
-    init=lambda _: HyperLogLog(),
+    init=lambda _: HyperLogLog(p=16),
     accumulate_row=lambda hll, row: acc_hyperloglog_row(hll, row),
     merge=lambda hll1, hll2: merge_hyperloglog(hll1, hll2),
     finalize=lambda hll: hll.count(),

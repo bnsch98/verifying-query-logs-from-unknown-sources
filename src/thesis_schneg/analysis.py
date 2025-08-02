@@ -1,4 +1,4 @@
-# from tirex_tracker import fetch_info
+from tirex_tracker import fetch_info
 # print(fetch_info())
 from functools import partial
 from sentence_transformers import SentenceTransformer
@@ -693,7 +693,7 @@ aggregate_word_counts = AggregateFn(
 
 
 hyperloglog_agg_row = AggregateFn(
-    init=lambda _: HyperLogLog(),
+    init=lambda _: HyperLogLog(p=16),
     accumulate_row=lambda hll, row: acc_hyperloglog_row(hll, row),
     merge=lambda hll1, hll2: merge_hyperloglog(hll1, hll2),
     finalize=lambda hll: hll.count(),
@@ -963,7 +963,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
         for name in dataset:
             dataset_name = f"{dataset_name}-{name}"
     if type(ds) is dict:
-        # If dataset is a dict, add information about the analysis and used data sets.
+        # If result is a dict, add information about the analysis and used data sets.
         if analysis_name is not None:
             ds['analysis_name'] = analysis_name
         if dataset is not None:
