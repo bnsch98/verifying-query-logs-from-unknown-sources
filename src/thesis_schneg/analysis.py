@@ -891,8 +891,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
                       only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
     if len(dataset) > 1 and read_dir is None:
         # Load next dataset.
-        dataset.pop(0)  # remove first element
-        for dataset_name in dataset:
+        for dataset_name in dataset[1:]:
             # Load next dataset.
             next = load_dataset(dataset_name=dataset_name, struc_level=struc_level,
                                 sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
@@ -959,8 +958,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     # Determine dataset name for writing.
     dataset_name = dataset[0]
     if len(dataset) > 1:
-        dataset.pop(0)  # remove first element
-        for name in dataset:
+        for name in dataset[1:]:
             dataset_name = f"{dataset_name}-{name}"
     if type(ds) is dict:
         # If result is a dict, add information about the analysis and used data sets.
