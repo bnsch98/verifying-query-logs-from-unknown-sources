@@ -1,4 +1,4 @@
-from tirex_tracker import fetch_info
+# from tirex_tracker import fetch_info
 # print(fetch_info())
 from functools import partial
 from sentence_transformers import SentenceTransformer
@@ -175,7 +175,6 @@ class PresidioGetEntities(_presidio_framework):
         # Get tokens from text
         doc = self.presidio_model.analyze(
             text=row["serp_query_text_url"], language='en')
-        # "entity": row['serp_query_text_url'][ent.to_dict()['start']:ent.to_dict()['end']],
         entities = [{"entity-label": ent.to_dict()["entity_type"]}
                     for ent in doc if doc and ent.to_dict()["score"] >= 0.7]
         return entities
@@ -441,11 +440,11 @@ def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memor
 
 def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Iterable[str]], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
     # check if wirte_dir is Path
-    if type(write_dir) is not Path:
+    if not isinstance(write_dir, Path):
         write_dir = Path(write_dir)
 
     # Specifiy output directory if standard path was parsed. If not, we assume that a specific path was parsed via the CLI and no further specification is necessary.
-    if str(write_dir) == "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis":
+    if write_dir == Path("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"):
         output_folder = f"{dataset_name}-{analysis_name}"
 
         if struc_level is not None:
@@ -481,11 +480,11 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         [f.unlink() for f in write_dir.glob("*") if f.is_file()]
 
     # Write output
-    if type(dataset) is dict:
+    if isinstance(dataset, dict):
         # Make directory to work around FileNotFoundError
         write_dir.mkdir(parents=True, exist_ok=True)
         # Distinguish between nested dict and flat dict. We rule out deeper nesting.
-        if analysis_name in dataset.keys() and type(dataset[analysis_name]) is dict:
+        if analysis_name in dataset.keys() and isinstance(dataset[analysis_name], dict):
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset[analysis_name]))
@@ -493,11 +492,11 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
             # Write json file
             with write_dir.joinpath("result.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset))
-    elif type(dataset) is Dataset:
+    elif isinstance(dataset, Dataset):
         # Write parquet file
         dataset.write_parquet(path=str(write_dir),
                               concurrency=write_concurrency)
-    elif type(dataset) is DataFrame:
+    elif isinstance(dataset, DataFrame):
         # Write csv file
         dataset.to_csv(path_or_buf=write_dir.joinpath(
             "result.csv"), index=False)
@@ -601,7 +600,6 @@ def transform_timestamp(batch: DataFrame, time_mode: str) -> DataFrame:
     assert time_mode in [
         "yearly", "monthly", "weekly"], f"Invalid time mode \"{time_mode}\". Choose from [yearly, monthly, weekly]"
     # transform timestamp to year, month or week if serp_timestamp is not null
-    # batch = batch[~batch['serp_timestamp'].isnull()]
     if time_mode == "yearly":  # get year from timestamp
         batch['time'] = batch['serp_timestamp'].apply(
             lambda x: datetime.fromtimestamp(x).year)
@@ -684,7 +682,7 @@ aggregation_query_length = AggregateFn(
 
 
 aggregate_word_counts = AggregateFn(
-    init=lambda word_counts: {"word": [], "count()": []},
+    init=lambda: {"word": [], "count()": []},
     accumulate_row=lambda counts, row: acc_word_counts(counts, row),
     merge=lambda counts1, counts2: merge_word_counts(counts1, counts2),
     # finalize=from_pandas,
@@ -911,7 +909,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     # Apply mapping function.
     if module_specifics['mapping_func'] is not None:
         # iterate through list of mapping functions
-        if type(module_specifics['mapping_func']) is list:
+        if isinstance(module_specifics['mapping_func'], list):
             for func in module_specifics['mapping_func']:
                 ds = map_dataset(dataset=ds, mapping_func=func,
                                  concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
@@ -960,7 +958,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     if len(dataset) > 1:
         for name in dataset[1:]:
             dataset_name = f"{dataset_name}-{name}"
-    if type(ds) is dict:
+    if isinstance(ds, dict):
         # If result is a dict, add information about the analysis and used data sets.
         if analysis_name is not None:
             ds['analysis_name'] = analysis_name

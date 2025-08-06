@@ -170,6 +170,21 @@ def annual_deduplication(
     )
 
 
+@app.command
+def process_results(analysis: AnalysisName, dataset: Iterable[DatasetName], write_results: bool = False) -> None:
+    """
+    Process results for a given analysis and dataset.
+    If write_results is True, write the processed results to a file.
+    """
+    from thesis_schneg.results import process_results as _process_results
+
+    _process_results(
+        dataset_name=dataset,
+        analysis_name=analysis,
+        write_results=write_results,
+    )
+
+
 # solely for testing purposes, not part of the main functionality
 @app.command
 def test_cli(
