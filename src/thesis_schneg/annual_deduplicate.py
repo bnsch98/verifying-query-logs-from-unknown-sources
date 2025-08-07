@@ -217,12 +217,12 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
         write_dir = write_dir.joinpath(output_folder)
 
     # Write output
-    if type(dataset) is dict:
+    if isinstance(dataset, dict):
         if not write_dir.exists():
             # Make directory to work around FileNotFoundError
             write_dir.mkdir(parents=True, exist_ok=True)
         # Distinguish between nested dict and flat dict. We rule out deeper nesting.
-        if analysis_name in dataset.keys() and type(dataset[analysis_name]) is dict:
+        if analysis_name in dataset.keys() and isinstance(dataset[analysis_name], dict):
             # Write json file
             with write_dir.joinpath(f"{analysis_name}-{dataset_name}-{_year}.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset[analysis_name]))
@@ -230,17 +230,28 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
             # Write json file
             with write_dir.joinpath(f"{analysis_name}-{dataset_name}-{_year}.json").open("w+", encoding="utf-8") as f:
                 f.write(dumps(dataset))
-    elif type(dataset) is Dataset:
+    elif isinstance(dataset, Dataset):
         # Delete old files
         if write_dir.exists():
             [f.unlink() for f in write_dir.glob("*") if f.is_file()]
         # Write parquet file
         dataset.write_parquet(path=str(write_dir),
                               concurrency=write_concurrency)
-    elif type(dataset) is DataFrame:
+    elif isinstance(dataset, DataFrame):
         # Write csv file
         dataset.to_csv(path_or_buf=write_dir.joinpath(
             "result.csv"), index=False)
+    elif isinstance(dataset, list):
+        # We assume a list of dicts -> write json lines file
+        if not write_dir.exists():
+            # Make directory to work around FileNotFoundError
+            write_dir.mkdir(parents=True, exist_ok=True)
+        # Delete old files
+        [f.unlink() for f in write_dir.glob("*") if f.is_file()]
+        # Write json lines file
+        with write_dir.joinpath("result.jsonl").open("w+", encoding="utf-8") as f:
+            for item in dataset:
+                f.write(dumps(item) + "\n")
     else:
         print("Unknown type of output")
 
@@ -310,7 +321,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
 ) -> None:
     assert struc_level in [None, "words",
                            "named-entities", "queries"], "Invalid structural level"
-
+    assert dataset[0] == 'aql', "'aql' has to be the first dataset in the list"
     init()
 
     # Load module specifics
@@ -320,66 +331,74 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     # load dataset
     ds = load_dataset(dataset_name=dataset[0], struc_level=struc_level, sample_files=sample_files,
                       only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
-
+    ds_comp = load_dataset(dataset_name=dataset[1], struc_level=struc_level, sample_files=sample_files,
+                           only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
     # preprocess dataset
     if analysis_name == "count-lowercase":
         ds = map_dataset(dataset=ds, mapping_func=set_lowercase,
                          concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+        ds_comp = map_dataset(dataset=ds_comp, mapping_func=set_lowercase,
+                              concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+
+    ds_comp_agg = aggregate_dataset(
+        dataset=ds_comp, aggregation_func=module_specifics['aggregator'])
 
     years = [1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
              2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
 
+    # years = [2021, 2022]
+
+    results = []
+
     for _year in years:
-        # Load dataset.
-        ds2 = map_dataset(dataset=ds, mapping_func=partial(filter_by_year, year=_year),
-                          concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
-
-        if len(dataset) > 1 and read_dir is None:
-            # Load next dataset.
-            dataset.pop(0)  # remove first element
-            for dataset_name in dataset:
-                # Load next dataset.
-                next = load_dataset(dataset_name=dataset_name, struc_level=struc_level,
-                                    sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
-                # Union datasets.
-                ds2 = ds2.union(next)
-
-        # Apply aggregation function.
-        if module_specifics['aggregator'] is not None:
-            ds2 = aggregate_dataset(
+        try:
+            # Load dataset.
+            ds2 = map_dataset(dataset=ds, mapping_func=partial(filter_by_year, year=_year),
+                              concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
+            # Aggregate AQL dataset.
+            aql_agg = aggregate_dataset(
                 dataset=ds2, aggregation_func=module_specifics['aggregator'])
+            # Union datasets.
+            ds2 = ds2.union(ds_comp)
+            # Apply aggregation function to combination of AQL and comparison dataset.
+            if module_specifics['aggregator'] is not None:
+                ds2 = aggregate_dataset(
+                    dataset=ds2, aggregation_func=module_specifics['aggregator'])
 
-        # Print results for debugging.
-        # if type(ds) is Dataset:
-        #     print(f"\n\n\n\n\n{ds.count()}\n\n\n\n\n{ds.take(5)}")
-        # elif type(ds) is dict:
-        #     print(f"\n\n\n\n\n{ds}\n\n\n\n\n")
-
-        # Get sample of results.
-        # ds = ds.take(50)
-        # print(ds.take(5))
-
-        # print number of rows
-        # print(ds.count())
-        # print(ds.columns())
-        # print(ds.take(1))
-
-        # Write results.
-        # Determine dataset name for writing.
-        dataset_name = dataset[0]
-        if len(dataset) > 1:
-            dataset_name = f"{dataset_name}-{dataset[1]}"
-        if type(ds2) is dict:
-            # If dataset is a dict, add information about the analysis and used data sets.
-            if analysis_name is not None:
+            # Add AQL aggregation result to dataset.
+            if aql_agg is not None:
+                ds2['aql-agg'] = aql_agg['hyperloglog-agg']
+                ds2['combined-agg'] = ds2.pop('hyperloglog-agg')
+                ds2['compare-agg'] = ds_comp_agg['hyperloglog-agg']
+                ds2['aql_agg+comp_agg-combined_agg'] = ds2['aql-agg'] + \
+                    ds2['compare-agg'] - ds2['combined-agg']
+                if aql_agg['hyperloglog-agg'] < 1:
+                    ds2['duplicate-ratio-aql'] = "ratio not defined (AQL agg < 1)"
+                else:
+                    ds2['duplicate-ratio-aql'] = (ds2['aql_agg+comp_agg-combined_agg'] / aql_agg['hyperloglog-agg'],
+                                                  f"{ds2['aql_agg+comp_agg-combined_agg'] / aql_agg['hyperloglog-agg']:.2%}")
+                if ds_comp_agg['hyperloglog-agg'] < 1:
+                    ds2['duplicate-ratio-comp'] = "ratio not defined (comp agg < 1)"
+                else:
+                    ds2['duplicate-ratio-comp'] = (ds2['aql_agg+comp_agg-combined_agg'] / ds_comp_agg['hyperloglog-agg'],
+                                                   f"{ds2['aql_agg+comp_agg-combined_agg'] / ds_comp_agg['hyperloglog-agg']:.2%}")
+                ds2['year'] = _year
+                ds2['dataset'] = "-".join(dataset)
                 ds2['analysis_name'] = analysis_name
-            if dataset is not None:
-                ds2['dataset'] = dataset_name
-            if sample_files is not None:
-                ds2['sample_files'] = sample_files
             else:
-                ds2['sample_files'] = 'all'
-            ds2['year'] = _year
+                raise ValueError(
+                    f"No aggregation result of AQL for year {_year} found. Check if AQL contains data for this year.")
+            results.append(ds2)
+        except Exception as e:
+            print(f"Error processing year {_year}: {e}")
+            # Write results.
+            # Determine dataset name for writing.
+            dataset_name = "-".join(dataset)
+            write_dataset(dataset=results, write_dir=write_dir,
+                          analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english, _year=_year)
 
-        write_dataset(dataset=ds2, write_dir=write_dir,
-                      analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english, _year=_year)
+    # Write results.
+    # Determine dataset name for writing.
+    dataset_name = "-".join(dataset)
+    write_dataset(dataset=results, write_dir=write_dir,
+                  analysis_name=analysis_name, write_concurrency=write_concurrency, struc_level=struc_level, dataset_name=dataset_name, sample_files=sample_files, which_half=which_half, read_dir=read_dir, only_english=only_english, _year=_year)
