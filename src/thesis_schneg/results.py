@@ -116,6 +116,11 @@ def get_query_log_intersec_ratio(
         # size of combined query log is the last value in the dict
         combined_size = next(reversed(result_dict.values()))
         intersec_ratio = (other_size+aql_size-combined_size)/other_size
+        result = {
+            'analysis_name': analysis_name,
+            'dataset_name': dataset_name,
+            'intersec_ratio': intersec_ratio
+        }
         print(
             f"Intersection ratio of {dataset_name} for {analysis_name}: {intersec_ratio:.2%}\n-> {intersec_ratio:.2%} of {dataset_name[1]} queries are also in {dataset_name[0]}.")
     else:
@@ -125,6 +130,12 @@ def get_query_log_intersec_ratio(
         # we estimate conservatively
         intersec_ratio_aql = (aql_size + comb_size - all_size) / (aql_size)
         intersec_ratio_comb = (aql_size + comb_size - all_size) / (comb_size)
+        result = {
+            'analysis_name': analysis_name,
+            'dataset_name': dataset_name,
+            'intersec_ratio_aql': intersec_ratio_aql,
+            'intersec_ratio_comb': intersec_ratio_comb
+        }
         print(f"Intersection ratio of {dataset_name} for {analysis_name}:")
         print(
             f"{intersec_ratio_aql:.2%} of aql queries are also in the combined comparison query logs.")
@@ -132,16 +143,19 @@ def get_query_log_intersec_ratio(
             f"{intersec_ratio_comb:.2%} of the combined comparison query logs are also in aql.")
 
     if write_results:
-        result = {
-            'analysis_name': analysis_name,
-            'dataset_name': dataset_name,
-            'intersec_ratio': intersec_ratio
-        }
-        write_data(result, get_result_path(
-            analysis_name, dataset_name))
-
+        result_path = get_result_path(
+            analysis_name, dataset_name)
+        if not result_path.exists():
+            print("create new result directory...")
+            result_path.mkdir(parents=True, exist_ok=True)
+            if result_path.exists():
+                print("result path successfully created.")
+        write_data(result, result_path)
+        print("result successfully written.")
 
 ############################################    Process Results    ################################################
+
+
 def process_results(analysis_name: AnalysisName, dataset_name: Iterable[DatasetName], write_results: bool = False) -> None:
     """
     Process results for a given analysis and dataset.
