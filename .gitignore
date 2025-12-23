@@ -3,6 +3,9 @@
 .venv
 /literature
 
+# ignore data files
+/data
+
 # ignore .vscode
 .vscode
 /.vscode
