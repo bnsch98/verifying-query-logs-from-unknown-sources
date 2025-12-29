@@ -176,7 +176,7 @@ def process_results(analysis: AnalysisName, dataset: Iterable[DatasetName], writ
     Process results for a given analysis and dataset.
     If write_results is True, write the processed results to a file.
     """
-    from thesis_schneg.results import process_results as _process_results
+    from thesis_schneg.get_duplication_results import process_results as _process_results
 
     _process_results(
         dataset_name=dataset,
