@@ -10,6 +10,9 @@
 .vscode
 /.vscode
 
+# ignore .github
+.github
+
 # ignore trend data
 /trends
 
