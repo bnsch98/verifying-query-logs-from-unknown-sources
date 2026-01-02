@@ -16,14 +16,14 @@ Follow these steps to set up the project's working environment:
 
 1. Connect to the Webis [VPN](https://webis.de/facilities.html#?q=vpn) and mount the [Ceph FS](https://faq.webis.de#how-to-use-ceph-cephfs-s3) at `/mnt/ceph/storage`. [Contact staff](https://webis.de/people.html) if you need assistance.
 2. Install [LaTeX](https://www.tug.org/texlive/)
-3. Install [Python 3.11](https://www.python.org/downloads/release/python-3110/)
+3. Install [Python 3.10](https://www.python.org/downloads/release/python-31012/)
 4. Navigate to the `src` directory: 
     ```shell script
     cd src/
     ```
 5. Create and activate a virtual environment:
     ```shell script
-    python3.11 -m venv venv/
+    python3 -m venv venv/
     source venv/bin/activate
     ```
 6. Install project dependencies:

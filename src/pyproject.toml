@@ -28,8 +28,6 @@ dependencies = [
     "safetensors~=0.4.5",
     "spacy~=3.7",
     "torch~=2.4",
-    "tqdm~=4.64",
-    "types-tqdm~=4.66",
     # "transformers~=4.12.3", # für orcas-I bert classifier
     "transformers~=4.44",
     "SciencePlots~=2.1",
@@ -43,6 +41,8 @@ dependencies = [
     "numpy~=1.2",
     "seaborn~=0.12",
     "datasketch~=1.6",
+    "ott-jax[neural]~=0.6",
+    "jax~=0.6"
 ]
 
 [build-system]
