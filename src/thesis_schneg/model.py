@@ -62,6 +62,11 @@ PostThesisAnalysisName: TypeAlias = Literal[
     "count-lowercase",
 ]
 
+EmbeddingsAnalysisName: TypeAlias = Literal[
+    "embeddings-distance",
+    "umap-visualization",
+]
+
 OTSolverVariant: TypeAlias = Literal[
     "sliced-wasserstein",
 ]

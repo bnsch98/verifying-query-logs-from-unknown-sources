@@ -1,5 +1,5 @@
-from typing import Any, Optional, Iterable
-from thesis_schneg.model import DatasetName, OTSolverVariant
+from typing import Any, Optional, Iterable, Tuple
+from thesis_schneg.model import DatasetName, EmbeddingsAnalysisName, OTSolverVariant
 from pathlib import Path
 from dotenv import load_dotenv
 from random import sample
@@ -25,8 +25,8 @@ DIRECTORY_MAP = {
 
 OT_PARAMS = {
     "sliced-wasserstein": {
-        "n_proj": 1000,
-        "rng": PRNGKey(42),
+        "n_proj": 1000,  # number of projections for sliced wasserstein computation
+        "rng": PRNGKey(42),  # random key for reproducibility
     },
     # "sinkhorn": {
     #     "epsilon": 0.1,
@@ -60,7 +60,7 @@ def load_embeddings(dataset: DatasetName, num_input_files: Optional[int], random
     else:
         files = files[:num_input_files]
     # Load data into pandas DataFrame
-    df = concat([read_parquet(file, engine='pyarrow', columns=["embeddings"])
+    df = concat([read_parquet(file, engine='pyarrow')
                 for file in files], ignore_index=True)
     # Print memory usage
     if print_memory_usg:
@@ -103,33 +103,77 @@ class OTSolver:
         return distance
 
 
-def calculate_embeddings_distance(
-    datasets: Iterable[DatasetName],
-    ot_variant: OTSolverVariant,
-    num_input_files: Optional[int],
-) -> None:
-    # Load embeddings
-    df_X = load_embeddings(
-        dataset=datasets[0], num_input_files=num_input_files, randomized=False, print_memory_usg=True)
-    df_Y = load_embeddings(
-        dataset=datasets[1], num_input_files=num_input_files, randomized=False, print_memory_usg=True)
+def get_ot_distance(solver: OTSolver) -> Tuple[Any, float]:
+    """
+    Compute the OT distance using the provided solver and measure the time taken.
 
-    size_X = len(df_X)
-    size_Y = len(df_Y)
-    print(
-        f"Loaded embeddings: {datasets[0]} with {size_X} samples, {datasets[1]} with {size_Y} samples.")
-    # Initialize OT solver
-    solver = OTSolver(variant=ot_variant, X=df_X, Y=df_Y)
-
+    :param solver: The OT solver instance to use for computing the distance.
+    :type solver: OTSolver
+    :return: Return the computed distance and the time taken in seconds.
+    :rtype: Tuple[Any, float]
+    """
     # Center the pointclouds
     solver.center_pointclouds()
 
     # Compute distance
     start = time()
-    distance = solver.compute_distance(**OT_PARAMS[ot_variant])
+    distance = solver.compute_distance(**OT_PARAMS[solver.variant])
     end = time()
+
+    return distance, end - start
+
+
+def embeddings_analysis_pipeline(
+    datasets: Iterable[DatasetName],
+    analysis: EmbeddingsAnalysisName,
+    ot_variant: OTSolverVariant,
+    num_input_files: Optional[int],
+    shuffle_files: bool = False,
+) -> None:
+    # Load embeddings
+    df_X = load_embeddings(
+        dataset=datasets[0], num_input_files=num_input_files, randomized=shuffle_files, print_memory_usg=True)
+    df_Y = load_embeddings(
+        dataset=datasets[1], num_input_files=num_input_files, randomized=shuffle_files, print_memory_usg=True)
+
+    size_X = len(df_X)
+    size_Y = len(df_Y)
     print(
-        f"Computed distance between {datasets[0]} of length {size_X} and {datasets[1]} of length {size_Y}: {distance[0]}\nTime taken: {end - start:.2f} seconds")
+        f"Loaded embeddings: {datasets[0]} with {size_X} samples, {datasets[1]} with {size_Y} samples.")
+
+    if analysis == "embeddings-distance":
+        # Initialize OT solver
+        solver = OTSolver(variant=ot_variant, X=df_X, Y=df_Y)
+
+        # Compute OT distance
+        distance, duration = get_ot_distance(solver)
+
+        print(
+            f"Computed {ot_variant} distance for {datasets[0]} of {size_X} samples vs {datasets[1]} of {size_Y} samples\nDistance: {distance[0]}\nDuration: {duration:.2f} seconds.")
+    elif analysis == "umap-visualization":
+        from umap import UMAP
+        import plotly.express as px
+
+        reducer = UMAP(n_neighbors=5, min_dist=0.3,
+                       n_components=2, random_state=42)
+        # combine embeddings and then fit_transform
+        combined_embeddings = df_X['embeddings'].tolist(
+        ) + df_Y['embeddings'].tolist()
+
+        combined_embeddings = reducer.fit_transform(combined_embeddings)
+        print(f"Size of combined embeddings: {combined_embeddings.shape}")
+        labels = [datasets[0]] * size_X + [datasets[1]] * size_Y
+        fig = px.scatter(
+            x=combined_embeddings[:, 0],
+            y=combined_embeddings[:, 1],
+            color=labels,
+            title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings",
+            labels={'x': 'UMAP Dimension 1', 'y': 'UMAP Dimension 2'}
+        )
+        fig.show()
+
+    else:
+        raise ValueError(f"Unknown analysis type: {analysis}")
 
 
 class ResultWriter:

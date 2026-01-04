@@ -43,6 +43,8 @@ dependencies = [
     "datasketch~=1.6",
     "ott-jax[neural]~=0.6",
     "jax~=0.6",
+    "umap-learn~=0.5",
+    "plotly~=6.5"
 ]
 
 [build-system]
