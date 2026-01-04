@@ -1,4 +1,5 @@
-from typing import Any
+from time import time
+from typing import Any, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from random import sample
@@ -6,13 +7,15 @@ from pandas import DataFrame, concat, read_parquet
 import jax.numpy as jnp
 from jax.random import PRNGKey
 from numpy import stack
+import matplotlib.pyplot as plt
 import os
 
 
-################### LOAD CONFIGURATION #####################
+################### CONFIGURATION #####################
 # use .env to load data path for embeddings
 load_dotenv()
 
+# Mapping of dataset names to their corresponding directory names
 DIRECTORY_MAP = {
     "aol": "aol-get-embeddings-special",
     "aql": "aql-get-embeddings-special",
@@ -22,21 +25,27 @@ DIRECTORY_MAP = {
 
 
 ################### FUNCTIONS #####################
-def load_embeddings(dataset: str, num_input_files: int, randomized: bool = True) -> DataFrame:
+def load_embeddings(dataset: str, num_input_files: Optional[int], randomized: bool = True, print_memory_usg: bool = True) -> DataFrame:
     # Get file paths
     data_dir = Path(os.getenv("EMBEDDINGS_PATH")) / DIRECTORY_MAP[dataset]
     print(f"Loading embeddings from {data_dir}")
-
-    # Get random or fixed sample of data files of size <size num_input_files>
+    # yield files
+    files = [file for file in data_dir.iterdir()]
+    # Adjust num_input_files if None or larger than available files
+    if num_input_files is None or num_input_files > len(files):
+        num_input_files = len(files)
+    # Get random or fixed sample of data files of size <num_input_files>
     if randomized:
-        files = sample([file for file in data_dir.iterdir()],
-                       k=num_input_files)
+        files = sample(files, k=num_input_files)
     else:
-        files = [file for file in data_dir.iterdir()][:num_input_files]
-
+        files = files[:num_input_files]
     # Load data into pandas DataFrame
-    df = concat([read_parquet(file) for file in files], ignore_index=True)
-
+    df = concat([read_parquet(file, engine='pyarrow', columns=["embeddings"])
+                for file in files], ignore_index=True)
+    # Print memory usage
+    if print_memory_usg:
+        print(
+            f"Memory usage of loaded DataFrame: {df.memory_usage(deep=True).sum() / (1024 ** 2):.2f} MB")
     return df
 
 
@@ -61,12 +70,13 @@ class OTSolver:
         self.X = jnp.array(stack(X['embeddings'].values))
         self.Y = jnp.array(stack(Y['embeddings'].values))
 
-    def compute_distance(self, center_pointcloud: bool = True, **kwargs) -> Any:
+    def center_pointclouds(self):
+        self.X = self.X - jnp.mean(self.X, axis=0)
+        self.Y = self.Y - jnp.mean(self.Y, axis=0)
+
+    def compute_distance(self, **kwargs) -> Any:
         ot_function = self.get_ot_variant(self.variant)
-        if center_pointcloud:
-            print("Centering point clouds before computing OT distance.")
-            self.X = self.X - jnp.mean(self.X, axis=0)
-            self.Y = self.Y - jnp.mean(self.Y, axis=0)
+        print(f"Computing {self.variant} distance with parameters: {kwargs}")
         distance = ot_function(self.X, self.Y, **kwargs)
         return distance
 
@@ -75,20 +85,49 @@ class ResultWriter:
     pass
 
 
-df_X = load_embeddings(dataset="aol", num_input_files=10, randomized=False)
-print(f"Loaded {len(df_X)} embeddings for dataset AOL")
+################### MAIN ANALYSIS #####################
+if __name__ == "__main__":
+    start = time()
+    n = 20
+    df_X = load_embeddings(dataset="aol", num_input_files=n,
+                           randomized=False, print_memory_usg=True)
+    end = time()
+    print(
+        f"Time taken to load {len(df_X)} embeddings for dataset AOL: {end - start:.2f} seconds")
 
-df_Y = load_embeddings(
-    dataset="ms-marco", num_input_files=10, randomized=False)
-print(f"Loaded {len(df_Y)} embeddings for dataset MS-MARCO")
+    start = time()
+    df_Y = load_embeddings(
+        dataset="ms-marco", num_input_files=n, randomized=False, print_memory_usg=True)
+    end = time()
+    print(
+        f"Time taken to load {len(df_Y)} embeddings for dataset MS-MARCO: {end - start:.2f} seconds")
 
-Solver = OTSolver(variant="sliced-wasserstein",
-                  X=df_X, Y=df_Y)
+    start = time()
+    # initialize OT solver
+    Solver = OTSolver(variant="sliced-wasserstein",
+                      X=df_X, Y=df_Y)
 
-distance = Solver.compute_distance(
-    center_pointcloud=True, n_proj=50, rng=PRNGKey(42))
+    # center the pointclouds
+    Solver.center_pointclouds()
 
-print(f"Sliced Wasserstein Distance: {distance[0]}")
+    # tracking the influence of n_proj on convergence
+    distances = []
+    # projs = list(range(10, 100, 10)) + \
+    #     list(range(100, 500, 50)) + list(range(500, 3000, 250))
+    proj = 1000
+    distance = Solver.compute_distance(n_proj=proj, rng=PRNGKey(42))
+    end = time()
+    print(
+        f"Sliced Wasserstein Distance with n_input_files={n} and n_proj={proj}: {distance[0]}\nTime taken: {end - start:.2f} seconds")
+    # plot the results
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(projs, distances, marker='o')
+    # plt.title('Sliced Wasserstein Distance vs Number of Projections')
+    # plt.xlabel('Number of Projections (n_proj)')
+    # plt.ylabel('Sliced Wasserstein Distance')
+    # plt.grid(True)
+    # plt.show()
+
 # TODO
 # 1. DataLoader
 # - größe des datensatzes bestimmen

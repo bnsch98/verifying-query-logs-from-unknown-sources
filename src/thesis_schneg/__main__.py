@@ -149,7 +149,7 @@ def annual_deduplication(
         "/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis"),
     read_dir: Optional[Iterable[str]] = None
 ) -> None:
-    from thesis_schneg.annual_deduplicate import analysis_pipeline as annual_deduplication_pipeline
+    from thesis_schneg.post_thesis_analysis.annual_deduplicate import analysis_pipeline as annual_deduplication_pipeline
 
     annual_deduplication_pipeline(
         dataset=dataset,
