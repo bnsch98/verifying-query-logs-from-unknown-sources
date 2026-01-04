@@ -7,12 +7,11 @@ from nltk.downloader import Downloader
 from urllib.error import URLError
 from urllib.request import urlopen
 from abc import abstractmethod, ABC
-
 from functools import partial
 from dataclasses import dataclass
 from functools import cached_property
 from json import dumps
-from thesis_schneg.model import DatasetName, AnalysisName
+from thesis_schneg.model import DatasetName, ThesisAnalysisName
 from ray.data.grouped_data import GroupedData
 from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
@@ -247,7 +246,7 @@ class Question_Predictor(_Question_Predictor):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
-    analysis_name: AnalysisName,
+    analysis_name: ThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -321,7 +320,7 @@ def _get_parquet_paths(
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
-                 analysis_name: AnalysisName,
+                 analysis_name: ThesisAnalysisName,
                  struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -468,7 +467,7 @@ def groupby_count(dataset: Dataset, col: str) -> Dataset:
 ###########################################    Get task-specific modules     #########################################
 
 
-def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
+def _get_module_specifics(analysis_name: ThesisAnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
 
     if analysis_name == "questions":
         return {'groupby_func': partial(groupby_count, col='is-question'), 'aggregator': None, 'mapping_func': [Question_Predictor()], 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url']}
@@ -476,7 +475,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
 ############################################    Pipeline    ################################################
 def analysis_pipeline(dataset_name: DatasetName,
-                      analysis_name: AnalysisName,
+                      analysis_name: ThesisAnalysisName,
                       struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
                       only_english: bool = False,

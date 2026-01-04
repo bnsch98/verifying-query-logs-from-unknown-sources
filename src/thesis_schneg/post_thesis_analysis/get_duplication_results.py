@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, Iterable, Union, Any
 from pandas import DataFrame, read_csv as pd_read_csv, read_parquet as pd_read_parquet, concat as pd_concat
 from json import load as json_load, dumps
-from thesis_schneg.model import DatasetName, AnalysisName
+from thesis_schneg.model import DatasetName, PostThesisAnalysisName
 
 
 ############################################    Basic Modules    #######################################
@@ -59,7 +59,7 @@ def write_data(data: Union[Dict[str, Any], Iterable[Any], DataFrame], write_path
         raise TypeError(f"Unsupported data type: {type(data)}.")
 
 
-def get_data_path(analysis_name: AnalysisName, dataset_name: Iterable[DatasetName], data_dir: Path = Path("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis")) -> Path:
+def get_data_path(analysis_name: PostThesisAnalysisName, dataset_name: Iterable[DatasetName], data_dir: Path = Path("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/analysis_data/analysis")) -> Path:
     """
     Get the path to the result file for a given analysis and dataset.
     """
@@ -67,7 +67,7 @@ def get_data_path(analysis_name: AnalysisName, dataset_name: Iterable[DatasetNam
     return data_dir.joinpath(f"{dataset_name}-{analysis_name}-all")
 
 
-def get_result_path(analysis_name: AnalysisName, dataset_name: Iterable[DatasetName], result_dir: Path = Path("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results")) -> Path:
+def get_result_path(analysis_name: PostThesisAnalysisName, dataset_name: Iterable[DatasetName], result_dir: Path = Path("/mnt/ceph/storage/data-in-progress/data-teaching/theses/thesis-schneg/results")) -> Path:
     """
     Get the path to the result file for a given analysis and dataset.
     """
@@ -77,7 +77,7 @@ def get_result_path(analysis_name: AnalysisName, dataset_name: Iterable[DatasetN
 
 ############################################    Analysis Specific Processing    ################################################
 def get_query_log_intersec_ratio(
-        dataset_name: Iterable[DatasetName], analysis_name: AnalysisName, write_results: bool = False) -> None:
+        dataset_name: Iterable[DatasetName], analysis_name: PostThesisAnalysisName, write_results: bool = False) -> None:
     """
     Get the intersection ratio of two sets of queries.
     Supports only two datasets, e.g. aql and another query log,
@@ -156,7 +156,7 @@ def get_query_log_intersec_ratio(
 ############################################    Process Results    ################################################
 
 
-def process_results(analysis_name: AnalysisName, dataset_name: Iterable[DatasetName], write_results: bool = False) -> None:
+def process_results(analysis_name: PostThesisAnalysisName, dataset_name: Iterable[DatasetName], write_results: bool = False) -> None:
     """
     Process results for a given analysis and dataset.
     """

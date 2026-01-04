@@ -2,7 +2,7 @@ from presidio_analyzer import AnalyzerEngine
 from dataclasses import dataclass
 from functools import cached_property
 from json import dumps
-from thesis_schneg.model import DatasetName, AnalysisName
+from thesis_schneg.model import DatasetName, ThesisAnalysisName
 from ray.data.grouped_data import GroupedData
 from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
@@ -57,7 +57,7 @@ class PresidioGetEntities(_presidio_framework):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
-    analysis_name: AnalysisName,
+    analysis_name: ThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -131,7 +131,7 @@ def _get_parquet_paths(
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
-                 analysis_name: AnalysisName,
+                 analysis_name: ThesisAnalysisName,
                  struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -273,7 +273,7 @@ def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, ana
 
 
 ###########################################    Get task-specific modules     #########################################
-def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
+def _get_module_specifics(analysis_name: ThesisAnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
 
     if analysis_name == "extract-presidio-pii":
         return {'groupby_func': None, 'aggregator': None, 'mapping_func': None, 'flat_mapping_func': PresidioGetEntities(), 'col_filter': ['serp_query_text_url']}
@@ -281,7 +281,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
 ############################################    Pipeline    ################################################
 def analysis_pipeline(dataset_name: DatasetName,
-                      analysis_name: AnalysisName,
+                      analysis_name: ThesisAnalysisName,
                       struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
                       only_english: bool = False,

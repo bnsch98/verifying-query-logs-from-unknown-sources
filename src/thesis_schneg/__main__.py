@@ -4,7 +4,8 @@ from cyclopts import App
 from cyclopts.types import Directory
 from thesis_schneg.model import (
     DatasetName,
-    AnalysisName,
+    ThesisAnalysisName,
+    PostThesisAnalysisName,
 )
 
 app = App()
@@ -13,7 +14,7 @@ app = App()
 @app.command
 def analyser(
     dataset: Iterable[DatasetName],
-    analysis: AnalysisName,
+    analysis: ThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -53,7 +54,7 @@ def analyser(
 @app.command
 def presidio_analysis(
     dataset: Iterable[DatasetName],
-    analysis: AnalysisName,
+    analysis: ThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -93,7 +94,7 @@ def presidio_analysis(
 @app.command
 def questions(
     dataset: Iterable[DatasetName],
-    analysis: AnalysisName,
+    analysis: ThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -133,7 +134,7 @@ def questions(
 @app.command
 def annual_deduplication(
     dataset: Iterable[DatasetName],
-    analysis: AnalysisName,
+    analysis: PostThesisAnalysisName,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
     only_english: bool = False,
@@ -171,12 +172,12 @@ def annual_deduplication(
 
 
 @app.command
-def process_results(analysis: AnalysisName, dataset: Iterable[DatasetName], write_results: bool = False) -> None:
+def get_deduplication_results(analysis: ThesisAnalysisName, dataset: Iterable[DatasetName], write_results: bool = False) -> None:
     """
     Process results for a given analysis and dataset.
     If write_results is True, write the processed results to a file.
     """
-    from thesis_schneg.get_duplication_results import process_results as _process_results
+    from thesis_schneg.post_thesis_analysis.get_duplication_results import process_results as _process_results
 
     _process_results(
         dataset_name=dataset,

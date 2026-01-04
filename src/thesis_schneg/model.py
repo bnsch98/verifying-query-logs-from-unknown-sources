@@ -15,7 +15,8 @@ DatasetName: TypeAlias = Literal[
     "aql",
 ]
 
-AnalysisName: TypeAlias = Literal[
+
+ThesisAnalysisName: TypeAlias = Literal[
     "clean-query-log",
     "get-too-short-queries",
     "extract-chars",
@@ -54,6 +55,9 @@ AnalysisName: TypeAlias = Literal[
     "get-query-frequency",
     "get-embeddings",
     "questions",
+
+]
+PostThesisAnalysisName: TypeAlias = Literal[
     "count-deduplicated-queries",
     "count-deduplicated-lowercase-queries",
     "count-regular",

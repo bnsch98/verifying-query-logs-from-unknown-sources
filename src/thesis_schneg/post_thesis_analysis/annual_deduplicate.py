@@ -1,5 +1,5 @@
 from json import dumps
-from thesis_schneg.model import DatasetName, AnalysisName
+from thesis_schneg.model import DatasetName, PostThesisAnalysisName
 from ray.data.grouped_data import GroupedData
 from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
@@ -17,7 +17,7 @@ from functools import partial
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
-    analysis_name: AnalysisName,
+    analysis_name: PostThesisAnalysisName,
     read_dir: Optional[Iterable[str]] = None,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
@@ -111,7 +111,7 @@ def _get_parquet_paths(
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
-                 analysis_name: AnalysisName,
+                 analysis_name: PostThesisAnalysisName,
                  struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -292,18 +292,9 @@ def merge_hyperloglog(hll1: HyperLogLog, hll2: HyperLogLog) -> HyperLogLog:
     return hll1
 
 
-###########################################    Get task-specific modules     #########################################
-def _get_module_specifics(analysis_name: AnalysisName) -> Dict[str, Any]:
-
-    if analysis_name == "count-regular":
-        return {'groupby_func': None, 'aggregator': hyperloglog_agg_row, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
-    elif analysis_name == "count-lowercase":
-        return {'groupby_func': None, 'aggregator': hyperloglog_agg_row, 'mapping_func': None, 'flat_mapping_func': None, 'col_filter': ['serp_query_text_url', 'serp_timestamp']}
-
-
 ############################################    Pipeline    ################################################
 def analysis_pipeline(dataset: Iterable[DatasetName],
-                      analysis_name: AnalysisName,
+                      analysis_name: PostThesisAnalysisName,
                       struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
                       only_english: bool = False,
@@ -324,15 +315,11 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
     assert dataset[0] == 'aql', "'aql' has to be the first dataset in the list"
     init()
 
-    # Load module specifics
-    module_specifics = _get_module_specifics(
-        analysis_name=analysis_name)
-
     # load dataset
     ds = load_dataset(dataset_name=dataset[0], struc_level=struc_level, sample_files=sample_files,
-                      only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
+                      only_english=only_english, read_concurrency=read_concurrency, columns=['serp_query_text_url', 'serp_timestamp'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
     ds_comp = load_dataset(dataset_name=dataset[1], struc_level=struc_level, sample_files=sample_files,
-                           only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
+                           only_english=only_english, read_concurrency=read_concurrency, columns=['serp_query_text_url', 'serp_timestamp'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
     # preprocess dataset
     if analysis_name == "count-lowercase":
         ds = map_dataset(dataset=ds, mapping_func=set_lowercase,
@@ -341,7 +328,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
                               concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
 
     ds_comp_agg = aggregate_dataset(
-        dataset=ds_comp, aggregation_func=module_specifics['aggregator'])
+        dataset=ds_comp, aggregation_func=hyperloglog_agg_row)
 
     years = [1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
              2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
@@ -357,13 +344,12 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
                               concurrency=concurrency, batch_size=batch_size, num_gpus=num_gpus, num_cpus=num_cpus, memory_scaler=memory_scaler)
             # Aggregate AQL dataset.
             aql_agg = aggregate_dataset(
-                dataset=ds2, aggregation_func=module_specifics['aggregator'])
+                dataset=ds2, aggregation_func=hyperloglog_agg_row)
             # Union datasets.
             ds2 = ds2.union(ds_comp)
             # Apply aggregation function to combination of AQL and comparison dataset.
-            if module_specifics['aggregator'] is not None:
-                ds2 = aggregate_dataset(
-                    dataset=ds2, aggregation_func=module_specifics['aggregator'])
+            ds2 = aggregate_dataset(
+                dataset=ds2, aggregation_func=hyperloglog_agg_row)
 
             # Add AQL aggregation result to dataset.
             if aql_agg is not None:

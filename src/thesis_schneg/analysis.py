@@ -8,7 +8,7 @@ from spacy import load as spacy_load, Language, explain
 from dataclasses import dataclass
 from functools import cached_property
 from json import dumps, load as json_load
-from thesis_schneg.model import DatasetName, AnalysisName
+from thesis_schneg.model import DatasetName, ThesisAnalysisName, PostThesisAnalysisName
 from ray.data.grouped_data import GroupedData
 from ray.data.aggregate import AggregateFn
 from ray.data import read_parquet, Dataset
@@ -276,7 +276,7 @@ class SpacyEntityLevelStructures(_spacy_framework):
 
 def _get_parquet_paths(
     dataset_name: DatasetName,
-    analysis_name: AnalysisName,
+    analysis_name: Union[ThesisAnalysisName, PostThesisAnalysisName],
     read_dir: Optional[Iterable[str]] = None,
     struc_level: Optional[str] = None,
     sample_files: Optional[int] = None,
@@ -370,7 +370,7 @@ def _get_parquet_paths(
 
 ############################################    Basic Modules    #######################################
 def load_dataset(dataset_name: DatasetName,
-                 analysis_name: AnalysisName,
+                 analysis_name: Union[ThesisAnalysisName, PostThesisAnalysisName],
                  struc_level: Optional[str] = None,
                  sample_files: Optional[int] = None,
                  only_english: bool = False,
@@ -438,7 +438,11 @@ def map_groups(dataset: GroupedData, map_group_func: Callable[[Any], Any], memor
     return dataset.map_groups(map_group_func, concurrency=concurrency, memory=memory_scaler*1000*1000*1000)
 
 
-def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: str, struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Iterable[str]], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
+def write_dataset(dataset: Union[Dict, Dataset, DataFrame], write_dir: Path, analysis_name: Union[ThesisAnalysisName, PostThesisAnalysisName], struc_level: str, dataset_name: str, sample_files: int, which_half: Optional[str], read_dir: Optional[Iterable[str]], write_concurrency: Optional[int] = 2, only_english: bool = False) -> None:
+    # check if a write directory was passed
+    if write_dir is None:
+        raise ValueError("No write directory specified")
+
     # check if wirte_dir is Path
     if not isinstance(write_dir, Path):
         write_dir = Path(write_dir)
@@ -762,7 +766,7 @@ def groupby_count_sort(dataset: Dataset, col_group: str, col_sort: str) -> Datas
 
 
 ###########################################    Get task-specific modules     #########################################
-def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int]) -> Dict[str, Any]:
+def _get_module_specifics(analysis_name: Union[ThesisAnalysisName, PostThesisAnalysisName], struc_level: Optional[int]) -> Dict[str, Any]:
 
     # Basic modules: clean data, simple transformations, filters, debug etc.
     if analysis_name == "clean-query-log":
@@ -859,7 +863,7 @@ def _get_module_specifics(analysis_name: AnalysisName, struc_level: Optional[int
 
 ############################################    Pipeline    ################################################
 def analysis_pipeline(dataset: Iterable[DatasetName],
-                      analysis_name: AnalysisName,
+                      analysis_name: Union[ThesisAnalysisName, PostThesisAnalysisName],
                       struc_level: Optional[str] = None,
                       sample_files: Optional[int] = None,
                       only_english: bool = False,
@@ -895,6 +899,7 @@ def analysis_pipeline(dataset: Iterable[DatasetName],
                                 sample_files=sample_files, only_english=only_english, read_concurrency=read_concurrency, columns=module_specifics['col_filter'], memory_scaler=memory_scaler, which_half=which_half, analysis_name=analysis_name, read_dir=read_dir)
             # Union datasets.
             ds = ds.union(next)
+
     # take random sample of dataset for get-embeddings analysis
     if analysis_name == "get-embeddings" and len(dataset) == 1:
         if dataset[0] == "aol":  # Size: 10 M
