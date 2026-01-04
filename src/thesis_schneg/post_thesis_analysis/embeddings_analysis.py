@@ -1,13 +1,13 @@
-from time import time
-from typing import Any, Optional
+from typing import Any, Optional, Iterable
+from thesis_schneg.model import DatasetName, OTSolverVariant
 from pathlib import Path
 from dotenv import load_dotenv
 from random import sample
 from pandas import DataFrame, concat, read_parquet
-import jax.numpy as jnp
 from jax.random import PRNGKey
 from numpy import stack
-import matplotlib.pyplot as plt
+from time import time
+import jax.numpy as jnp
 import os
 
 
@@ -23,9 +23,29 @@ DIRECTORY_MAP = {
     "orcas": "orcas-get-embeddings-all",
 }
 
+OT_PARAMS = {
+    "sliced-wasserstein": {
+        "n_proj": 1000,
+        "rng": PRNGKey(42),
+    },
+    # "sinkhorn": {
+    #     "epsilon": 0.1,
+    #     "num_iters": 100,
+    # },
+    # "linearized-wasserstein": {
+    #     "epsilon": 0.1,
+    # },
+    # "neural-ot": {
+    #     "hidden_layers": [128, 128],
+    #     "learning_rate": 0.001,
+    #     "num_epochs": 1000,
+    # },
+}
 
 ################### FUNCTIONS #####################
-def load_embeddings(dataset: str, num_input_files: Optional[int], randomized: bool = True, print_memory_usg: bool = True) -> DataFrame:
+
+
+def load_embeddings(dataset: DatasetName, num_input_files: Optional[int], randomized: bool = True, print_memory_usg: bool = True) -> DataFrame:
     # Get file paths
     data_dir = Path(os.getenv("EMBEDDINGS_PATH")) / DIRECTORY_MAP[dataset]
     print(f"Loading embeddings from {data_dir}")
@@ -51,7 +71,7 @@ def load_embeddings(dataset: str, num_input_files: Optional[int], randomized: bo
 
 class OTSolver:
     @staticmethod
-    def get_ot_variant(variant: str):
+    def get_ot_variant(variant: OTSolverVariant):
         if variant == "sliced-wasserstein":
             from ott.tools.sliced import sliced_wasserstein
             return sliced_wasserstein
@@ -65,7 +85,7 @@ class OTSolver:
         else:
             raise ValueError(f"Unknown OT variant: {variant}")
 
-    def __init__(self, variant: str, X: DataFrame, Y: DataFrame):
+    def __init__(self, variant: OTSolverVariant, X: DataFrame, Y: DataFrame):
         self.variant = variant
         self.X = jnp.array(stack(X['embeddings'].values))
         self.Y = jnp.array(stack(Y['embeddings'].values))
@@ -76,49 +96,45 @@ class OTSolver:
 
     def compute_distance(self, **kwargs) -> Any:
         ot_function = self.get_ot_variant(self.variant)
-        print(f"Computing {self.variant} distance with parameters: {kwargs}")
+        print(f"Computing {self.variant} distance with parameters:")
+        for key, value in kwargs.items():
+            print(f"    - {key}: {value}")
         distance = ot_function(self.X, self.Y, **kwargs)
         return distance
+
+
+def calculate_embeddings_distance(
+    datasets: Iterable[DatasetName],
+    ot_variant: OTSolverVariant,
+    num_input_files: Optional[int],
+) -> None:
+    # Load embeddings
+    df_X = load_embeddings(
+        dataset=datasets[0], num_input_files=num_input_files, randomized=False, print_memory_usg=True)
+    df_Y = load_embeddings(
+        dataset=datasets[1], num_input_files=num_input_files, randomized=False, print_memory_usg=True)
+
+    size_X = len(df_X)
+    size_Y = len(df_Y)
+    print(
+        f"Loaded embeddings: {datasets[0]} with {size_X} samples, {datasets[1]} with {size_Y} samples.")
+    # Initialize OT solver
+    solver = OTSolver(variant=ot_variant, X=df_X, Y=df_Y)
+
+    # Center the pointclouds
+    solver.center_pointclouds()
+
+    # Compute distance
+    start = time()
+    distance = solver.compute_distance(**OT_PARAMS[ot_variant])
+    end = time()
+    print(
+        f"Computed distance between {datasets[0]} of length {size_X} and {datasets[1]} of length {size_Y}: {distance[0]}\nTime taken: {end - start:.2f} seconds")
 
 
 class ResultWriter:
     pass
 
-
-################### MAIN ANALYSIS #####################
-if __name__ == "__main__":
-    start = time()
-    n = 20
-    df_X = load_embeddings(dataset="aol", num_input_files=n,
-                           randomized=False, print_memory_usg=True)
-    end = time()
-    print(
-        f"Time taken to load {len(df_X)} embeddings for dataset AOL: {end - start:.2f} seconds")
-
-    start = time()
-    df_Y = load_embeddings(
-        dataset="ms-marco", num_input_files=n, randomized=False, print_memory_usg=True)
-    end = time()
-    print(
-        f"Time taken to load {len(df_Y)} embeddings for dataset MS-MARCO: {end - start:.2f} seconds")
-
-    start = time()
-    # initialize OT solver
-    Solver = OTSolver(variant="sliced-wasserstein",
-                      X=df_X, Y=df_Y)
-
-    # center the pointclouds
-    Solver.center_pointclouds()
-
-    # tracking the influence of n_proj on convergence
-    distances = []
-    # projs = list(range(10, 100, 10)) + \
-    #     list(range(100, 500, 50)) + list(range(500, 3000, 250))
-    proj = 1000
-    distance = Solver.compute_distance(n_proj=proj, rng=PRNGKey(42))
-    end = time()
-    print(
-        f"Sliced Wasserstein Distance with n_input_files={n} and n_proj={proj}: {distance[0]}\nTime taken: {end - start:.2f} seconds")
     # plot the results
     # plt.figure(figsize=(10, 6))
     # plt.plot(projs, distances, marker='o')

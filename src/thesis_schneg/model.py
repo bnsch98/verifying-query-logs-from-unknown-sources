@@ -1,12 +1,10 @@
 from typing import Literal, TYPE_CHECKING, Any
 
-
 # Workaround as TypeAlias is not yet implemented in older Python versions.
 if TYPE_CHECKING:
     from typing import TypeAlias
 else:
     TypeAlias = Any
-
 
 DatasetName: TypeAlias = Literal[
     "aol",
@@ -14,7 +12,6 @@ DatasetName: TypeAlias = Literal[
     "orcas",
     "aql",
 ]
-
 
 ThesisAnalysisName: TypeAlias = Literal[
     "clean-query-log",
@@ -57,9 +54,14 @@ ThesisAnalysisName: TypeAlias = Literal[
     "questions",
 
 ]
+
 PostThesisAnalysisName: TypeAlias = Literal[
     "count-deduplicated-queries",
     "count-deduplicated-lowercase-queries",
     "count-regular",
     "count-lowercase",
+]
+
+OTSolverVariant: TypeAlias = Literal[
+    "sliced-wasserstein",
 ]

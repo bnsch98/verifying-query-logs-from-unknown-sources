@@ -4,6 +4,7 @@ from cyclopts import App
 from cyclopts.types import Directory
 from thesis_schneg.model import (
     DatasetName,
+    OTSolverVariant,
     ThesisAnalysisName,
     PostThesisAnalysisName,
 )
@@ -183,6 +184,21 @@ def get_deduplication_results(analysis: ThesisAnalysisName, dataset: Iterable[Da
         dataset_name=dataset,
         analysis_name=analysis,
         write_results=write_results,
+    )
+
+
+@app.command
+def embeddings_analysis(
+    datasets: Iterable[DatasetName],
+    ot_variant: OTSolverVariant,
+    num_input_files: Optional[int] = 12,
+) -> None:
+
+    from thesis_schneg.post_thesis_analysis.embeddings_analysis import calculate_embeddings_distance
+    calculate_embeddings_distance(
+        datasets=datasets,
+        ot_variant=ot_variant,
+        num_input_files=num_input_files,
     )
 
 
