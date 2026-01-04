@@ -138,6 +138,7 @@ def embeddings_analysis_pipeline(
 
     size_X = len(df_X)
     size_Y = len(df_Y)
+
     print(
         f"Loaded embeddings: {datasets[0]} with {size_X} samples, {datasets[1]} with {size_Y} samples.")
 
@@ -163,13 +164,14 @@ def embeddings_analysis_pipeline(
         combined_embeddings = reducer.fit_transform(combined_embeddings)
         print(f"Size of combined embeddings: {combined_embeddings.shape}")
         labels = [datasets[0]] * size_X + [datasets[1]] * size_Y
-        fig = px.scatter(
-            x=combined_embeddings[:, 0],
-            y=combined_embeddings[:, 1],
-            color=labels,
-            title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings",
-            labels={'x': 'UMAP Dimension 1', 'y': 'UMAP Dimension 2'}
-        )
+        # plot with plotly and add the queries as metadata to each point
+        metadata = df_X['serp_query_text_url'].tolist(
+        ) + df_Y['serp_query_text_url'].tolist()
+
+        fig = px.scatter(x=combined_embeddings[:, 0], y=combined_embeddings[:, 1],
+                         color=labels,
+                         hover_data={'Query': metadata},
+                         title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings")
         fig.show()
 
     else:
