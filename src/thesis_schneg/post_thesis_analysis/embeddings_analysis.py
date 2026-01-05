@@ -9,7 +9,7 @@ from numpy import stack
 from time import time
 import jax.numpy as jnp
 import os
-
+import inspect
 
 ################### CONFIGURATION #####################
 # use .env to load data path for embeddings
@@ -27,7 +27,9 @@ OT_PARAMS = {
     "sliced-wasserstein": {
         "n_proj": 1000,  # number of projections for sliced wasserstein computation
         "rng": PRNGKey(42),  # random key for reproducibility
+        # "batch_size": 1024,
     },
+
     # "sinkhorn": {
     #     "epsilon": 0.1,
     #     "num_iters": 100,
@@ -150,28 +152,33 @@ def embeddings_analysis_pipeline(
         distance, duration = get_ot_distance(solver)
 
         print(
-            f"Computed {ot_variant} distance for {datasets[0]} of {size_X} samples vs {datasets[1]} of {size_Y} samples\nDistance: {distance[0]}\nDuration: {duration:.2f} seconds.")
+            f"Computed {ot_variant} distance for {datasets[0]} ({size_X} samples) vs {datasets[1]} ({size_Y} samples)\nDistance: {distance[0]}\nDuration: {duration:.2f} seconds.")
     elif analysis == "umap-visualization":
         from umap import UMAP
         import plotly.express as px
 
         reducer = UMAP(n_neighbors=5, min_dist=0.3,
                        n_components=2, random_state=42)
-        # combine embeddings and then fit_transform
+
+        # combine embeddings and then fit into UMPAP embedding space
         combined_embeddings = df_X['embeddings'].tolist(
         ) + df_Y['embeddings'].tolist()
-
         combined_embeddings = reducer.fit_transform(combined_embeddings)
         print(f"Size of combined embeddings: {combined_embeddings.shape}")
+
+        # create labels for the two datasets
         labels = [datasets[0]] * size_X + [datasets[1]] * size_Y
+
         # plot with plotly and add the queries as metadata to each point
         metadata = df_X['serp_query_text_url'].tolist(
         ) + df_Y['serp_query_text_url'].tolist()
 
+        # create scatter plot
         fig = px.scatter(x=combined_embeddings[:, 0], y=combined_embeddings[:, 1],
                          color=labels,
                          hover_data={'Query': metadata},
-                         title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings")
+                         title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings",
+                         opacity=0.5)  # Wert zwischen 0 (transparent) und 1 (opak)
         fig.show()
 
     else:

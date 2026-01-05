@@ -2,6 +2,9 @@
 
 Master's thesis by Benjamin Schneg
 
+Find the PDF-Version [here](https://webis.de/for-students/completed-theses.html#schneg_2025).
+
+## Structure
 <!-- TOC -->
   * [Installation](#installation)
   * [Structure](#structure)
@@ -23,14 +26,38 @@ Follow these steps to set up the project's working environment:
     ```
 5. Create and activate a virtual environment:
     ```shell script
-    python3 -m venv venv/
+    python3.10 -m venv venv/
     source venv/bin/activate
     ```
 6. Install project dependencies:
+- Option A: CPU Installation (Lightweight)
     ```shell
     pip install -e .
     ```
+- Option B: GPU Installation (Required for WSL2 / Linux Acceleration)
+    ```shell
+    pip install -e ".[gpu]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    ```
+7. Post-Installation for GPU Users (WSL2):
+If you installed the GPU version, JAX needs to know where the NVIDIA libraries and compilers are located within your virtual environment. Add the following lines to your `~/.bashrc` (replace `<ABS_PATH_TO_SRC>` with the actual absolute path to your `src` directory):
+    ```shell
+    # 1. Add NVIDIA libraries from venv and WSL2 driver path
+    export VENV_PACKAGES="<ABS_PATH_TO_SRC>/venv/lib/python3.10/site-packages"
+    export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$VENV_PACKAGES/nvidia/cudnn/lib:$VENV_PACKAGES/nvidia/cublas/lib:$LD_LIBRARY_PATH
 
+    # 2. Point XLA to the CUDA compiler (ptxas) in the venv
+    export XLA_FLAGS="--xla_gpu_cuda_data_dir=$VENV_PACKAGES/nvidia/cuda_nvcc"
+
+    # 3. Optimization: Prevent JAX from pre-allocating all VRAM at once (recommended for WSL2)
+    export XLA_PYTHON_CLIENT_PREALLOCATE=false
+    ``` 
+    After saving, reload your profile: `source ~/.bashrc`.
+8. Verify GPU Installation:
+To ensure JAX correctly detects your GPU, run the following command in your terminal:
+    ```shell
+    python3 -c "import jax; print(f'Devices found: {jax.devices()}')"
+    ```
+    If successful, it should return `[cuda(id=0)]` or `[GpuDevice(id=0)]`.
 ## Structure
 This repository is structured as follows:
 | Folder                     | Purpose                                     |

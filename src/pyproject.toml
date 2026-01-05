@@ -1,6 +1,6 @@
 [project]
 name = "thesis-schneg"
-requires-python = "~=3.10"
+requires-python = ">=3.10,<3.11"
 version = "0.0.0"
 
 dependencies = [
@@ -41,10 +41,24 @@ dependencies = [
     "numpy~=1.2",
     "seaborn~=0.12",
     "datasketch~=1.6",
-    "ott-jax[neural]~=0.6",
-    "jax~=0.6",
     "umap-learn~=0.5",
-    "plotly~=6.5"
+    "plotly~=6.5",
+    # Basic jax for CPU-version
+    "jax==0.4.28",
+    "jaxlib==0.4.28",
+    # OTT-JAX with neural features (runs everywhere, but slower on CPU)
+    "ott-jax[neural]<0.5.0",
+    "equinox==0.11.4",
+    "diffrax==0.5.1",
+    "optimistix==0.0.7",
+    "lineax==0.0.5",   
+]
+
+# --- optional dependencies for GPU-version ---
+[project.optional-dependencies]
+gpu = [
+    "nvidia-cudnn-cu11==8.9.6.50",
+    "nvidia-cuda-nvcc-cu12",
 ]
 
 [build-system]
