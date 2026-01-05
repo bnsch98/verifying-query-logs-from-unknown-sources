@@ -4,10 +4,10 @@ Master's thesis by Benjamin Schneg
 
 Find the PDF-Version [here](https://webis.de/for-students/completed-theses.html#schneg_2025).
 
-## Structure
+## Content
 <!-- TOC -->
   * [Installation](#installation)
-  * [Structure](#structure)
+  * [Repository-Structure](#repository-structure)
   * [Usage](#usage)
 <!-- TOC -->
 
@@ -58,7 +58,7 @@ To ensure JAX correctly detects your GPU, run the following command in your term
     python3 -c "import jax; print(f'Devices found: {jax.devices()}')"
     ```
     If successful, it should return `[cuda(id=0)]` or `[GpuDevice(id=0)]`.
-## Structure
+## Repository-Structure
 This repository is structured as follows:
 | Folder                     | Purpose                                     |
 |----------------------------|---------------------------------------------|
