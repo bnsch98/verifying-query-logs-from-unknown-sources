@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Literal
 from pathlib import Path
 from cyclopts import App
 from cyclopts.types import Directory
@@ -195,6 +195,7 @@ def embeddings_analysis(
     ot_variant: OTSolverVariant = "sliced-wasserstein",
     num_input_files: Optional[int] = 12,
     shuffle_files: bool = False,
+    device_type: Literal["cpu", "gpu"] = "gpu",
 ) -> None:
 
     from thesis_schneg.post_thesis_analysis.embeddings_analysis import embeddings_analysis_pipeline as _embeddings_analysis_pipeline
@@ -204,6 +205,7 @@ def embeddings_analysis(
         ot_variant=ot_variant,
         num_input_files=num_input_files,
         shuffle_files=shuffle_files,
+        device_type=device_type,
     )
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Optional, Iterable, Tuple
+from typing import Any, Optional, Iterable, Tuple, Literal
 from thesis_schneg.model import DatasetName, EmbeddingsAnalysisName, OTSolverVariant
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,6 +8,7 @@ from jax.random import PRNGKey
 from numpy import stack
 from time import time
 import jax.numpy as jnp
+import jax
 import os
 import inspect
 
@@ -44,6 +45,8 @@ OT_PARAMS = {
     # },
 }
 
+# Limit GPU memory usage to 50%
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.5'
 ################### FUNCTIONS #####################
 
 
@@ -87,22 +90,35 @@ class OTSolver:
         else:
             raise ValueError(f"Unknown OT variant: {variant}")
 
-    def __init__(self, variant: OTSolverVariant, X: DataFrame, Y: DataFrame):
+    def __init__(self, variant: OTSolverVariant, X: DataFrame, Y: DataFrame, device_type: Literal["cpu", "gpu"] = "gpu"):
         self.variant = variant
-        self.X = jnp.array(stack(X['embeddings'].values))
-        self.Y = jnp.array(stack(Y['embeddings'].values))
+
+        # 1. Set device
+        available_devices = jax.devices(device_type)
+        self.device = available_devices[0]
+        print(f"Using device: {self.device}")
+
+        # 2. Load data onto device
+        print(f"Loading data to {device_type.upper()}...")
+        self.X = jax.device_put(
+            jnp.array(stack(X['embeddings'].values)), self.device)
+        self.Y = jax.device_put(
+            jnp.array(stack(Y['embeddings'].values)), self.device)
+
+        if variant == "sliced-wasserstein":
+            from ott.tools.sliced import sliced_wasserstein
+            self._jit_ot = jax.jit(
+                sliced_wasserstein, static_argnames=("n_proj",), device=self.device)
 
     def center_pointclouds(self):
         self.X = self.X - jnp.mean(self.X, axis=0)
         self.Y = self.Y - jnp.mean(self.Y, axis=0)
 
     def compute_distance(self, **kwargs) -> Any:
-        ot_function = self.get_ot_variant(self.variant)
-        print(f"Computing {self.variant} distance with parameters:")
-        for key, value in kwargs.items():
-            print(f"    - {key}: {value}")
-        distance = ot_function(self.X, self.Y, **kwargs)
-        return distance
+        print(
+            f"Computing {self.variant} distance on {list(self.X.devices())[0].device_kind}...")
+        distance, _ = self._jit_ot(self.X, self.Y, **kwargs)
+        return distance.item()
 
 
 def get_ot_distance(solver: OTSolver) -> Tuple[Any, float]:
@@ -131,6 +147,7 @@ def embeddings_analysis_pipeline(
     ot_variant: OTSolverVariant,
     num_input_files: Optional[int],
     shuffle_files: bool = False,
+    device_type: Literal["cpu", "gpu"] = "gpu",
 ) -> None:
     # Load embeddings
     df_X = load_embeddings(
@@ -146,13 +163,14 @@ def embeddings_analysis_pipeline(
 
     if analysis == "embeddings-distance":
         # Initialize OT solver
-        solver = OTSolver(variant=ot_variant, X=df_X, Y=df_Y)
+        solver = OTSolver(variant=ot_variant, X=df_X,
+                          Y=df_Y, device_type=device_type)
 
         # Compute OT distance
         distance, duration = get_ot_distance(solver)
 
         print(
-            f"Computed {ot_variant} distance for {datasets[0]} ({size_X} samples) vs {datasets[1]} ({size_Y} samples)\nDistance: {distance[0]}\nDuration: {duration:.2f} seconds.")
+            f"Computed {ot_variant} distance for {datasets[0]} ({size_X} samples) vs {datasets[1]} ({size_Y} samples)\nDistance: {distance}\nDuration: {duration:.2f} seconds.")
     elif analysis == "umap-visualization":
         from umap import UMAP
         import plotly.express as px
