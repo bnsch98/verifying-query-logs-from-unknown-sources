@@ -196,6 +196,7 @@ def embeddings_analysis(
     num_input_files: Optional[int] = 12,
     shuffle_files: bool = False,
     device_type: Literal["cpu", "gpu"] = "gpu",
+    batch_size: int = 100,
 ) -> None:
 
     from thesis_schneg.post_thesis_analysis.embeddings_analysis import embeddings_analysis_pipeline as _embeddings_analysis_pipeline
@@ -206,6 +207,7 @@ def embeddings_analysis(
         num_input_files=num_input_files,
         shuffle_files=shuffle_files,
         device_type=device_type,
+        batch_size=batch_size,
     )
 
 

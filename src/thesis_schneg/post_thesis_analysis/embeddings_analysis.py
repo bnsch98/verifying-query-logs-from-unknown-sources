@@ -6,7 +6,7 @@ from random import sample
 from pandas import DataFrame, concat, read_parquet
 from jax.random import PRNGKey
 from numpy import stack
-from time import time
+import time
 import jax.numpy as jnp
 import jax
 import os
@@ -28,6 +28,7 @@ OT_PARAMS = {
     "sliced-wasserstein": {
         "n_proj": 1000,  # number of projections for sliced wasserstein computation
         "rng": PRNGKey(42),  # random key for reproducibility
+        "center_pointclouds": False,
         # "batch_size": 1024,
     },
 
@@ -92,36 +93,80 @@ class OTSolver:
 
     def __init__(self, variant: OTSolverVariant, X: DataFrame, Y: DataFrame, device_type: Literal["cpu", "gpu"] = "gpu"):
         self.variant = variant
+        self.device_type = device_type
 
         # 1. Set device
-        available_devices = jax.devices(device_type)
-        self.device = available_devices[0]
+        self.device = jax.devices(self.device_type)[0]
         print(f"Using device: {self.device}")
 
-        # 2. Load data onto device
-        print(f"Loading data to {device_type.upper()}...")
-        self.X = jax.device_put(
-            jnp.array(stack(X['embeddings'].values)), self.device)
-        self.Y = jax.device_put(
-            jnp.array(stack(Y['embeddings'].values)), self.device)
+        # 2. Load data
+        print(f"Loading data to {self.device_type.upper()}...")
+        self.X = stack(X['embeddings'].values)
+        self.Y = stack(Y['embeddings'].values)
 
+        # 3. Get OT function
         if variant == "sliced-wasserstein":
             from ott.tools.sliced import sliced_wasserstein
-            self._jit_ot = jax.jit(
-                sliced_wasserstein, static_argnames=("n_proj",), device=self.device)
+            self._swd_func = sliced_wasserstein
+
+    # 2. Push data to the selected device
+    def push_to_device(self):
+        self.X = jax.device_put(
+            jnp.array(self.X), self.device)
+        self.Y = jax.device_put(
+            jnp.array(self.Y), self.device)
 
     def center_pointclouds(self):
         self.X = self.X - jnp.mean(self.X, axis=0)
         self.Y = self.Y - jnp.mean(self.Y, axis=0)
 
-    def compute_distance(self, **kwargs) -> Any:
-        print(
-            f"Computing {self.variant} distance on {list(self.X.devices())[0].device_kind}...")
-        distance, _ = self._jit_ot(self.X, self.Y, **kwargs)
-        return distance.item()
+    # max_samples = 150k
+    def compute_distance(self, batch_size: int = 100, **kwargs) -> tuple[float, float]:
+        rng = kwargs.get('rng', PRNGKey(42))
+        n_proj = kwargs.get('n_proj', 1000)
+        start_time = time.perf_counter()
+
+        if self.device_type == "gpu":
+            # --- BATCHED GPU VERSION ---
+            # We divide projections into smaller chunks to stay below the 4GB VRAM limit.
+            # Memory usage is determined by batch_size instead of total n_proj.
+            n_batches = n_proj // batch_size
+
+            @jax.jit
+            def batched_swd(key):
+                def scan_fn(carry, batch_key):
+                    # In ott-jax 0.4.x, sliced_wasserstein returns (distance, projections)
+                    dist, _ = self._swd_func(
+                        self.X, self.Y, n_proj=batch_size, rng=batch_key)
+                    return carry + dist, None
+
+                    # Generate n_batches unique keys for the projections
+                keys = jax.random.split(key, n_batches)
+                # jax.lax.scan is a compiled loop that keeps intermediate results small
+                total_dist, _ = jax.lax.scan(scan_fn, 0.0, keys)
+                return total_dist / n_batches
+
+            result_array = batched_swd(rng)
+
+        else:
+            # --- STANDARD CPU VERSION (Non-batched) ---
+            # CPU usually has enough system RAM to handle n_proj=1000 directly.
+            @jax.jit
+            def simple_swd(key):
+                dist, _ = self._swd_func(
+                    self.X, self.Y, n_proj=n_proj, rng=key)
+                return dist
+
+            result_array = simple_swd(rng)
+
+        # block_until_ready() is mandatory for accurate timing due to JAX's async dispatch
+        result_array.block_until_ready()
+        duration = time.perf_counter() - start_time
+
+        return float(result_array), duration
 
 
-def get_ot_distance(solver: OTSolver) -> Tuple[Any, float]:
+def get_ot_distance(solver: OTSolver, batch_size: int = 100, **kwargs) -> Tuple[Any, float]:
     """
     Compute the OT distance using the provided solver and measure the time taken.
 
@@ -130,15 +175,18 @@ def get_ot_distance(solver: OTSolver) -> Tuple[Any, float]:
     :return: Return the computed distance and the time taken in seconds.
     :rtype: Tuple[Any, float]
     """
-    # Center the pointclouds
-    solver.center_pointclouds()
+    # Center the pointclouds if requested
+    center_pc = kwargs.get('center_pointclouds', True)
+    if center_pc:
+        solver.center_pointclouds()
+
+    # Push data to device
+    solver.push_to_device()
 
     # Compute distance
-    start = time()
-    distance = solver.compute_distance(**OT_PARAMS[solver.variant])
-    end = time()
-
-    return distance, end - start
+    distance, duration = solver.compute_distance(
+        batch_size=batch_size, **kwargs)
+    return distance, duration
 
 
 def embeddings_analysis_pipeline(
@@ -148,6 +196,7 @@ def embeddings_analysis_pipeline(
     num_input_files: Optional[int],
     shuffle_files: bool = False,
     device_type: Literal["cpu", "gpu"] = "gpu",
+    batch_size: int = 100,
 ) -> None:
     # Load embeddings
     df_X = load_embeddings(
@@ -167,7 +216,8 @@ def embeddings_analysis_pipeline(
                           Y=df_Y, device_type=device_type)
 
         # Compute OT distance
-        distance, duration = get_ot_distance(solver)
+        distance, duration = get_ot_distance(
+            solver, batch_size=batch_size, **OT_PARAMS[solver.variant])
 
         print(
             f"Computed {ot_variant} distance for {datasets[0]} ({size_X} samples) vs {datasets[1]} ({size_Y} samples)\nDistance: {distance}\nDuration: {duration:.2f} seconds.")
@@ -224,7 +274,7 @@ class ResultWriter:
 # - sinkhorn
 # - sliced wasserstein distance
 # - linearized wasserstein distance
-# - neural OT?
+# - neural OT? 0.000562994449865073
 
 # 3. Data Writer
 # - zielverzeichnis festlegen

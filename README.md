@@ -1,7 +1,6 @@
 # Verifying Query Logs from Unknown Sources
 
-Master's thesis by Benjamin Schneg
-
+Master's thesis by Benjamin Schneg  
 Find the PDF-Version [here](https://webis.de/for-students/completed-theses.html#schneg_2025).
 
 ## Content
