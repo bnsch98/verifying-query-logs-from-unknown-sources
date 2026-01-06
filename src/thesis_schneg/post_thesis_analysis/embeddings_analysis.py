@@ -29,6 +29,7 @@ OT_PARAMS = {
         "n_proj": 1000,  # number of projections for sliced wasserstein computation
         "rng": PRNGKey(42),  # random key for reproducibility
         "center_pointclouds": False,
+        "max_samples": 20000,
         # "batch_size": 1024,
     },
 
@@ -121,49 +122,74 @@ class OTSolver:
         self.Y = self.Y - jnp.mean(self.Y, axis=0)
 
     # max_samples = 150k
-    def compute_distance(self, batch_size: int = 100, **kwargs) -> tuple[float, float]:
-        rng = kwargs.get('rng', PRNGKey(42))
+    def compute_distance(self, batch_size: int = 100,  **kwargs) -> Tuple[float, float]:
+        """
+        Computes SWD with conditional sub-sampling if combined samples > 120k.
+        Uses a Python loop to manage GPU memory safely on 4GB VRAM.
+        """
+        # Extract arguments from kwargs with defaults
+        rng = kwargs.get('rng', jax.random.PRNGKey(42))
         n_proj = kwargs.get('n_proj', 1000)
+        max_samples = kwargs.get('max_samples', 20000)
+
         start_time = time.perf_counter()
 
+        n_samples_x = len(self.X)
+        n_samples_y = len(self.Y)
+        combined_samples = n_samples_x + n_samples_y
+
+        # Condition: Use sub-sampling only if combined size > 120,000
+        use_subsampling = combined_samples > 120000
+
+        # JIT-compiled step for a single batch of projections
+        @jax.jit
+        def swd_step(x_chunk, y_chunk, key):
+            # In ott-jax 0.4.x, sliced_wasserstein returns (distance, projections)
+            dist, _ = self._swd_func(
+                x_chunk, y_chunk, n_proj=batch_size, rng=key)
+            return dist
+
         if self.device_type == "gpu":
-            # --- BATCHED GPU VERSION ---
-            # We divide projections into smaller chunks to stay below the 4GB VRAM limit.
-            # Memory usage is determined by batch_size instead of total n_proj.
-            n_batches = n_proj // batch_size
+            n_proj_batches = n_proj // batch_size
+            total_dist = 0.0
 
-            @jax.jit
-            def batched_swd(key):
-                def scan_fn(carry, batch_key):
-                    # In ott-jax 0.4.x, sliced_wasserstein returns (distance, projections)
-                    dist, _ = self._swd_func(
-                        self.X, self.Y, n_proj=batch_size, rng=batch_key)
-                    return carry + dist, None
+            # Use a Python loop to force XLA to clear temporary sort-buffers between batches
+            current_rng = rng
+            for i in range(n_proj_batches):
+                # Split keys for sampling and for the SWD projections
+                current_rng, subkey = jax.random.split(current_rng)
+                k1, k2, k3 = jax.random.split(subkey, 3)
 
-                    # Generate n_batches unique keys for the projections
-                keys = jax.random.split(key, n_batches)
-                # jax.lax.scan is a compiled loop that keeps intermediate results small
-                total_dist, _ = jax.lax.scan(scan_fn, 0.0, keys)
-                return total_dist / n_batches
+                if use_subsampling:
+                    # Draw fresh random indices for every projection batch
+                    idx_x = jax.random.randint(
+                        k1, (max_samples,), 0, n_samples_x)
+                    idx_y = jax.random.randint(
+                        k2, (max_samples,), 0, n_samples_y)
+                    curr_x, curr_y = self.X[idx_x], self.Y[idx_y]
+                else:
+                    # Use all available data
+                    curr_x, curr_y = self.X, self.Y
 
-            result_array = batched_swd(rng)
+                # Execute the JIT-optimized step for this batch
+                total_dist += swd_step(curr_x, curr_y, k3)
+
+            final_dist = total_dist / n_proj_batches
 
         else:
-            # --- STANDARD CPU VERSION (Non-batched) ---
-            # CPU usually has enough system RAM to handle n_proj=1000 directly.
+            # CPU Path: Typically has enough RAM to avoid manual batching
             @jax.jit
             def simple_swd(key):
                 dist, _ = self._swd_func(
                     self.X, self.Y, n_proj=n_proj, rng=key)
                 return dist
+            final_dist = simple_swd(rng)
 
-            result_array = simple_swd(rng)
-
-        # block_until_ready() is mandatory for accurate timing due to JAX's async dispatch
-        result_array.block_until_ready()
+        # Sync the GPU and stop the clock
+        final_dist.block_until_ready()
         duration = time.perf_counter() - start_time
 
-        return float(result_array), duration
+        return float(final_dist), duration
 
 
 def get_ot_distance(solver: OTSolver, batch_size: int = 100, **kwargs) -> Tuple[Any, float]:
