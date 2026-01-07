@@ -10,7 +10,7 @@ import time
 import jax.numpy as jnp
 import jax
 import os
-import inspect
+
 
 ################### CONFIGURATION #####################
 # use .env to load data path for embeddings
@@ -26,10 +26,10 @@ DIRECTORY_MAP = {
 
 OT_PARAMS = {
     "sliced-wasserstein": {
-        "n_proj": 1000,  # number of projections for sliced wasserstein computation
+        "n_proj": 2000,  # number of projections for sliced wasserstein computation
         "rng": PRNGKey(42),  # random key for reproducibility
         "center_pointclouds": False,
-        "max_samples": 20000,
+        "max_samples": 600000,
         # "batch_size": 1024,
     },
 
@@ -47,8 +47,10 @@ OT_PARAMS = {
     # },
 }
 
-# Limit GPU memory usage to 50%
+# Limit GPU memory usage to 0.x%
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.5'
+# Use platform allocator for potentially better memory management (especially to debug OOM issues)
+# os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'platform'
 ################### FUNCTIONS #####################
 
 
@@ -116,6 +118,7 @@ class OTSolver:
             jnp.array(self.X), self.device)
         self.Y = jax.device_put(
             jnp.array(self.Y), self.device)
+        print(f"Data type in jax array: {self.X.dtype}, {self.Y.dtype}")
 
     def center_pointclouds(self):
         self.X = self.X - jnp.mean(self.X, axis=0)
@@ -132,14 +135,16 @@ class OTSolver:
         n_proj = kwargs.get('n_proj', 1000)
         max_samples = kwargs.get('max_samples', 20000)
 
+        print(
+            f"Computing {self.variant} distance with n_proj={n_proj}, batch_size={batch_size} and max_samples={max_samples}...")
         start_time = time.perf_counter()
 
         n_samples_x = len(self.X)
         n_samples_y = len(self.Y)
         combined_samples = n_samples_x + n_samples_y
 
-        # Condition: Use sub-sampling only if combined size > 120,000
-        use_subsampling = combined_samples > 120000
+        # Condition: Use sub-sampling only if combined size > max_samples
+        use_subsampling = combined_samples > max_samples
 
         # JIT-compiled step for a single batch of projections
         @jax.jit
@@ -163,9 +168,9 @@ class OTSolver:
                 if use_subsampling:
                     # Draw fresh random indices for every projection batch
                     idx_x = jax.random.randint(
-                        k1, (max_samples,), 0, n_samples_x)
+                        k1, (max_samples//2,), 0, n_samples_x)
                     idx_y = jax.random.randint(
-                        k2, (max_samples,), 0, n_samples_y)
+                        k2, (max_samples//2,), 0, n_samples_y)
                     curr_x, curr_y = self.X[idx_x], self.Y[idx_y]
                 else:
                     # Use all available data
@@ -209,6 +214,7 @@ def get_ot_distance(solver: OTSolver, batch_size: int = 100, **kwargs) -> Tuple[
     # Push data to device
     solver.push_to_device()
 
+    distance, duration = (0.0, 0.0)
     # Compute distance
     distance, duration = solver.compute_distance(
         batch_size=batch_size, **kwargs)
