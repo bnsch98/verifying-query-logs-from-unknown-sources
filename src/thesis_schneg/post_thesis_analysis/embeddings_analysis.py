@@ -26,10 +26,10 @@ DIRECTORY_MAP = {
 
 OT_PARAMS = {
     "sliced-wasserstein": {
-        "n_proj": 2000,  # number of projections for sliced wasserstein computation
-        "rng": PRNGKey(42),  # random key for reproducibility
+        "n_proj": 16000,  # number of projections for sliced wasserstein computation
+        "rng": PRNGKey(4),  # random key for reproducibility
         "center_pointclouds": False,
-        "max_samples": 600000,
+        "max_samples": 40000,
         # "batch_size": 1024,
     },
 
@@ -145,6 +145,8 @@ class OTSolver:
 
         # Condition: Use sub-sampling only if combined size > max_samples
         use_subsampling = combined_samples > max_samples
+        print(
+            f"Using subsampling: {use_subsampling} (Size of combined samples: {combined_samples}, size of subsample limit: {max_samples//2})")
 
         # JIT-compiled step for a single batch of projections
         @jax.jit
@@ -158,6 +160,12 @@ class OTSolver:
             n_proj_batches = n_proj // batch_size
             total_dist = 0.0
 
+            if n_samples_x < max_samples // 2 or n_samples_y < max_samples // 2:
+                max_samples_x = n_samples_x
+                max_samples_y = n_samples_y
+            else:
+                max_samples_x = max_samples // 2
+                max_samples_y = max_samples // 2
             # Use a Python loop to force XLA to clear temporary sort-buffers between batches
             current_rng = rng
             for i in range(n_proj_batches):
@@ -168,9 +176,9 @@ class OTSolver:
                 if use_subsampling:
                     # Draw fresh random indices for every projection batch
                     idx_x = jax.random.randint(
-                        k1, (max_samples//2,), 0, n_samples_x)
+                        k1, (max_samples_x,), 0, n_samples_x)
                     idx_y = jax.random.randint(
-                        k2, (max_samples//2,), 0, n_samples_y)
+                        k2, (max_samples_y,), 0, n_samples_y)
                     curr_x, curr_y = self.X[idx_x], self.Y[idx_y]
                 else:
                     # Use all available data
