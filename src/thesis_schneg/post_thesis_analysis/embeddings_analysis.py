@@ -30,7 +30,6 @@ OT_PARAMS = {
         "rng": PRNGKey(4),  # random key for reproducibility
         "center_pointclouds": False,
         "max_samples": 40000,
-        # "batch_size": 1024,
     },
 
     # "sinkhorn": {
@@ -237,7 +236,7 @@ def embeddings_analysis_pipeline(
     shuffle_files: bool = False,
     device_type: Literal["cpu", "gpu"] = "gpu",
     batch_size: int = 100,
-) -> None:
+) -> Optional[float]:
     # Load embeddings
     df_X = load_embeddings(
         dataset=datasets[0], num_input_files=num_input_files, randomized=shuffle_files, print_memory_usg=True)
@@ -261,6 +260,8 @@ def embeddings_analysis_pipeline(
 
         print(
             f"Computed {ot_variant} distance for {datasets[0]} ({size_X} samples) vs {datasets[1]} ({size_Y} samples)\nDistance: {distance}\nDuration: {duration:.2f} seconds.")
+        print(distance)
+        return distance
     elif analysis == "umap-visualization":
         from umap import UMAP
         import plotly.express as px
@@ -286,37 +287,13 @@ def embeddings_analysis_pipeline(
                          color=labels,
                          hover_data={'Query': metadata},
                          title=f"UMAP Visualization of {datasets[0]} and {datasets[1]} Embeddings",
-                         opacity=0.5)  # Wert zwischen 0 (transparent) und 1 (opak)
+                         opacity=0.5)  # Values between 0 (transparent) and 1 (opaque)
+        # save as html
+        output_dir = Path(os.getenv("PLOT_PATH")) / "embeddings-umap-plots"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"umap_{datasets[0]}_vs_{datasets[1]}.html"
+        fig.write_html(str(output_file))
         fig.show()
 
     else:
         raise ValueError(f"Unknown analysis type: {analysis}")
-
-
-class ResultWriter:
-    pass
-
-    # plot the results
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(projs, distances, marker='o')
-    # plt.title('Sliced Wasserstein Distance vs Number of Projections')
-    # plt.xlabel('Number of Projections (n_proj)')
-    # plt.ylabel('Sliced Wasserstein Distance')
-    # plt.grid(True)
-    # plt.show()
-
-# TODO
-# 1. DataLoader
-# - größe des datensatzes bestimmen
-# - Quelldaten festlegen (AOL, AQl, etc)
-
-# 2. OT Solver
-# - sinkhorn
-# - sliced wasserstein distance
-# - linearized wasserstein distance
-# - neural OT? 0.000562994449865073
-
-# 3. Data Writer
-# - zielverzeichnis festlegen
-# - dateinamen festlegen
-# - format festlegen (csv, json, parquet, etc)
