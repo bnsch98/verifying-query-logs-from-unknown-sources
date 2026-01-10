@@ -41,7 +41,7 @@ Follow these steps to set up the project's working environment:
     pip install -e ".[gpu]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
     ```
 
-<details open><summary>GPU installation details</summary>  
+<details closed><summary>GPU installation details</summary>  
 
 If you installed the GPU version, JAX needs to know where the NVIDIA libraries and compilers are located within your virtual environment. Add the following lines to your `~/.bashrc` (replace `<ABS_PATH_TO_SRC>` with the actual absolute path to your `src` directory):
 
