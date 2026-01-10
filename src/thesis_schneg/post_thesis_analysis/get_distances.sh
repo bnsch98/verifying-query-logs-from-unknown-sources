@@ -18,8 +18,8 @@ echo "Starting SWD benchmark for all pairs..."
 for i in "${!datasets[@]}"; do
     for j in "${!datasets[@]}"; do
         
-        # Avoid comparing the same dataset (e.g., aq vs aq)
-        # and avoid redundant pairs (e.g., if aq-orc is done, skip orc-aq)
+        # Avoid comparing the same dataset (e.g., aql vs aql)
+        # and avoid redundant pairs (e.g., if aql-orcas is done, skip orcas-aql)
         if [ "$i" -lt "$j" ]; then
             ds1=${datasets[$i]}
             ds2=${datasets[$j]}
